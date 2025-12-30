@@ -216,10 +216,18 @@ app.post('/api/search', async (req, res) => {
     // 結果を追加（中国サイトの結果が先に来る）
     allResults.forEach((result, index) => {
       if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-        console.log(`✅ ${allSiteNames[index] || 'Unknown'}: ${result.value.length}件の動画を取得`);
-        videos.push(...result.value);
+        if (result.value.length > 0) {
+          console.log(`✅ ${allSiteNames[index] || 'Unknown'}: ${result.value.length}件の動画を取得`);
+          videos.push(...result.value);
+        }
       } else {
-        console.error(`❌ ${allSiteNames[index] || 'Unknown'}検索エラー:`, result.reason?.message || result.reason);
+        // 404エラーは警告レベル、その他はエラーレベル
+        const error = result.reason;
+        if (error?.response?.status === 404) {
+          console.warn(`⚠️ ${allSiteNames[index] || 'Unknown'}検索: ページが見つかりません（404）`);
+        } else {
+          console.error(`❌ ${allSiteNames[index] || 'Unknown'}検索エラー:`, error?.message || error);
+        }
       }
     });
     
@@ -843,7 +851,12 @@ async function searchFC2(query) {
     console.log(`✅ FC2: ${videos.length}件の動画を取得`);
     return videos;
   } catch (error) {
-    console.error('FC2検索エラー:', error.message);
+    // 404エラーは警告レベル、その他はエラーレベル
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ FC2検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ FC2検索エラー:', error.message);
+    }
     return [];
   }
 }
@@ -893,7 +906,12 @@ async function searchAkibaAbv(query) {
     console.log(`✅ AkibaAbv: ${videos.length}件の動画を取得`);
     return videos;
   } catch (error) {
-    console.error('AkibaAbv検索エラー:', error.message);
+    // 404エラーは警告レベル、その他はエラーレベル
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ AkibaAbv検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ AkibaAbv検索エラー:', error.message);
+    }
     return [];
   }
 }
