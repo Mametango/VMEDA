@@ -112,14 +112,14 @@ function displayResults(videos) {
       </div>
       <div class="video-player-container" id="player-${video.id}">
         ${hasThumbnail ? `
-          <div class="video-thumbnail-wrapper" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}')">
+          <div class="video-thumbnail-wrapper" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}')">
             <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" class="video-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="play-overlay">
               <button class="play-btn-thumbnail">▶</button>
             </div>
           </div>
         ` : `
-          <button class="play-btn" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}')">
+          <button class="play-btn" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}')">
             ▶ 再生
           </button>
         `}
@@ -144,7 +144,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl) {
   // 既に表示されている場合は閉じる
   if (container.querySelector('iframe')) {
     container.innerHTML = `
-      <button class="play-btn" onclick="showPlayer('${videoId}', '${embedUrl}', '${originalUrl}')">
+      <button class="play-btn" onclick="showPlayer('${videoId}', '${embedUrl}', '${originalUrl}', '${source || ''}')">
         ▶ 再生
       </button>
     `;
@@ -190,7 +190,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl) {
         <p>⚠️ 動画を読み込めませんでした</p>
         <p class="error-detail">サーバーまたはネットワークの問題、またはフォーマットがサポートされていない可能性があります。</p>
         <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
-        <button class="retry-btn" onclick="showPlayer('${videoId}', '${escapeHtml(embedUrl)}', '${escapeHtml(originalUrl)}')">再試行</button>
+        <button class="retry-btn" onclick="showPlayer('${videoId}', '${escapeHtml(embedUrl)}', '${escapeHtml(originalUrl)}', '${source || ''}')">再試行</button>
       </div>
     `;
   };
