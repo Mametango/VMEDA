@@ -153,11 +153,27 @@ window.showPlayer = function(videoId, embedUrl, originalUrl) {
 
   // プレイヤーを表示
   const iframe = document.createElement('iframe');
-  iframe.src = embedUrl.startsWith('//') ? `https:${embedUrl}` : embedUrl;
+  // URLを正規化（iOS Safari対応）
+  let normalizedUrl = embedUrl.startsWith('//') ? `https:${embedUrl}` : embedUrl;
+  if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+    normalizedUrl = `https://${normalizedUrl}`;
+  }
+  iframe.src = normalizedUrl;
   iframe.allowFullscreen = true;
   iframe.className = 'video-player';
-  iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+  iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media');
   iframe.setAttribute('loading', 'lazy');
+  iframe.setAttribute('frameborder', '0');
+  iframe.setAttribute('scrolling', 'no');
+  // iOS Safari対応
+  iframe.setAttribute('webkitallowfullscreen', 'true');
+  iframe.setAttribute('mozallowfullscreen', 'true');
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.position = 'absolute';
+  iframe.style.top = '0';
+  iframe.style.left = '0';
+  iframe.style.border = 'none';
   
   // エラー検出用のフラグ
   let hasError = false;
@@ -186,8 +202,12 @@ window.showPlayer = function(videoId, embedUrl, originalUrl) {
   
   // 読み込み完了を検出
   iframe.onload = () => {
+    console.log('✅ iframe読み込み完了');
+    // タイムアウトを短縮（読み込み完了したので）
     if (errorTimeout) clearTimeout(errorTimeout);
-    // 読み込み完了後、iframe内のエラーメッセージをチェック
+    
+    // iOS Safariではiframeにアクセスできない場合が多いため、
+    // 読み込み完了後は成功とみなす
     setTimeout(() => {
       try {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -202,50 +222,77 @@ window.showPlayer = function(videoId, embedUrl, originalUrl) {
               bodyHTML.includes('could not be loaded') ||
               bodyHTML.includes('not supported')) {
             showError();
+          } else {
+            console.log('✅ iframeコンテンツ確認完了');
           }
+        } else {
+          // iOS SafariではCORSでアクセスできない場合が多いが、正常に動作している可能性がある
+          console.log('ℹ️ iframeにアクセスできません（CORS）- 正常な場合があります');
         }
       } catch (e) {
-        // CORSエラーは無視（正常な場合もある）
+        // CORSエラーは無視（iOS Safariでは正常な場合が多い）
+        console.log('ℹ️ iframeアクセスエラー（CORS）:', e.message);
       }
     }, 2000);
   };
   
+  // コンテナをクリアしてiframeを追加
   container.innerHTML = '';
+  container.style.position = 'relative';
+  container.style.width = '100%';
+  container.style.paddingTop = '56.25%'; // 16:9
+  container.style.background = '#000';
+  container.style.borderRadius = '8px';
+  container.style.overflow = 'hidden';
   container.appendChild(iframe);
   
   console.log('✅ iframeを作成しました:', iframe.src);
+  console.log('📱 コンテナサイズ:', container.offsetWidth, 'x', container.offsetHeight);
   
-  // タイムアウトでエラー検出（5秒後にチェック）
+  // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
+  // タイムアウトでエラー検出（10秒後にチェック）
   errorTimeout = setTimeout(() => {
+    if (hasError) return;
+    
+    // iOS Safariではiframeにアクセスできない場合が多いため、
+    // iframeが表示されているかどうかで判断
+    const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
+    const containerVisible = container.offsetWidth > 0 && container.offsetHeight > 0;
+    
+    console.log('🔍 iframe状態確認:', {
+      iframeVisible,
+      containerVisible,
+      iframeWidth: iframe.offsetWidth,
+      iframeHeight: iframe.offsetHeight,
+      containerWidth: container.offsetWidth,
+      containerHeight: container.offsetHeight
+    });
+    
+    // iframeが表示されていない場合はエラー
+    if (!iframeVisible || !containerVisible) {
+      console.warn('⚠️ iframeが表示されていません');
+      // iOS SafariではCORSでiframeにアクセスできない場合が多いため、
+      // エラーを表示せずに、元のURLへのリンクを表示
+      container.innerHTML = `
+        <div class="player-error">
+          <p>📱 動画を再生するには、元のサイトで開いてください</p>
+          <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
+        </div>
+      `;
+      return;
+    }
+    
+    // iframeにアクセスできる場合はエラーチェック
     try {
       const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!iframeDoc) {
-        // iframeにアクセスできない場合、さらに待機
-        setTimeout(() => {
-          if (!hasError) {
-            try {
-              const doc = iframe.contentDocument || iframe.contentWindow?.document;
-              if (!doc || doc.body?.innerText?.includes('could not be loaded')) {
-                showError();
-              }
-            } catch (e) {
-              // 最終的にアクセスできない場合はエラーとみなす
-              showError();
-            }
-          }
-        }, 3000);
-      } else if (iframeDoc.body?.innerText?.includes('could not be loaded')) {
+      if (iframeDoc && iframeDoc.body?.innerText?.includes('could not be loaded')) {
         showError();
       }
     } catch (e) {
-      // CORSエラーでも、より長いタイムアウトで再チェック
-      setTimeout(() => {
-        if (!hasError) {
-          showError();
-        }
-      }, 5000);
+      // CORSエラーは無視（iOS Safariでは正常な場合が多い）
+      console.log('ℹ️ iframeにアクセスできません（CORS）:', e.message);
     }
-  }, 5000);
+  }, 10000);
 };
 
 // ソース名取得
