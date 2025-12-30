@@ -1184,6 +1184,11 @@ async function searchSohu(query) {
   }
 }
 
+// ルートパス - index.htmlを返す
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Favicon
 app.get('/favicon.ico', (req, res) => {
   res.status(204).end();
