@@ -56,11 +56,24 @@ app.use('/api/search', searchLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 静的ファイル配信
-app.use(express.static('public', {
+// 静的ファイル配信（Vercel対応）
+app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1d', // キャッシュ1日
   etag: true,
 }));
+
+// 静的ファイルの明示的なルーティング（Vercel用）
+app.get('/app.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.js'), {
+    headers: { 'Content-Type': 'application/javascript' }
+  });
+});
+
+app.get('/styles.css', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'styles.css'), {
+    headers: { 'Content-Type': 'text/css' }
+  });
+});
 
 // 共通ヘルパー関数
 function extractTitle($, $elem) {
