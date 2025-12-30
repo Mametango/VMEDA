@@ -1,0 +1,338 @@
+// グローバルエラーハンドラー（外部リソースの読み込みエラーを抑制）
+window.addEventListener('error', (event) => {
+  // 外部サイトのリソース読み込みエラーを抑制
+  if (event.target && (
+    event.target.tagName === 'IMG' ||
+    event.target.tagName === 'LINK' ||
+    event.target.tagName === 'SCRIPT' ||
+    event.target.tagName === 'IFRAME'
+  )) {
+    // SSL証明書エラー、DNS解決エラー、CORSエラーなどを抑制
+    if (
+      event.message.includes('ERR_CERT') ||
+      event.message.includes('ERR_NAME_NOT_RESOLVED') ||
+      event.message.includes('ERR_BLOCKED_BY_RESPONSE') ||
+      event.message.includes('ERR_SSL_PROTOCOL') ||
+      event.message.includes('ERR_HTTP2_PROTOCOL') ||
+      event.message.includes('NotSameOrigin') ||
+      event.message.includes('403') ||
+      event.message.includes('400')
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      return false;
+    }
+  }
+}, true);
+
+// 未処理のPromise拒否を抑制
+window.addEventListener('unhandledrejection', (event) => {
+  // 外部サイトのエラーを抑制
+  if (event.reason && (
+    event.reason.message && (
+      event.reason.message.includes('ERR_CERT') ||
+      event.reason.message.includes('ERR_NAME_NOT_RESOLVED') ||
+      event.reason.message.includes('ERR_BLOCKED_BY_RESPONSE') ||
+      event.reason.message.includes('ERR_SSL_PROTOCOL') ||
+      event.reason.message.includes('403') ||
+      event.reason.message.includes('400')
+    )
+  )) {
+    event.preventDefault();
+  }
+});
+
+// 検索機能
+const searchInput = document.getElementById('search-input');
+const searchBtn = document.getElementById('search-btn');
+const resultsDiv = document.getElementById('results');
+const loadingDiv = document.getElementById('loading');
+
+// 検索実行
+async function searchVideos(query) {
+  if (!query || query.trim().length === 0) {
+    alert('検索キーワードを入力してください');
+    return;
+  }
+
+  loadingDiv.classList.remove('hidden');
+  resultsDiv.innerHTML = '';
+
+  try {
+    console.log('🔍 検索開始:', query);
+    
+    const response = await fetch('/api/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query: query.trim() })
+    });
+
+    console.log('📡 レスポンス受信:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || '検索に失敗しました');
+    }
+
+    const data = await response.json();
+    console.log('📊 検索結果:', data.results?.length || 0, '件');
+    console.log('📊 データ内容:', JSON.stringify(data).substring(0, 500));
+    
+    if (!data.results || data.results.length === 0) {
+      console.warn('⚠️ 検索結果が空です。テストデータが返されているか確認してください。');
+    }
+    
+    displayResults(data.results || []);
+  } catch (error) {
+    console.error('❌ 検索エラー:', error);
+    resultsDiv.innerHTML = `<div class="error">検索エラー: ${error.message}</div>`;
+  } finally {
+    loadingDiv.classList.add('hidden');
+  }
+}
+
+// 結果表示
+function displayResults(videos) {
+  if (videos.length === 0) {
+    resultsDiv.innerHTML = '<div class="no-results">検索結果が見つかりませんでした</div>';
+    return;
+  }
+
+  const html = videos.map(video => {
+    const thumbnail = video.thumbnail || '';
+    const hasThumbnail = thumbnail && thumbnail.length > 0 && thumbnail.startsWith('http');
+    
+    return `
+    <div class="video-item">
+      <div class="video-header">
+        <h3 class="video-title">${escapeHtml(video.title)}</h3>
+        <span class="video-source">${getSourceName(video.source)}</span>
+      </div>
+      <div class="video-player-container" id="player-${video.id}">
+        ${hasThumbnail ? `
+          <div class="video-thumbnail-wrapper" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}')">
+            <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" class="video-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="play-overlay">
+              <button class="play-btn-thumbnail">▶</button>
+            </div>
+          </div>
+        ` : `
+          <button class="play-btn" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}')">
+            ▶ 再生
+          </button>
+        `}
+      </div>
+    </div>
+  `;
+  }).join('');
+
+  resultsDiv.innerHTML = html;
+}
+
+// プレイヤー表示（グローバルスコープに公開）
+window.showPlayer = function(videoId, embedUrl, originalUrl) {
+  console.log('▶ プレイヤー表示:', videoId, embedUrl);
+  const container = document.getElementById(`player-${videoId}`);
+  
+  if (!container) {
+    console.error('❌ プレイヤーコンテナが見つかりません:', `player-${videoId}`);
+    return;
+  }
+  
+  // 既に表示されている場合は閉じる
+  if (container.querySelector('iframe')) {
+    container.innerHTML = `
+      <button class="play-btn" onclick="showPlayer('${videoId}', '${embedUrl}', '${originalUrl}')">
+        ▶ 再生
+      </button>
+    `;
+    return;
+  }
+
+  // プレイヤーを表示
+  const iframe = document.createElement('iframe');
+  iframe.src = embedUrl.startsWith('//') ? `https:${embedUrl}` : embedUrl;
+  iframe.allowFullscreen = true;
+  iframe.className = 'video-player';
+  iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+  iframe.setAttribute('loading', 'lazy');
+  
+  // エラー検出用のフラグ
+  let hasError = false;
+  let errorTimeout;
+  
+  // エラーメッセージを表示する関数
+  const showError = () => {
+    if (hasError) return;
+    hasError = true;
+    if (errorTimeout) clearTimeout(errorTimeout);
+    
+    container.innerHTML = `
+      <div class="player-error">
+        <p>⚠️ 動画を読み込めませんでした</p>
+        <p class="error-detail">サーバーまたはネットワークの問題、またはフォーマットがサポートされていない可能性があります。</p>
+        <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
+        <button class="retry-btn" onclick="showPlayer('${videoId}', '${escapeHtml(embedUrl)}', '${escapeHtml(originalUrl)}')">再試行</button>
+      </div>
+    `;
+  };
+  
+  // iframeのエラーイベント
+  iframe.onerror = () => {
+    showError();
+  };
+  
+  // 読み込み完了を検出
+  iframe.onload = () => {
+    if (errorTimeout) clearTimeout(errorTimeout);
+    // 読み込み完了後、iframe内のエラーメッセージをチェック
+    setTimeout(() => {
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (iframeDoc) {
+          const bodyText = iframeDoc.body?.innerText || '';
+          const bodyHTML = iframeDoc.body?.innerHTML || '';
+          // エラーメッセージを検出
+          if (bodyText.includes('could not be loaded') || 
+              bodyText.includes('not supported') ||
+              bodyText.includes('network failed') ||
+              bodyText.includes('server failed') ||
+              bodyHTML.includes('could not be loaded') ||
+              bodyHTML.includes('not supported')) {
+            showError();
+          }
+        }
+      } catch (e) {
+        // CORSエラーは無視（正常な場合もある）
+      }
+    }, 2000);
+  };
+  
+  container.innerHTML = '';
+  container.appendChild(iframe);
+  
+  console.log('✅ iframeを作成しました:', iframe.src);
+  
+  // タイムアウトでエラー検出（5秒後にチェック）
+  errorTimeout = setTimeout(() => {
+    try {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) {
+        // iframeにアクセスできない場合、さらに待機
+        setTimeout(() => {
+          if (!hasError) {
+            try {
+              const doc = iframe.contentDocument || iframe.contentWindow?.document;
+              if (!doc || doc.body?.innerText?.includes('could not be loaded')) {
+                showError();
+              }
+            } catch (e) {
+              // 最終的にアクセスできない場合はエラーとみなす
+              showError();
+            }
+          }
+        }, 3000);
+      } else if (iframeDoc.body?.innerText?.includes('could not be loaded')) {
+        showError();
+      }
+    } catch (e) {
+      // CORSエラーでも、より長いタイムアウトで再チェック
+      setTimeout(() => {
+        if (!hasError) {
+          showError();
+        }
+      }, 5000);
+    }
+  }, 5000);
+};
+
+// ソース名取得
+function getSourceName(source) {
+  const names = {
+    'google': 'Google',
+    'youtube': 'YouTube',
+    'bilibili': 'Bilibili',
+    'jpdmv': 'JPdmv',
+    'douga4': 'Douga4',
+    'dailymotion': 'Dailymotion',
+    'vimeo': 'Vimeo',
+    'spankbang': 'Spankbang',
+    'x1hub': 'X1hub',
+    'porntube': 'Porntube',
+    'javguru': 'JavGuru',
+    'japanhub': 'Japanhub',
+    'tktube': 'Tktube',
+    'akibaabv': 'AkibaAbv',
+    'fc2': 'FC2',
+    'sohu': 'Sohu',
+    'youku': 'Youku',
+    'iqiyi': 'iQiyi',
+    'tencent': 'Tencent Video',
+    'xigua': 'Xigua Video',
+    'javdb': 'JAVDB',
+    'javlibrary': 'JAVLibrary',
+    'javbus': 'JAVBus',
+    'javsee': 'JAVSee',
+    'javhd': 'JAVHD',
+    'javmost': 'JAVMost',
+    'javtrailers': 'JAVTrailers',
+    'javsubtitle': 'JAVSubtitle',
+    'jav321': 'JAV321',
+    'javjunkies': 'JAVJunkies',
+    'javfinder': 'JAVFinder',
+    'javfree': 'JAVFree',
+    'javstreaming': 'JAVStreaming',
+    'javcl': 'JAVCL',
+    'javdoe': 'JAVDoe',
+    'javfull': 'JAVFull',
+    'javhdporn': 'JAVHDPorn',
+    'javhub': 'JAVHub',
+    'javleak': 'JAVLeak',
+    'javmix': 'JAVMix',
+    'javmodel': 'JAVModel',
+    'javnew': 'JAVNew',
+    'javporn': 'JAVPorn',
+    'javsx': 'JAVSX',
+    'javtag': 'JAVTag',
+    'javtube': 'JAVTube',
+    'javx': 'JAVX',
+    'javzoo': 'JAVZoo',
+    'missav': 'MissAV',
+    'jav': 'JAV',
+    '91porn': '91Porn',
+    '91porn2': '91Porn2',
+    'caoliu': 'Caoliu',
+    'caoliu1024': 'CaoLiu1024',
+    'sis': 'Sis',
+    'sis001': 'Sis001',
+    'diyihuisuo': 'Diyihuisuo',
+    'diyihuisuo2': 'Diyihuisuo2',
+    'xingba': 'Xingba',
+    'xingba2': 'Xingba2',
+    't66y': 'T66y',
+    'javbus': 'Javbus',
+    'javdb': 'Javdb',
+    'test': 'テスト'
+  };
+  return names[source] || source;
+}
+
+// HTMLエスケープ
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// イベントリスナー
+searchBtn.addEventListener('click', () => {
+  searchVideos(searchInput.value);
+});
+
+searchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    searchVideos(searchInput.value);
+  }
+});

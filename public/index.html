@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VMEDA - 動画検索サイト</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="site-title">VMEDA</h1>
+    </header>
+
+    <section class="search-section">
+      <div class="search-container">
+        <input 
+          type="text" 
+          id="search-input" 
+          class="search-input" 
+          placeholder="動画を検索..."
+          autocomplete="off"
+        >
+        <button id="search-btn" class="search-btn">検索</button>
+      </div>
+    </section>
+
+    <div id="loading" class="loading hidden">検索中...</div>
+
+    <div id="results" class="results"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
