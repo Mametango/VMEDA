@@ -20,9 +20,16 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:", "http:"],
       frameSrc: ["'self'", "https:", "http:"],
       connectSrc: ["'self'", "https:", "http:"],
+      fontSrc: ["'self'", "data:", "https:"],
     },
   },
   crossOriginEmbedderPolicy: false,
+  // iOS Safari対応
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
 }));
 
 // CORS設定（本番環境では適切に設定）
@@ -57,22 +64,48 @@ app.use('/api/search', searchLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// リクエストログ（デバッグ用）
+app.use((req, res, next) => {
+  const userAgent = req.get('user-agent') || '';
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+  console.log(`📱 ${req.method} ${req.path} - ${isMobile ? 'Mobile' : 'Desktop'} - ${userAgent.substring(0, 50)}`);
+  next();
+});
+
 // 静的ファイル配信（Vercel対応）
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1d', // キャッシュ1日
   etag: true,
+  setHeaders: (res, filePath) => {
+    // 静的ファイルのMIMEタイプを明示的に設定
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    } else if (filePath.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+  }
 }));
 
 // 静的ファイルの明示的なルーティング（Vercel用）
 app.get('/app.js', (req, res) => {
+  console.log('📄 app.js リクエスト受信');
   res.sendFile(path.join(__dirname, 'public', 'app.js'), {
-    headers: { 'Content-Type': 'application/javascript' }
+    headers: { 
+      'Content-Type': 'application/javascript',
+      'Cache-Control': 'public, max-age=86400'
+    }
   });
 });
 
 app.get('/styles.css', (req, res) => {
+  console.log('📄 styles.css リクエスト受信');
   res.sendFile(path.join(__dirname, 'public', 'styles.css'), {
-    headers: { 'Content-Type': 'text/css' }
+    headers: { 
+      'Content-Type': 'text/css',
+      'Cache-Control': 'public, max-age=86400'
+    }
   });
 });
 
@@ -1176,7 +1209,24 @@ async function searchSohu(query) {
 
 // ルートパス - index.htmlを返す
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  console.log('🏠 ルートパス リクエスト受信');
+  const userAgent = req.get('user-agent') || '';
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+  console.log(`📱 デバイス: ${isMobile ? 'Mobile' : 'Desktop'} - ${userAgent.substring(0, 80)}`);
+  
+  res.sendFile(path.join(__dirname, 'public', 'index.html'), {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache'
+    }
+  }, (err) => {
+    if (err) {
+      console.error('❌ index.html送信エラー:', err);
+      res.status(500).send('Internal Server Error');
+    } else {
+      console.log('✅ index.html送信成功');
+    }
+  });
 });
 
 // Favicon
