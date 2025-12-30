@@ -195,26 +195,17 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合（中国サイトの結果を先に）
     const videos = [];
-    const prioritySiteNames = ['Bilibili', 'Youku', 'iQiyi', 'Tencent Video', 'Xigua Video', 'Sohu'];
-    const otherSiteNames = ['Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv'];
+    const prioritySiteNames = ['91Porn', 'Caoliu', 'Sis', 'Diyihuisuo', 'Xingba', 'Javbus', 'Javdb', 'T66y', 'CaoLiu1024', 'Sis001', 'Diyihuisuo2', 'Xingba2', '91Porn2', 'Bilibili', 'Youku', 'iQiyi'];
+    const otherSiteNames = ['Tencent Video', 'Xigua Video', 'Sohu', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv'];
     const allSiteNames = [...prioritySiteNames, ...otherSiteNames];
     
     // 結果を追加（中国サイトの結果が先に来る）
     allResults.forEach((result, index) => {
       if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-        console.log(`✅ ${allSiteNames[index]}: ${result.value.length}件の動画を取得`);
+        console.log(`✅ ${allSiteNames[index] || 'Unknown'}: ${result.value.length}件の動画を取得`);
         videos.push(...result.value);
       } else {
-        console.error(`❌ ${allSiteNames[index]}検索エラー:`, result.reason?.message);
-      }
-    });
-    
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-        console.log(`✅ ${siteNames[index]}: ${result.value.length}件の動画を取得`);
-        videos.push(...result.value);
-      } else {
-        console.error(`❌ ${siteNames[index]}検索エラー:`, result.reason?.message);
+        console.error(`❌ ${allSiteNames[index] || 'Unknown'}検索エラー:`, result.reason?.message || result.reason);
       }
     });
     
@@ -255,7 +246,12 @@ app.post('/api/search', async (req, res) => {
     res.json({ results: uniqueVideos });
   } catch (error) {
     console.error('❌ 検索エラー:', error.message);
+    console.error('❌ スタックトレース:', error.stack);
     // エラーの詳細情報をクライアントに送信しない（セキュリティ対策）
+    // ただし、開発環境では詳細を返す
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('❌ エラー詳細:', error);
+    }
     res.status(500).json({ error: '検索に失敗しました。しばらく待ってから再度お試しください。' });
   }
 });
