@@ -151,28 +151,11 @@ app.post('/api/search', async (req, res) => {
     const sanitizedQuery = validation.query;
     console.log(`🔍 検索開始: "${sanitizedQuery}"`);
     
-    // 中国のAVサイト・アングラ動画サイトをメインに検索（優先順位高）
-    const prioritySearches = [
-      search91Porn(query),
-      searchCaoliu(query),
-      searchSis(query),
-      searchDiyihuisuo(query),
-      searchXingba(query),
-      searchJavbus(query),
-      searchJavdb(query),
-      searchT66y(query),
-      searchCaoLiu1024(query),
-      searchSis001(query),
-      searchDiyihuisuo2(query),
-      searchXingba2(query),
-      search91Porn2(query),
+    // 定義されている検索関数のみを使用
+    const allSearches = [
       searchBilibili(query),
       searchYouku(query),
-      searchIQiyi(query)
-    ];
-    
-    // その他のサイトも並行実行
-    const otherSearches = [
+      searchIQiyi(query),
       searchTencentVideo(query),
       searchXiguaVideo(query),
       searchSohu(query),
@@ -189,15 +172,12 @@ app.post('/api/search', async (req, res) => {
       searchAkibaAbv(query)
     ];
     
-    // すべての検索を並行実行（中国サイトを優先）
-    const allSearches = [...prioritySearches, ...otherSearches];
+    // すべての検索を並行実行
     const allResults = await Promise.allSettled(allSearches);
     
-    // 結果を統合（中国サイトの結果を先に）
+    // 結果を統合
     const videos = [];
-    const prioritySiteNames = ['91Porn', 'Caoliu', 'Sis', 'Diyihuisuo', 'Xingba', 'Javbus', 'Javdb', 'T66y', 'CaoLiu1024', 'Sis001', 'Diyihuisuo2', 'Xingba2', '91Porn2', 'Bilibili', 'Youku', 'iQiyi'];
-    const otherSiteNames = ['Tencent Video', 'Xigua Video', 'Sohu', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv'];
-    const allSiteNames = [...prioritySiteNames, ...otherSiteNames];
+    const allSiteNames = ['Bilibili', 'Youku', 'iQiyi', 'Tencent Video', 'Xigua Video', 'Sohu', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv'];
     
     // 結果を追加（中国サイトの結果が先に来る）
     allResults.forEach((result, index) => {
