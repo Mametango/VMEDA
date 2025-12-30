@@ -16,6 +16,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"], // インラインイベントハンドラーを許可
       imgSrc: ["'self'", "data:", "https:", "http:"],
       frameSrc: ["'self'", "https:", "http:"],
       connectSrc: ["'self'", "https:", "http:"],
