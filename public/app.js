@@ -144,6 +144,43 @@ function displayResults(videos, searchQuery) {
   resultsDiv.innerHTML = html;
 }
 
+// 他のユーザーの検索ワードを取得
+async function loadRecentSearches() {
+  try {
+    const response = await fetch('/api/recent-searches');
+    if (!response.ok) return;
+    
+    const data = await response.json();
+    if (data.searches && data.searches.length > 0) {
+      displayRecentSearches(data.searches);
+      recentSearchesDiv.classList.remove('hidden');
+    } else {
+      recentSearchesDiv.classList.add('hidden');
+    }
+  } catch (error) {
+    console.error('❌ 最近の検索取得エラー:', error);
+    recentSearchesDiv.classList.add('hidden');
+  }
+}
+
+// 他のユーザーの検索ワードを表示
+function displayRecentSearches(searches) {
+  const html = searches.map(search => `
+    <div class="recent-search-item" onclick="searchInput.value='${escapeHtml(search.query)}'; searchVideos('${escapeHtml(search.query)}')">
+      <span class="recent-search-query">${escapeHtml(search.query)}</span>
+      <span class="recent-search-time">${search.timeAgo}</span>
+    </div>
+  `).join('');
+  
+  recentSearchesList.innerHTML = html;
+}
+
+// ページ読み込み時に他のユーザーの検索ワードを取得
+loadRecentSearches();
+
+// 定期的に他のユーザーの検索ワードを更新（30秒ごと）
+setInterval(loadRecentSearches, 30000);
+
 // 動画サイトごとの埋め込み対応状況を判定（緩和版）
 // 基本的には埋め込みを試み、エラーが発生した場合のみ元のURLにリンク
 function isEmbeddable(url, source) {
