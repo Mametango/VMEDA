@@ -440,13 +440,17 @@ body {
     width: 100%;
     margin: 10px 0;
     padding: 0;
+    padding-top: 56.25% !important; /* 16:9 アスペクト比を強制 */
+    height: 0 !important;
+    position: relative;
   }
 
   .video-thumbnail-wrapper {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
-    height: auto;
-    padding-top: 56.25%; /* 16:9 */
+    height: 100%;
   }
 
   .sort-container {
