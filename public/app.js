@@ -87,6 +87,11 @@ async function searchVideos(query) {
     }
     
     displayResults(data.results || [], query.trim());
+    
+    // 検索実行後、検索履歴を更新
+    setTimeout(() => {
+      loadRecentSearches();
+    }, 1000);
   } catch (error) {
     console.error('❌ 検索エラー:', error);
     resultsDiv.innerHTML = `<div class="error">検索エラー: ${error.message}</div>`;
@@ -135,22 +140,31 @@ function displayResults(videos, searchQuery) {
   resultsDiv.innerHTML = html;
 }
 
-// 他のユーザーの検索ワードを取得
+// 検索履歴を取得
 async function loadRecentSearches() {
   try {
+    console.log('📋 検索履歴を取得中...');
     const response = await fetch('/api/recent-searches');
-    if (!response.ok) return;
+    if (!response.ok) {
+      console.error('❌ 検索履歴取得エラー:', response.status, response.statusText);
+      return;
+    }
     
     const data = await response.json();
+    console.log('📋 検索履歴取得:', data.searches?.length || 0, '件');
+    
     if (data.searches && data.searches.length > 0) {
       displayRecentSearches(data.searches);
+      recentSearchesDiv.classList.remove('hidden');
     } else {
       // 検索履歴がない場合でも表示（空のメッセージを表示）
       displayRecentSearches([]);
+      recentSearchesDiv.classList.remove('hidden');
     }
   } catch (error) {
-    console.error('❌ 最近の検索取得エラー:', error);
+    console.error('❌ 検索履歴取得エラー:', error);
     displayRecentSearches([]);
+    recentSearchesDiv.classList.remove('hidden');
   }
 }
 
