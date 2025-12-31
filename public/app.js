@@ -212,14 +212,24 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
     hasError = true;
     if (errorTimeout) clearTimeout(errorTimeout);
     
-    container.innerHTML = `
-      <div class="player-error">
-        <p>⚠️ 動画を読み込めませんでした</p>
-        <p class="error-detail">サーバーまたはネットワークの問題、またはフォーマットがサポートされていない可能性があります。</p>
-        <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
-        <button class="retry-btn" onclick="showPlayer('${videoId}', '${escapeHtml(embedUrl)}', '${escapeHtml(originalUrl)}', '${source || ''}')">再試行</button>
-      </div>
-    `;
+    // iOS Safariでは、iframeにアクセスできない場合でも正常に動作している可能性があるため、
+    // エラー表示の前にiframeが表示されているか確認
+    setTimeout(() => {
+      const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
+      if (iframeVisible) {
+        console.log('ℹ️ iframeは表示されているため、エラー表示をスキップ');
+        return;
+      }
+      
+      container.innerHTML = `
+        <div class="player-error">
+          <p>⚠️ 動画を読み込めませんでした</p>
+          <p class="error-detail">サーバーまたはネットワークの問題、またはフォーマットがサポートされていない可能性があります。</p>
+          <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
+          <button class="retry-btn" onclick="showPlayer('${videoId}', '${escapeHtml(embedUrl)}', '${escapeHtml(originalUrl)}', '${source || ''}')">再試行</button>
+        </div>
+      `;
+    }, 2000);
   };
   
   // iframeのエラーイベント
