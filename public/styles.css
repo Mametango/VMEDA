@@ -460,6 +460,22 @@ body {
     font-size: 13px;
   }
 
+  .sort-container {
+    padding: 12px;
+    gap: 8px;
+    margin: 15px 0;
+  }
+
+  .sort-label {
+    font-size: 13px;
+  }
+
+  .sort-select {
+    padding: 8px 12px;
+    font-size: 13px;
+    max-width: 100%;
+  }
+
   .search-container {
     flex-direction: column;
     gap: 10px;
