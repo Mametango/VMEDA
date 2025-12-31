@@ -617,8 +617,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     }
     
     console.log('📺 Bilibili埋め込みURL:', normalizedUrl);
-    console.log('📱 iPhone判定:', isIOSDevice);
-    console.log('📱 User-Agent:', navigator.userAgent);
   }
   
   // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
@@ -632,16 +630,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   } else if (isIOSDevice && source === 'bilibili') {
     // Bilibiliの場合は直接埋め込みURLを使用（プロキシ経由では動作しない）
     console.log('📱 iPhone/iOS + Bilibili: 直接埋め込みURLを使用:', normalizedUrl);
-    console.log('📱 iPhone/iOS + Bilibili: デバッグ情報:', {
-      embedUrl: embedUrl,
-      originalUrl: originalUrl,
-      normalizedUrl: normalizedUrl,
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
-      vendor: navigator.vendor,
-      isIPhone: isIOSDevice,
-      browser: navigator.userAgent.includes('Brave') ? 'Brave' : 'Other'
-    });
   }
   
   // Bilibiliの場合は、iPhone/Braveブラウザで特別な設定
@@ -743,17 +731,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     
     // Bilibiliの場合は、特別な処理を行う
     if (source === 'bilibili') {
-      const isIOSDeviceForBilibili = isIPhone();
-      console.log('📺 Bilibili動画の読み込み完了を検出:', {
-        isIPhone: isIOSDeviceForBilibili,
-        browser: navigator.userAgent.includes('Brave') ? 'Brave' : 'Other',
-        iframeSrc: iframe.src,
-        iframeWidth: iframe.offsetWidth,
-        iframeHeight: iframe.offsetHeight,
-        containerWidth: container.offsetWidth,
-        containerHeight: container.offsetHeight,
-        userAgent: navigator.userAgent
-      });
       // BilibiliのプレイヤーはJavaScriptで動的に読み込まれるため、
       // 少し待ってからエラーチェックを行う
       setTimeout(() => {
@@ -762,14 +739,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
           if (iframeDoc) {
             const bodyText = iframeDoc.body?.innerText || '';
             const bodyHTML = iframeDoc.body?.innerHTML || '';
-            console.log('📺 Bilibili iframeコンテンツ確認:', {
-              bodyTextLength: bodyText.length,
-              bodyHTMLLength: bodyHTML.length,
-              hasError: bodyText.includes('could not be loaded') || 
-                        bodyText.includes('not supported') ||
-                        bodyText.includes('network failed') ||
-                        bodyText.includes('server failed')
-            });
             
             // エラーメッセージを検出
             if (bodyText.includes('could not be loaded') || 
@@ -778,25 +747,11 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
                 bodyText.includes('server failed') ||
                 bodyHTML.includes('could not be loaded') ||
                 bodyHTML.includes('not supported')) {
-              console.error('❌ Bilibili動画のエラーを検出');
               showError();
-            } else {
-              console.log('✅ Bilibili iframeコンテンツ確認完了');
             }
-          } else {
-            // iOS SafariではCORSでアクセスできない場合が多いが、正常に動作している可能性がある
-            console.log('ℹ️ Bilibili iframeにアクセスできません（CORS）:', {
-              isIPhone: isIPhone(),
-              iframeVisible: iframe.offsetWidth > 0 && iframe.offsetHeight > 0,
-              iframeWidth: iframe.offsetWidth,
-              iframeHeight: iframe.offsetHeight,
-              containerWidth: container.offsetWidth,
-              containerHeight: container.offsetHeight
-            });
           }
         } catch (e) {
-          // CORSエラーは無視
-          console.log('ℹ️ Bilibili iframeアクセスエラー（CORS）:', e.message);
+          // CORSエラーは無視（iOS Safariでは正常な場合が多い）
         }
       }, 3000); // Bilibiliの場合は3秒待つ
     } else {
@@ -854,16 +809,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
     const containerVisible = container.offsetWidth > 0 && container.offsetHeight > 0;
     
-    console.log('🔍 iframe状態確認（タイムアウト）:', {
-      source: source,
-      isIPhone: isIPhone(),
-      iframeVisible,
-      containerVisible,
-      iframeWidth: iframe.offsetWidth,
-      iframeHeight: iframe.offsetHeight,
-      containerWidth: container.offsetWidth,
-      containerHeight: container.offsetHeight
-    });
     
     // iframeが表示されていない場合はエラー
     if (!iframeVisible || !containerVisible) {
