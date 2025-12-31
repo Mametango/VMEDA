@@ -124,8 +124,25 @@ function displayResults(videos, searchQuery) {
   }
 
   const html = videos.map(video => {
-    const thumbnail = video.thumbnail || '';
-    const hasThumbnail = thumbnail && thumbnail.length > 0 && thumbnail.startsWith('http');
+    // サムネイルURLを正規化（相対パスを絶対URLに変換）
+    let thumbnail = video.thumbnail || '';
+    if (thumbnail) {
+      // 相対パス（//で始まる）をhttps:に変換
+      if (thumbnail.startsWith('//')) {
+        thumbnail = 'https:' + thumbnail;
+      }
+      // 相対パス（/で始まる）を絶対URLに変換
+      else if (thumbnail.startsWith('/') && !thumbnail.startsWith('http')) {
+        const url = new URL(video.url || 'https://example.com');
+        thumbnail = url.origin + thumbnail;
+      }
+      // http://で始まる場合はhttps://に変換（セキュリティのため）
+      else if (thumbnail.startsWith('http://')) {
+        thumbnail = thumbnail.replace('http://', 'https://');
+      }
+    }
+    
+    const hasThumbnail = thumbnail && thumbnail.length > 0 && (thumbnail.startsWith('http://') || thumbnail.startsWith('https://') || thumbnail.startsWith('data:'));
     
     const duration = video.duration || '';
     const showDuration = duration && duration.trim().length > 0;
@@ -142,8 +159,8 @@ function displayResults(videos, searchQuery) {
       <div class="video-player-container" id="player-${video.id}">
         ${hasThumbnail ? `
           <div class="video-thumbnail-wrapper" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}')">
-            <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" class="video-thumbnail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="play-overlay">
+            <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" class="video-thumbnail" loading="lazy" onerror="this.onerror=null; this.style.display='none'; const overlay = this.nextElementSibling; if(overlay) overlay.style.display='flex';">
+            <div class="play-overlay" style="display: none;">
               <button class="play-btn-thumbnail">▶</button>
             </div>
           </div>

@@ -279,6 +279,12 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+  background: #1a1a1a;
+  transition: opacity 0.3s ease;
+}
+
+.video-thumbnail[src=""] {
+  display: none;
 }
 
 .play-overlay {

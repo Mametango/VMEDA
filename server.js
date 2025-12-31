@@ -253,10 +253,33 @@ function extractTitle($, $elem) {
 }
 
 function extractThumbnail($, $elem) {
-  return $elem.find('img').attr('src') || 
-         $elem.find('img').attr('data-src') ||
-         $elem.find('img').attr('data-lazy-src') ||
-         $elem.closest('.g').find('img').attr('src') || '';
+  // 複数の属性を試す（lazy loading対応）
+  const thumbnail = $elem.find('img').attr('src') || 
+                    $elem.find('img').attr('data-src') ||
+                    $elem.find('img').attr('data-lazy-src') ||
+                    $elem.find('img').attr('data-original') ||
+                    $elem.find('img').attr('data-thumbnail') ||
+                    $elem.closest('.g').find('img').attr('src') ||
+                    $elem.closest('.g').find('img').attr('data-src') ||
+                    '';
+  
+  // サムネイルURLを正規化
+  if (thumbnail) {
+    // 相対パス（//で始まる）をhttps:に変換
+    if (thumbnail.startsWith('//')) {
+      return 'https:' + thumbnail;
+    }
+    // 相対パス（/で始まる）はそのまま返す（フロントエンドで処理）
+    if (thumbnail.startsWith('/') && !thumbnail.startsWith('http')) {
+      return thumbnail;
+    }
+    // http://で始まる場合はhttps://に変換
+    if (thumbnail.startsWith('http://')) {
+      return thumbnail.replace('http://', 'https://');
+    }
+  }
+  
+  return thumbnail;
 }
 
 function extractDurationFromHtml($, $elem) {
