@@ -697,6 +697,140 @@ searchInput.addEventListener('keypress', (e) => {
   }
 });
 
+// 広告の読み込み（環境変数または設定から）
+async function loadAds() {
+  // サーバーから広告設定を取得
+  let adClientId = '';
+  let adSlotHeader = '';
+  let adSlotFooter = '';
+  let adSlotInContent = '';
+  
+  try {
+    const response = await fetch('/api/ad-config');
+    if (response.ok) {
+      const config = await response.json();
+      adClientId = config.adClientId || '';
+      adSlotHeader = config.adSlotHeader || '';
+      adSlotFooter = config.adSlotFooter || '';
+      adSlotInContent = config.adSlotInContent || '';
+    }
+  } catch (error) {
+    console.log('ℹ️ 広告設定の取得に失敗:', error);
+  }
+  
+  // フォールバック: グローバル変数から取得
+  if (!adClientId) {
+    adClientId = window.AD_CLIENT_ID || '';
+    adSlotHeader = window.AD_SLOT_HEADER || '';
+    adSlotFooter = window.AD_SLOT_FOOTER || '';
+    adSlotInContent = window.AD_SLOT_IN_CONTENT || '';
+  }
+  
+  if (!adClientId) {
+    console.log('ℹ️ 広告クライアントIDが設定されていません');
+    return;
+  }
+  
+  // グローバル変数に設定（後で使用するため）
+  window.AD_CLIENT_ID = adClientId;
+  window.AD_SLOT_HEADER = adSlotHeader;
+  window.AD_SLOT_FOOTER = adSlotFooter;
+  window.AD_SLOT_IN_CONTENT = adSlotInContent;
+  
+  // Google AdSenseスクリプトを読み込む
+  if (!document.querySelector('script[src*="adsbygoogle"]')) {
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClientId}`;
+    script.crossOrigin = 'anonymous';
+    document.head.appendChild(script);
+  }
+  
+  // ヘッダー下の広告
+  if (adSlotHeader) {
+    const adHeader = document.getElementById('ad-header');
+    if (adHeader) {
+      adHeader.innerHTML = `
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="${adClientId}"
+             data-ad-slot="${adSlotHeader}"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+      `;
+      try {
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      } catch (e) {
+        console.log('ℹ️ 広告の読み込みエラー:', e);
+      }
+    }
+  }
+  
+  // フッター上の広告
+  if (adSlotFooter) {
+    const adFooter = document.getElementById('ad-footer');
+    if (adFooter) {
+      adFooter.innerHTML = `
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="${adClientId}"
+             data-ad-slot="${adSlotFooter}"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+      `;
+      try {
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      } catch (e) {
+        console.log('ℹ️ 広告の読み込みエラー:', e);
+      }
+    }
+  }
+}
+
+// 検索結果の間に広告を挿入
+function insertAdsInResults() {
+  const adClientId = window.AD_CLIENT_ID || '';
+  const adSlotInContent = window.AD_SLOT_IN_CONTENT || '';
+  
+  if (!adClientId || !adSlotInContent) {
+    return;
+  }
+  
+  const videoItems = document.querySelectorAll('.video-item');
+  if (videoItems.length === 0) return;
+  
+  // 5件ごとに広告を挿入（最初の広告は3件目以降）
+  for (let i = 3; i < videoItems.length; i += 5) {
+    const adDiv = document.createElement('div');
+    adDiv.className = 'ad-container ad-in-content';
+    adDiv.innerHTML = `
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="${adClientId}"
+           data-ad-slot="${adSlotInContent}"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+    `;
+    
+    videoItems[i].parentNode.insertBefore(adDiv, videoItems[i].nextSibling);
+    
+    try {
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      console.log('ℹ️ 広告の読み込みエラー:', e);
+    }
+  }
+}
+
+// ページ読み込み時に広告を読み込む
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    loadAds();
+  });
+} else {
+  loadAds();
+}
+
 // ソート選択時の処理
 if (sortSelect) {
   sortSelect.addEventListener('change', (e) => {
