@@ -9,11 +9,10 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 他のユーザーの検索ワードを保存（メモリ内、最大100件）
+// 他のユーザーの検索ワードを保存（メモリ内、最大30件）
 // 重複を避けるため、同じ検索ワードは最新のもののみ残す
 const recentSearches = [];
-const MAX_RECENT_SEARCHES = 100;
-const DISPLAY_COUNT = 30; // 表示する検索ワードの数
+const MAX_RECENT_SEARCHES = 30; // 30個だけ保持
 
 // セキュリティミドルウェア
 app.use(helmet({
@@ -191,7 +190,7 @@ app.post('/api/search', async (req, res) => {
     const sanitizedQuery = validation.query;
     console.log(`🔍 検索開始: "${sanitizedQuery}"`);
     
-    // 検索ワードを保存（他のユーザー向け）
+    // 検索ワードを保存（他のユーザー向け、最大30個）
     const searchEntry = {
       query: sanitizedQuery,
       timestamp: Date.now(),
@@ -205,7 +204,7 @@ app.post('/api/search', async (req, res) => {
     }
     
     recentSearches.unshift(searchEntry); // 先頭に追加
-    // 最大件数を超えた場合は古いものを削除
+    // 30個を超えた場合は古いものを削除（31個目以降は消える）
     if (recentSearches.length > MAX_RECENT_SEARCHES) {
       recentSearches.pop();
     }
@@ -1257,7 +1256,7 @@ app.get('/api/recent-searches', (req, res) => {
     const clientIp = req.ip || req.connection.remoteAddress;
     const otherSearches = recentSearches
       .filter(entry => entry.ip !== clientIp) // 自分の検索は除外
-      .slice(0, DISPLAY_COUNT) // 最大30件
+      .slice(0, MAX_RECENT_SEARCHES) // 最大30件
       .map(entry => ({
         query: entry.query,
         timestamp: entry.timestamp,

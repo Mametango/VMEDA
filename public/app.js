@@ -110,7 +110,6 @@ function displayResults(videos, searchQuery) {
   const html = `
     <div class="search-query-display">
       <p class="search-query-text">検索ワード: <span class="search-query-value">${escapeHtml(searchQuery || '')}</span></p>
-      <p class="search-results-count">${videos.length}件の結果</p>
     </div>
     ${videos.map(video => {
     const thumbnail = video.thumbnail || '';
