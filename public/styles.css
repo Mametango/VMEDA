@@ -590,6 +590,22 @@ body {
     background: #000;
     border-radius: 8px;
     overflow: hidden;
+    /* iPhone Safariで確実に表示されるように */
+    min-height: 200px;
+    display: block;
+  }
+
+  .video-player {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    /* iPhone Safariで確実に表示されるように */
+    display: block;
+    -webkit-transform: translateZ(0); /* ハードウェアアクセラレーション */
+    transform: translateZ(0);
   }
 
   .video-thumbnail-wrapper {
@@ -602,6 +618,8 @@ body {
     max-height: 100%;
     border-radius: 8px;
     overflow: hidden;
+    /* iPhone Safariで確実に表示されるように */
+    min-height: 200px;
   }
 
   .open-original-btn,
