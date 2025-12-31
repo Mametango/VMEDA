@@ -14,17 +14,24 @@
 ### 2. Vercel KVを使用（推奨）
 Vercel KVが見つからない場合：
 
-1. **Vercelダッシュボードで確認**
+1. **Marketplace経由で作成（最新・推奨）**
+   - プロジェクトを選択
+   - 「Marketplace」タブをクリック
+   - 「KV」または「Redis」を検索
+   - 「Add Integration」をクリック
+
+2. **Vercelダッシュボードで確認**
    - プロジェクトを選択
    - 左側のメニューから「Storage」を探す
    - または「Settings」→「Storage」を確認
 
-2. **Storageタブが見つからない場合**
+3. **Storageタブが見つからない場合**
+   - Marketplace経由で作成を試す
    - Vercelのアカウント設定を確認
    - 無料プラン（Hobby）でも利用可能なはずです
    - ブラウザをリフレッシュしてみる
 
-3. **別の方法でKVデータベースを作成**
+4. **別の方法でKVデータベースを作成**
    - Vercel CLIを使用：
      ```bash
      vercel kv create vmeda-kv
