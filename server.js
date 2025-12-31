@@ -3,18 +3,55 @@ const cors = require('cors');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const path = require('path');
+const fs = require('fs');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// このサイトを通して検索したワードを保存（メモリ内、最新30個を保持）
+// このサイトを通して検索したワードを保存（ファイルに永続化、最新30個を保持）
 // 重複を避けるため、同じ検索ワードは最新のもののみ残す
 // 30個を超えると古いものから自動的に削除される
 // 自分の検索も含めて、すべての検索ワードを履歴として残す
-const recentSearches = [];
 const MAX_RECENT_SEARCHES = 30; // 最新30個だけ保持
+const SEARCHES_FILE = path.join(__dirname, 'data', 'recent-searches.json');
+
+// 検索履歴をファイルから読み込む
+function loadRecentSearchesFromFile() {
+  try {
+    if (fs.existsSync(SEARCHES_FILE)) {
+      const data = fs.readFileSync(SEARCHES_FILE, 'utf8');
+      const searches = JSON.parse(data);
+      console.log(`📂 検索履歴をファイルから読み込み: ${searches.length}件`);
+      return Array.isArray(searches) ? searches : [];
+    }
+  } catch (error) {
+    console.error('❌ 検索履歴の読み込みエラー:', error);
+  }
+  return [];
+}
+
+// 検索履歴をファイルに保存
+function saveRecentSearchesToFile(searches) {
+  try {
+    // dataディレクトリが存在しない場合は作成
+    const dataDir = path.dirname(SEARCHES_FILE);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    // 最新30個だけ保存
+    const searchesToSave = searches.slice(0, MAX_RECENT_SEARCHES);
+    fs.writeFileSync(SEARCHES_FILE, JSON.stringify(searchesToSave, null, 2), 'utf8');
+    console.log(`💾 検索履歴をファイルに保存: ${searchesToSave.length}件`);
+  } catch (error) {
+    console.error('❌ 検索履歴の保存エラー:', error);
+  }
+}
+
+// サーバー起動時にファイルから検索履歴を読み込む
+let recentSearches = loadRecentSearchesFromFile();
 
 // セキュリティミドルウェア
 app.use(helmet({
@@ -213,6 +250,9 @@ app.post('/api/search', async (req, res) => {
     if (recentSearches.length > MAX_RECENT_SEARCHES) {
       recentSearches.splice(MAX_RECENT_SEARCHES); // 30個目以降を削除
     }
+    
+    // ファイルに保存（永続化）
+    saveRecentSearchesToFile(recentSearches);
     
     console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${recentSearches.length}件)`);
     
