@@ -293,14 +293,6 @@ body {
   margin-bottom: 30px;
 }
 
-.recent-searches-title {
-  color: white;
-  font-size: 18px;
-  margin-bottom: 15px;
-  text-align: center;
-  font-weight: bold;
-}
-
 .recent-searches-list {
   display: flex;
   flex-direction: column;
@@ -377,11 +369,6 @@ body {
   .recent-searches {
     padding: 15px;
     margin-bottom: 20px;
-  }
-
-  .recent-searches-title {
-    font-size: 16px;
-    margin-bottom: 12px;
   }
 
   .recent-searches-list {
