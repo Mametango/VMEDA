@@ -331,8 +331,8 @@ app.post('/api/search', async (req, res) => {
       recentSearches.splice(MAX_RECENT_SEARCHES); // 30個目以降を削除
     }
     
-    // Vercel KVに保存（永続化、フォールバックはファイル）
-    await saveRecentSearchesToKV(recentSearches);
+    // MongoDBに保存（永続化）
+    await saveRecentSearchesToMongoDB(recentSearches);
     
     console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${recentSearches.length}件)`);
     
@@ -1404,8 +1404,8 @@ async function searchSohu(query) {
 // 検索履歴を取得するAPI（このサイトを通して検索したワードを最新30個返す）
 app.get('/api/recent-searches', async (req, res) => {
   try {
-    // Vercel KVから最新の検索履歴を読み込む（フォールバックはファイル）
-    const allSearches = await loadRecentSearchesFromKV();
+    // MongoDBから最新の検索履歴を読み込む
+    const allSearches = await loadRecentSearchesFromMongoDB();
     
     // このサイトを通して検索したワードを最新30個返す
     // 自分の検索も他の人の検索も含めて、すべての検索ワードを履歴として表示
