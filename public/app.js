@@ -180,14 +180,16 @@ function displayResults(videos, searchQuery) {
   // 動画プレイヤーコンテナにタッチイベントリスナーを追加
   document.querySelectorAll('.video-thumbnail-wrapper, .play-btn').forEach(element => {
     // タッチイベントを検出してクリックイベントとして処理
-    element.addEventListener('touchstart', function(e) {
-      // タッチイベントをクリックイベントとして扱う
+    element.addEventListener('touchend', function(e) {
+      // タッチイベントをクリックイベントとして扱う（ユーザーの直接的な操作として）
       e.preventDefault();
-      // クリックイベントを発火
+      // クリックイベントを発火（ユーザーの直接的な操作として扱う）
       const clickEvent = new MouseEvent('click', {
         bubbles: true,
         cancelable: true,
-        view: window
+        view: window,
+        detail: 1,
+        buttons: 1
       });
       this.dispatchEvent(clickEvent);
     }, { passive: false });
