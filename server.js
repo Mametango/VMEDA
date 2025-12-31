@@ -212,6 +212,16 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
+// 広告設定を提供するAPI（環境変数から）
+app.get('/api/ad-config', (req, res) => {
+  res.json({
+    adClientId: process.env.AD_CLIENT_ID || '',
+    adSlotHeader: process.env.AD_SLOT_HEADER || '',
+    adSlotFooter: process.env.AD_SLOT_FOOTER || '',
+    adSlotInContent: process.env.AD_SLOT_IN_CONTENT || ''
+  });
+});
+
 // 静的ファイルの明示的なルーティング（Vercel用）
 app.get('/app.js', (req, res) => {
   console.log('📄 app.js リクエスト受信');

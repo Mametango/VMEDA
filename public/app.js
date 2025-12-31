@@ -158,6 +158,9 @@ function displayResults(videos, searchQuery) {
   }).join('');
 
   resultsDiv.innerHTML = html;
+  
+  // 検索結果表示後、広告を検索結果の間に挿入
+  insertAdsInResults();
 }
 
 // 再生時間を秒に変換する関数
