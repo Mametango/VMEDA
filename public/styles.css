@@ -374,23 +374,6 @@ body {
     margin-bottom: 20px;
   }
 
-  .search-query-display {
-    padding: 15px;
-    margin-bottom: 20px;
-  }
-
-  .search-query-text {
-    font-size: 16px;
-  }
-
-  .search-query-value {
-    font-size: 18px;
-  }
-
-  .search-results-count {
-    font-size: 12px;
-  }
-
   .recent-searches {
     padding: 15px;
     margin-bottom: 20px;
