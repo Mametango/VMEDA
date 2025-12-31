@@ -133,6 +133,35 @@ let recentSearches = [];
   recentSearches = await loadRecentSearchesFromMongoDB();
 })();
 
+// 検索履歴のキャッシュ（高速化のため）
+let recentSearchesCache = null;
+let recentSearchesCacheTime = 0;
+const CACHE_DURATION = 5000; // 5秒間キャッシュ（MongoDBへの負荷を軽減）
+
+// キャッシュ付きで検索履歴を取得
+async function getRecentSearchesCached() {
+  const now = Date.now();
+  // キャッシュが有効な場合はキャッシュを返す
+  if (recentSearchesCache && (now - recentSearchesCacheTime) < CACHE_DURATION) {
+    console.log('📋 検索履歴をキャッシュから取得');
+    return recentSearchesCache;
+  }
+  
+  // キャッシュが無効な場合はMongoDBから取得
+  const searches = await loadRecentSearchesFromMongoDB();
+  recentSearchesCache = searches;
+  recentSearchesCacheTime = now;
+  console.log('📋 検索履歴をMongoDBから取得（キャッシュ更新）');
+  return searches;
+}
+
+// 検索履歴が更新されたときにキャッシュを無効化
+function invalidateRecentSearchesCache() {
+  recentSearchesCache = null;
+  recentSearchesCacheTime = 0;
+  console.log('📋 検索履歴キャッシュを無効化');
+}
+
 // セキュリティミドルウェア
 app.use(helmet({
   contentSecurityPolicy: {
@@ -367,6 +396,10 @@ app.post('/api/search', async (req, res) => {
     
     // MongoDBに保存（永続化）
     await saveRecentSearchesToMongoDB(currentSearches);
+    
+    // キャッシュを更新（次回の取得を高速化）
+    recentSearchesCache = currentSearches;
+    recentSearchesCacheTime = Date.now();
     
     console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${currentSearches.length}件)`);
     
@@ -1438,8 +1471,8 @@ async function searchSohu(query) {
 // 検索履歴を取得するAPI（このサイトを通して検索したワードを最新30個返す）
 app.get('/api/recent-searches', async (req, res) => {
   try {
-    // MongoDBから最新の検索履歴を読み込む
-    const allSearches = await loadRecentSearchesFromMongoDB();
+    // キャッシュ付きで検索履歴を取得（高速化）
+    const allSearches = await getRecentSearchesCached();
     
     // このサイトを通して検索したワードを最新30個返す
     // 自分の検索も他の人の検索も含めて、すべての検索ワードを履歴として表示
@@ -1454,6 +1487,13 @@ app.get('/api/recent-searches', async (req, res) => {
     if (searches.length > 0) {
       console.log(`📋 検索履歴サンプル: ${searches.slice(0, 3).map(s => s.query).join(', ')}`);
     }
+    
+    // キャッシュヘッダーを追加（クライアント側のキャッシュを有効化）
+    res.set({
+      'Cache-Control': 'public, max-age=5', // 5秒間キャッシュ
+      'ETag': `"${searches.length}-${Date.now()}"` // ETagでキャッシュ検証
+    });
+    
     res.json({ searches: searches });
   } catch (error) {
     console.error('❌ 検索履歴取得エラー:', error);
