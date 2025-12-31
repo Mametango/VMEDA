@@ -712,10 +712,25 @@ body {
 @supports (-webkit-touch-callout: none) {
   body {
     min-height: -webkit-fill-available;
+    /* iPhone Safariで確実に動作するように */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   .search-input {
     font-size: 16px; /* 自動ズームを防ぐ */
+  }
+  
+  .video-player-container {
+    /* iPhone Safariで確実に表示されるように */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+  
+  .video-player {
+    /* iPhone Safariで確実に表示されるように */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
