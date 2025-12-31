@@ -1255,18 +1255,17 @@ async function searchSohu(query) {
 // 他のユーザーの検索ワードを取得するAPI
 app.get('/api/recent-searches', (req, res) => {
   try {
-    // 最近の検索ワードを返す（最大30件、自分のIPを除外）
-    const clientIp = req.ip || req.connection.remoteAddress;
-    const otherSearches = recentSearches
-      .filter(entry => entry.ip !== clientIp) // 自分の検索は除外
-      .slice(0, MAX_RECENT_SEARCHES) // 最大30件
+    // 最近の検索ワードを返す（常に30件表示、自分のIPも含む）
+    // 最新30件をそのまま返す（自分の検索も含めて表示）
+    const searches = recentSearches
+      .slice(0, MAX_RECENT_SEARCHES) // 最新30件
       .map(entry => ({
         query: entry.query,
         timestamp: entry.timestamp,
         timeAgo: getTimeAgo(entry.timestamp)
       }));
     
-    res.json({ searches: otherSearches });
+    res.json({ searches: searches });
   } catch (error) {
     console.error('❌ 最近の検索取得エラー:', error);
     res.status(500).json({ error: '検索履歴の取得に失敗しました' });

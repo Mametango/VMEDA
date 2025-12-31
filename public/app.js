@@ -144,13 +144,13 @@ async function loadRecentSearches() {
     const data = await response.json();
     if (data.searches && data.searches.length > 0) {
       displayRecentSearches(data.searches);
-      recentSearchesDiv.classList.remove('hidden');
     } else {
-      recentSearchesDiv.classList.add('hidden');
+      // 検索履歴がない場合でも表示（空のメッセージを表示）
+      displayRecentSearches([]);
     }
   } catch (error) {
     console.error('❌ 最近の検索取得エラー:', error);
-    recentSearchesDiv.classList.add('hidden');
+    displayRecentSearches([]);
   }
 }
 
