@@ -84,7 +84,7 @@ async function searchVideos(query) {
       console.warn('⚠️ 検索結果が空です。テストデータが返されているか確認してください。');
     }
     
-    displayResults(data.results || []);
+    displayResults(data.results || [], query.trim());
   } catch (error) {
     console.error('❌ 検索エラー:', error);
     resultsDiv.innerHTML = `<div class="error">検索エラー: ${error.message}</div>`;
@@ -94,13 +94,23 @@ async function searchVideos(query) {
 }
 
 // 結果表示
-function displayResults(videos) {
+function displayResults(videos, searchQuery) {
   if (videos.length === 0) {
-    resultsDiv.innerHTML = '<div class="no-results">検索結果が見つかりませんでした</div>';
+    resultsDiv.innerHTML = `
+      <div class="search-query-display">
+        <p class="search-query-text">検索ワード: <span class="search-query-value">${escapeHtml(searchQuery || '')}</span></p>
+      </div>
+      <div class="no-results">検索結果が見つかりませんでした</div>
+    `;
     return;
   }
 
-  const html = videos.map(video => {
+  const html = `
+    <div class="search-query-display">
+      <p class="search-query-text">検索ワード: <span class="search-query-value">${escapeHtml(searchQuery || '')}</span></p>
+      <p class="search-results-count">${videos.length}件の結果</p>
+    </div>
+    ${videos.map(video => {
     const thumbnail = video.thumbnail || '';
     const hasThumbnail = thumbnail && thumbnail.length > 0 && thumbnail.startsWith('http');
     
@@ -126,7 +136,8 @@ function displayResults(videos) {
       </div>
     </div>
   `;
-  }).join('');
+    }).join('')}
+  `;
 
   resultsDiv.innerHTML = html;
 }
