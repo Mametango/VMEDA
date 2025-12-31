@@ -158,14 +158,14 @@ function displayResults(videos, searchQuery) {
       </div>
       <div class="video-player-container" id="player-${video.id}">
         ${hasThumbnail ? `
-          <div class="video-thumbnail-wrapper" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}')">
+          <div class="video-thumbnail-wrapper" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}', event)">
             <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" class="video-thumbnail" loading="lazy" onerror="this.onerror=null; this.style.display='none'; const overlay = this.nextElementSibling; if(overlay) { overlay.style.display='flex'; overlay.style.opacity='1'; }">
             <div class="play-overlay">
               <button class="play-btn-thumbnail">▶</button>
             </div>
           </div>
         ` : `
-          <button class="play-btn" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}')">
+          <button class="play-btn" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}', event)">
             ▶ 再生
           </button>
         `}
@@ -500,13 +500,21 @@ function isIPhone() {
 }
 
 // プレイヤー表示（グローバルスコープに公開）
-window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
+window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   console.log('▶ プレイヤー表示:', videoId, embedUrl, 'source:', source);
   const container = document.getElementById(`player-${videoId}`);
   
   if (!container) {
     console.error('❌ プレイヤーコンテナが見つかりません:', `player-${videoId}`);
     return;
+  }
+  
+  // iPhone Safariで動画を再生するため、ユーザーの直接的な操作として扱う
+  // イベントが存在する場合（タッチ/クリックイベント）、そのコンテキスト内で処理
+  if (event) {
+    // イベントを保持して、ユーザーの直接的な操作として扱う
+    event.preventDefault();
+    event.stopPropagation();
   }
   
   // iPhoneでもデスクトップと同じ埋め込み動画プレイヤーを使用
