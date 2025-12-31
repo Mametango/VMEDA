@@ -1600,6 +1600,43 @@ function getTimeAgo(timestamp) {
   }
 }
 
+// 動画プロキシエンドポイント（iPhoneでデスクトップに偽装）
+app.get('/api/proxy-video', async (req, res) => {
+  try {
+    const videoUrl = req.query.url;
+    if (!videoUrl) {
+      return res.status(400).json({ error: 'URLパラメータが必要です' });
+    }
+    
+    console.log('📺 動画プロキシリクエスト:', videoUrl);
+    
+    // デスクトップのUser-Agentでリクエスト
+    const response = await axios.get(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Referer': videoUrl,
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000,
+      maxRedirects: 5,
+      responseType: 'arraybuffer'
+    });
+    
+    // レスポンスヘッダーを転送
+    res.set({
+      'Content-Type': response.headers['content-type'] || 'text/html',
+      'Cache-Control': 'public, max-age=3600'
+    });
+    
+    res.send(response.data);
+  } catch (error) {
+    console.error('❌ 動画プロキシエラー:', error.message);
+    res.status(500).json({ error: '動画の取得に失敗しました' });
+  }
+});
+
 // ルートパス - index.htmlを返す
 app.get('/', (req, res) => {
   console.log('🏠 ルートパス リクエスト受信');
