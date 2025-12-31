@@ -343,6 +343,12 @@ body {
   line-height: 1;
 }
 
+/* Bilibiliアイコンのスタイル */
+.play-btn-thumbnail.bilibili-icon {
+  background: rgba(255, 119, 0, 0.9); /* Bilibiliのオレンジ色 */
+  font-size: 40px;
+}
+
 .play-btn-thumbnail:hover {
   transform: scale(1.1);
   background: rgba(102, 126, 234, 1);

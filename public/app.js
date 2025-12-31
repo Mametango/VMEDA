@@ -147,6 +147,10 @@ function displayResults(videos, searchQuery) {
     const duration = video.duration || '';
     const showDuration = duration && duration.trim().length > 0;
     
+    // Bilibiliの動画の場合はアイコンを変更
+    const isBilibili = video.source === 'bilibili';
+    const playIcon = isBilibili ? '📺' : '▶';
+    
     return `
     <div class="video-item">
       <div class="video-header">
@@ -161,12 +165,12 @@ function displayResults(videos, searchQuery) {
           <div class="video-thumbnail-wrapper" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}', event)">
             <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" class="video-thumbnail" loading="lazy" onerror="this.onerror=null; this.style.display='none'; const overlay = this.nextElementSibling; if(overlay) { overlay.style.display='flex'; overlay.style.opacity='1'; }">
             <div class="play-overlay">
-              <button class="play-btn-thumbnail">▶</button>
+              <button class="play-btn-thumbnail ${isBilibili ? 'bilibili-icon' : ''}">${playIcon}</button>
             </div>
           </div>
         ` : `
           <button class="play-btn" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}', event)">
-            ▶ 再生
+            ${playIcon} 再生
           </button>
         `}
       </div>
