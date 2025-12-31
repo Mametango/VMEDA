@@ -774,12 +774,70 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   container.style.background = '#000';
   container.style.borderRadius = '8px';
   container.style.overflow = 'hidden';
+  
+  // デバッグ情報を表示する要素を作成（iPhone/Braveブラウザ用）
+  const isIOSDevice = isIPhone();
+  const isBrave = navigator.userAgent.includes('Brave');
+  if (isIOSDevice && source === 'bilibili') {
+    const debugInfo = document.createElement('div');
+    debugInfo.className = 'debug-info';
+    debugInfo.style.cssText = 'position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: #fff; padding: 10px; border-radius: 5px; font-size: 12px; z-index: 1000; max-width: 90%; word-break: break-all;';
+    debugInfo.innerHTML = `
+      <div><strong>🔍 デバッグ情報</strong></div>
+      <div>ブラウザ: ${isBrave ? 'Brave' : 'Other'}</div>
+      <div>デバイス: iPhone/iOS</div>
+      <div>URL: ${normalizedUrl.substring(0, 50)}...</div>
+      <div>iframeサイズ: ${iframe.offsetWidth}x${iframe.offsetHeight}</div>
+      <div>コンテナサイズ: ${container.offsetWidth}x${container.offsetHeight}</div>
+      <div style="margin-top: 5px; font-size: 10px; color: #aaa;">読み込み中...</div>
+    `;
+    container.appendChild(debugInfo);
+    
+    // 5秒後にデバッグ情報を更新
+    setTimeout(() => {
+      if (debugInfo && debugInfo.parentNode) {
+        const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
+        debugInfo.innerHTML = `
+          <div><strong>🔍 デバッグ情報（5秒後）</strong></div>
+          <div>ブラウザ: ${isBrave ? 'Brave' : 'Other'}</div>
+          <div>デバイス: iPhone/iOS</div>
+          <div>URL: ${normalizedUrl.substring(0, 50)}...</div>
+          <div>iframeサイズ: ${iframe.offsetWidth}x${iframe.offsetHeight}</div>
+          <div>コンテナサイズ: ${container.offsetWidth}x${container.offsetHeight}</div>
+          <div style="margin-top: 5px; color: ${iframeVisible ? '#0f0' : '#f00'};">
+            iframe表示: ${iframeVisible ? '✅ 表示中' : '❌ 非表示'}
+          </div>
+        `;
+      }
+    }, 5000);
+    
+    // 15秒後にデバッグ情報を削除（または更新）
+    setTimeout(() => {
+      if (debugInfo && debugInfo.parentNode) {
+        const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
+        if (iframeVisible) {
+          debugInfo.style.display = 'none';
+        } else {
+          debugInfo.innerHTML = `
+            <div><strong>⚠️ 読み込みエラー</strong></div>
+            <div>ブラウザ: ${isBrave ? 'Brave' : 'Other'}</div>
+            <div>iframeが表示されていません</div>
+            <div style="margin-top: 5px; font-size: 10px;">
+              <a href="${originalUrl}" target="_blank" style="color: #4CAF50; text-decoration: underline;">元のサイトで開く</a>
+            </div>
+          `;
+        }
+      }
+    }, 15000);
+  }
+  
   container.appendChild(iframe);
   
   console.log('✅ iframeを作成しました:', {
     src: iframe.src,
     source: source,
-    isIPhone: isIPhone(),
+    isIPhone: isIOSDevice,
+    isBrave: isBrave,
     containerWidth: container.offsetWidth,
     containerHeight: container.offsetHeight,
     iframeWidth: iframe.offsetWidth,
