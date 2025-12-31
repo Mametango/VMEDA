@@ -78,3 +78,4 @@ mongodb+srv://username:password@ac-1awighg-shard-00-00.n6dvuzf.mongodb.net/vmeda
 3. **ネットワークアクセスを確認**
    - 「Network Access」で `0.0.0.0/0` が追加されているか確認
 
+

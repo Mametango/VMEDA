@@ -557,14 +557,19 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     if (normalizedUrl.startsWith('//')) {
       normalizedUrl = 'https:' + normalizedUrl;
     }
+    console.log('📺 Bilibili埋め込みURL:', normalizedUrl);
   }
   
   // iPhoneでデスクトップに偽装するため、プロキシ経由で読み込む
-  if (isIPhone()) {
+  // ただし、Bilibiliの場合はプロキシ経由では動作しないため、直接埋め込みURLを使用
+  if (isIPhone() && source !== 'bilibili') {
     // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
     const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(normalizedUrl)}`;
     normalizedUrl = proxyUrl;
     console.log('📱 iPhone: プロキシ経由で動画を読み込み:', proxyUrl);
+  } else if (isIPhone() && source === 'bilibili') {
+    // Bilibiliの場合は直接埋め込みURLを使用（プロキシ経由では動作しない）
+    console.log('📱 iPhone + Bilibili: 直接埋め込みURLを使用:', normalizedUrl);
   }
   
   iframe.src = normalizedUrl;

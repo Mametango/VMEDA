@@ -68,3 +68,4 @@ Vercelでは、以下のリダイレクトが自動的に設定されます：
 - `vmeda.org`
 - `vmeda.tk` (Freenomで無料)
 
+
