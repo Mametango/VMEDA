@@ -279,31 +279,53 @@ function sortVideos(videos, sortType) {
 }
 
 // 検索履歴を取得（自分の検索も他の人の検索も含む）
+// 現在表示中の検索履歴を保持（更新失敗時も消えないように）
+let currentDisplayedSearches = [];
+
 async function loadRecentSearches() {
   try {
     console.log('📋 検索履歴を取得中...');
     const response = await fetch('/api/recent-searches');
     if (!response.ok) {
       console.error('❌ 検索履歴取得エラー:', response.status, response.statusText);
+      // エラー時は既存の表示を保持
+      if (currentDisplayedSearches.length > 0) {
+        console.log('ℹ️ エラー時は既存の検索履歴を保持します');
+        return;
+      }
+      // 既存の表示がない場合のみ空を表示
+      displayRecentSearches([]);
+      recentSearchesDiv.style.display = 'block';
       return;
     }
     
     const data = await response.json();
-    console.log('📋 検索履歴取得:', data.searches?.length || 0, '件');
-    if (data.searches && data.searches.length > 0) {
-      console.log('📋 検索履歴サンプル:', data.searches.slice(0, 5).map(s => s.query).join(', '));
-    }
+    const searches = data.searches || [];
+    console.log('📋 検索履歴取得:', searches.length, '件');
     
-    // 検索履歴を常に表示（自分の検索も他の人の検索も含む）
-    if (data.searches && data.searches.length > 0) {
-      displayRecentSearches(data.searches);
+    if (searches.length > 0) {
+      console.log('📋 検索履歴サンプル:', searches.slice(0, 5).map(s => s.query).join(', '));
+      // 新しい検索履歴を表示
+      currentDisplayedSearches = searches;
+      displayRecentSearches(searches);
     } else {
-      // 検索履歴がない場合でも表示（空のメッセージを表示）
+      // 検索履歴が空の場合、既存の表示を保持
+      if (currentDisplayedSearches.length > 0) {
+        console.log('ℹ️ 検索履歴が空ですが、既存の表示を保持します');
+        return;
+      }
+      // 既存の表示がない場合のみ空のメッセージを表示
       displayRecentSearches([]);
     }
     recentSearchesDiv.style.display = 'block';
   } catch (error) {
     console.error('❌ 検索履歴取得エラー:', error);
+    // エラー時は既存の表示を保持
+    if (currentDisplayedSearches.length > 0) {
+      console.log('ℹ️ エラー時は既存の検索履歴を保持します');
+      return;
+    }
+    // 既存の表示がない場合のみ空を表示
     displayRecentSearches([]);
     recentSearchesDiv.style.display = 'block';
   }
@@ -311,10 +333,18 @@ async function loadRecentSearches() {
 
 // 検索履歴を表示（検索ワードのみ羅列）
 function displayRecentSearches(searches) {
-  if (searches.length === 0) {
+  if (!searches || searches.length === 0) {
+    // 既存の表示がある場合は保持
+    if (currentDisplayedSearches.length > 0) {
+      console.log('ℹ️ 検索履歴が空ですが、既存の表示を保持します');
+      return;
+    }
     recentSearchesList.innerHTML = '<p class="no-recent-searches">まだ検索履歴がありません</p>';
     return;
   }
+  
+  // 現在表示中の検索履歴を更新
+  currentDisplayedSearches = searches;
   
   const html = searches.map(search => `
     <div class="recent-search-item" onclick="searchInput.value='${escapeHtml(search.query)}'; searchVideos('${escapeHtml(search.query)}')">
@@ -323,13 +353,18 @@ function displayRecentSearches(searches) {
   `).join('');
   
   recentSearchesList.innerHTML = html;
+  console.log('✅ 検索履歴を表示:', searches.length, '件');
 }
 
 // ページ読み込み時に他のユーザーの検索ワードを取得
 loadRecentSearches();
 
-// 定期的に他のユーザーの検索ワードを更新（10秒ごと、より頻繁に更新）
-setInterval(loadRecentSearches, 10000);
+// 定期的に検索履歴を更新（30秒ごと、頻繁すぎると消える可能性があるため間隔を長く）
+// エラー時や空の場合は既存の表示を保持するため、検索履歴が消えることはありません
+setInterval(() => {
+  console.log('🔄 検索履歴を定期更新中...');
+  loadRecentSearches();
+}, 30000); // 30秒ごとに更新
 
 // 動画サイトごとの埋め込み対応状況を判定（緩和版）
 // 基本的には埋め込みを試み、エラーが発生した場合のみ元のURLにリンク
