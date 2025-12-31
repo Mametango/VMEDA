@@ -493,6 +493,18 @@ body {
     font-size: 28px;
   }
 
+  .recent-searches-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .recent-search-item {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
   .video-item {
     padding: 12px;
   }
