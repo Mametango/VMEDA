@@ -297,7 +297,8 @@ body {
 
 .recent-searches-list {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 8px;
   max-height: 500px;
   overflow-y: auto;
@@ -367,6 +368,8 @@ body {
     max-height: 400px;
     padding: 5px;
     width: fit-content;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   .recent-search-item {
