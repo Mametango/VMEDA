@@ -318,6 +318,13 @@ body {
   opacity: 1;
 }
 
+/* タッチデバイス（iPhoneなど）では常に再生ボタンを表示 */
+@media (hover: none) and (pointer: coarse) {
+  .play-overlay {
+    opacity: 1; /* タッチデバイスでは常に表示 */
+  }
+}
+
 .play-btn-thumbnail {
   width: 80px;
   height: 80px;
