@@ -551,7 +551,15 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     normalizedUrl = `https://${normalizedUrl}`;
   }
   
-  // Bilibiliの埋め込みURLを完全なURLに変換（iPhone Safari対応）
+  // iPhoneでBilibiliの動画を再生する場合、埋め込みではなく元のURLを直接開く
+  if (isIPhone() && source === 'bilibili') {
+    console.log('📱 iPhone + Bilibili: 埋め込みプレイヤーは動作しないため、元のURLを直接開きます');
+    // 元のURLを新しいウィンドウで開く（ユーザーの直接的な操作として）
+    window.open(originalUrl, '_blank');
+    return;
+  }
+  
+  // Bilibiliの埋め込みURLを完全なURLに変換（デスクトップ対応）
   if (source === 'bilibili' && normalizedUrl.includes('player.bilibili.com')) {
     // 既にhttps://で始まっている場合はそのまま、//で始まっている場合はhttps:を追加
     if (normalizedUrl.startsWith('//')) {
@@ -561,15 +569,12 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
   
   // iPhoneでデスクトップに偽装するため、プロキシ経由で読み込む
-  // ただし、Bilibiliの場合はプロキシ経由では動作しないため、直接埋め込みURLを使用
+  // Bilibiliの場合は既に上で処理済み
   if (isIPhone() && source !== 'bilibili') {
     // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
     const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(normalizedUrl)}`;
     normalizedUrl = proxyUrl;
     console.log('📱 iPhone: プロキシ経由で動画を読み込み:', proxyUrl);
-  } else if (isIPhone() && source === 'bilibili') {
-    // Bilibiliの場合は直接埋め込みURLを使用（プロキシ経由では動作しない）
-    console.log('📱 iPhone + Bilibili: 直接埋め込みURLを使用:', normalizedUrl);
   }
   
   iframe.src = normalizedUrl;
@@ -752,23 +757,13 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // iframeが表示されていない場合はエラー
     if (!iframeVisible || !containerVisible) {
       console.warn('⚠️ iframeが表示されていません');
-      // Bilibiliの場合は、元のURLへのリンクを表示
-      if (source === 'bilibili') {
-        container.innerHTML = `
-          <div class="player-error">
-            <p>📱 Bilibili動画を再生するには、元のサイトで開いてください</p>
-            <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
-          </div>
-        `;
-      } else {
-        // その他の動画サイトの場合
-        container.innerHTML = `
-          <div class="player-error">
-            <p>📱 動画を再生するには、元のサイトで開いてください</p>
-            <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
-          </div>
-        `;
-      }
+      // エラーメッセージを表示
+      container.innerHTML = `
+        <div class="player-error">
+          <p>📱 動画を再生するには、元のサイトで開いてください</p>
+          <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
+        </div>
+      `;
       return;
     }
     
