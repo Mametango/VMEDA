@@ -160,6 +160,121 @@ function displayResults(videos, searchQuery) {
   resultsDiv.innerHTML = html;
 }
 
+// 再生時間を秒に変換する関数
+function durationToSeconds(duration) {
+  if (!duration || typeof duration !== 'string') return 0;
+  
+  // "10:30" 形式を秒に変換
+  const parts = duration.trim().split(':');
+  if (parts.length === 2) {
+    const minutes = parseInt(parts[0], 10) || 0;
+    const seconds = parseInt(parts[1], 10) || 0;
+    return minutes * 60 + seconds;
+  } else if (parts.length === 3) {
+    // "1:10:30" 形式（時:分:秒）
+    const hours = parseInt(parts[0], 10) || 0;
+    const minutes = parseInt(parts[1], 10) || 0;
+    const seconds = parseInt(parts[2], 10) || 0;
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+  
+  // 数値のみの場合は秒として扱う
+  const num = parseInt(duration, 10);
+  return isNaN(num) ? 0 : num;
+}
+
+// 動画IDからタイムスタンプを抽出
+function extractTimestampFromId(id) {
+  if (!id) return 0;
+  // ID形式: "source-timestamp-index"
+  const parts = id.split('-');
+  for (const part of parts) {
+    const timestamp = parseInt(part, 10);
+    if (!isNaN(timestamp) && timestamp > 1000000000000) {
+      // タイムスタンプ（ミリ秒）として扱う
+      return timestamp;
+    }
+  }
+  return 0;
+}
+
+// ソート関数
+function sortVideos(videos, sortType) {
+  const sorted = [...videos];
+  
+  switch (sortType) {
+    case 'duration-desc':
+      // 再生時間が長い順
+      sorted.sort((a, b) => {
+        const aSeconds = durationToSeconds(a.duration);
+        const bSeconds = durationToSeconds(b.duration);
+        return bSeconds - aSeconds;
+      });
+      break;
+      
+    case 'duration-asc':
+      // 再生時間が短い順
+      sorted.sort((a, b) => {
+        const aSeconds = durationToSeconds(a.duration);
+        const bSeconds = durationToSeconds(b.duration);
+        return aSeconds - bSeconds;
+      });
+      break;
+      
+    case 'date-desc':
+      // 追加日時の新しい順
+      sorted.sort((a, b) => {
+        const aTimestamp = extractTimestampFromId(a.id);
+        const bTimestamp = extractTimestampFromId(b.id);
+        return bTimestamp - aTimestamp;
+      });
+      break;
+      
+    case 'date-asc':
+      // 追加日時の古い順
+      sorted.sort((a, b) => {
+        const aTimestamp = extractTimestampFromId(a.id);
+        const bTimestamp = extractTimestampFromId(b.id);
+        return aTimestamp - bTimestamp;
+      });
+      break;
+      
+    case 'title-asc':
+      // タイトル順（A-Z）
+      sorted.sort((a, b) => {
+        const aTitle = (a.title || '').toLowerCase();
+        const bTitle = (b.title || '').toLowerCase();
+        return aTitle.localeCompare(bTitle, 'ja');
+      });
+      break;
+      
+    case 'title-desc':
+      // タイトル順（Z-A）
+      sorted.sort((a, b) => {
+        const aTitle = (a.title || '').toLowerCase();
+        const bTitle = (b.title || '').toLowerCase();
+        return bTitle.localeCompare(aTitle, 'ja');
+      });
+      break;
+      
+    case 'source-asc':
+      // ソース順
+      sorted.sort((a, b) => {
+        const aSource = (a.source || '').toLowerCase();
+        const bSource = (b.source || '').toLowerCase();
+        return aSource.localeCompare(bSource, 'ja');
+      });
+      break;
+      
+    case 'default':
+    default:
+      // デフォルト（変更なし）
+      break;
+  }
+  
+  return sorted;
+}
+
 // 検索履歴を取得（自分の検索も他の人の検索も含む）
 async function loadRecentSearches() {
   try {
@@ -578,3 +693,22 @@ searchInput.addEventListener('keypress', (e) => {
     searchVideos(searchInput.value);
   }
 });
+
+// ソート選択時の処理
+if (sortSelect) {
+  sortSelect.addEventListener('change', (e) => {
+    const sortType = e.target.value;
+    console.log('🔀 ソート実行:', sortType, '動画数:', currentVideos.length);
+    
+    if (currentVideos.length === 0) {
+      console.warn('⚠️ ソート対象の動画がありません');
+      return;
+    }
+    
+    const sortedVideos = sortVideos(currentVideos, sortType);
+    console.log('✅ ソート完了:', sortedVideos.length, '件');
+    displayResults(sortedVideos, '');
+  });
+} else {
+  console.error('❌ sortSelect要素が見つかりません');
+}
