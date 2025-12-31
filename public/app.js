@@ -99,19 +99,12 @@ async function searchVideos(query) {
 function displayResults(videos, searchQuery) {
   if (videos.length === 0) {
     resultsDiv.innerHTML = `
-      <div class="search-query-display">
-        <p class="search-query-text">検索ワード: <span class="search-query-value">${escapeHtml(searchQuery || '')}</span></p>
-      </div>
       <div class="no-results">検索結果が見つかりませんでした</div>
     `;
     return;
   }
 
-  const html = `
-    <div class="search-query-display">
-      <p class="search-query-text">検索ワード: <span class="search-query-value">${escapeHtml(searchQuery || '')}</span></p>
-    </div>
-    ${videos.map(video => {
+  const html = videos.map(video => {
     const thumbnail = video.thumbnail || '';
     const hasThumbnail = thumbnail && thumbnail.length > 0 && thumbnail.startsWith('http');
     
@@ -137,8 +130,7 @@ function displayResults(videos, searchQuery) {
       </div>
     </div>
   `;
-    }).join('')}
-  `;
+  }).join('');
 
   resultsDiv.innerHTML = html;
 }
