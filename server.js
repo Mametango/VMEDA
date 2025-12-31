@@ -139,11 +139,11 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://pagead2.googlesyndication.com"],
       scriptSrcAttr: ["'unsafe-inline'"], // インラインイベントハンドラーを許可
       imgSrc: ["'self'", "data:", "https:", "http:"],
-      frameSrc: ["'self'", "https:", "http:"],
-      connectSrc: ["'self'", "https:", "http:"],
+      frameSrc: ["'self'", "https:", "http:", "https://googleads.g.doubleclick.net"],
+      connectSrc: ["'self'", "https:", "http:", "https://pagead2.googlesyndication.com"],
       fontSrc: ["'self'", "data:", "https:"],
     },
   },
