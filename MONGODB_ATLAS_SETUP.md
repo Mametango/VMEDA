@@ -71,7 +71,7 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/vmeda?retryWrite
 **重要**: 
 - `username` と `password` を実際の値に置き換える
 - パスワードに特殊文字が含まれる場合は、URLエンコードが必要（例: `@` → `%40`）
-- データベース名（`vmeda`）を接続文字列に含める
+- **データベース名（`vmeda`）**: 接続文字列の `/vmeda` の部分です。この名前は**適当でも問題ありません**（例: `mydb`, `vmeda`, `search_history` など）。MongoDB Atlasは自動的にデータベースを作成します。
 
 ### 7. デプロイ
 
