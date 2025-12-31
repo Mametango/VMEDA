@@ -176,6 +176,23 @@ function displayResults(videos, searchQuery) {
 
   resultsDiv.innerHTML = html;
   
+  // iPhoneでのタッチイベントをクリックイベントとして処理
+  // 動画プレイヤーコンテナにタッチイベントリスナーを追加
+  document.querySelectorAll('.video-thumbnail-wrapper, .play-btn').forEach(element => {
+    // タッチイベントを検出してクリックイベントとして処理
+    element.addEventListener('touchstart', function(e) {
+      // タッチイベントをクリックイベントとして扱う
+      e.preventDefault();
+      // クリックイベントを発火
+      const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      });
+      this.dispatchEvent(clickEvent);
+    }, { passive: false });
+  });
+  
   // 検索結果表示後、広告を検索結果の間に挿入
   insertAdsInResults();
 }
