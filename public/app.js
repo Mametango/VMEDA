@@ -674,7 +674,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     setTimeout(() => {
       const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
       if (iframeVisible) {
-        console.log('ℹ️ iframeは表示されているため、エラー表示をスキップ');
         return;
       }
       
@@ -797,7 +796,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       }
     } catch (e) {
       // CORSエラーは無視（iOS Safariでは正常な場合が多い）
-      console.log('ℹ️ iframeにアクセスできません（CORS）:', e.message);
     }
   }, timeoutDuration);
 };
