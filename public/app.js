@@ -528,6 +528,15 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
   if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
     normalizedUrl = `https://${normalizedUrl}`;
   }
+  
+  // Bilibiliの埋め込みURLを完全なURLに変換（iPhone Safari対応）
+  if (source === 'bilibili' && normalizedUrl.includes('player.bilibili.com')) {
+    // 既にhttps://で始まっている場合はそのまま、//で始まっている場合はhttps:を追加
+    if (normalizedUrl.startsWith('//')) {
+      normalizedUrl = 'https:' + normalizedUrl;
+    }
+  }
+  
   iframe.src = normalizedUrl;
   iframe.allowFullscreen = true;
   iframe.className = 'video-player';
