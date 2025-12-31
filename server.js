@@ -1422,49 +1422,122 @@ async function searchXiguaVideo(query) {
 async function searchSohu(query) {
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://tv.sohu.com/vsearch/${encodedQuery}`;
+    // 複数の検索URLを試す
+    const urls = [
+      `https://so.tv.sohu.com/mts?wd=${encodedQuery}`,
+      `https://tv.sohu.com/vsearch/${encodedQuery}`,
+      `https://so.tv.sohu.com/search?wd=${encodedQuery}`
+    ];
     
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
-        'Referer': 'https://tv.sohu.com/'
-      },
-      timeout: 15000
-    });
+    let videos = [];
     
-    const $ = cheerio.load(response.data);
-    const videos = [];
-    
-    $('.result-item, .item, a[href*="/v/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
-      
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/v/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://tv.sohu.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `sohu-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'sohu'
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
+            'Referer': 'https://tv.sohu.com/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 20000,
+          maxRedirects: 5
         });
+        
+        const $ = cheerio.load(response.data);
+        console.log(`🔍 Sohu検索: ${url} - HTMLサイズ: ${response.data.length}文字`);
+        
+        // 複数のセレクタを試す
+        const selectors = [
+          '.result-item',
+          '.item',
+          '.video-item',
+          '.video-card',
+          '.search-result-item',
+          'a[href*="/v/"]',
+          'a[href*="sohu.com/v/"]',
+          'a[href*="tv.sohu.com/v/"]',
+          '[class*="video"]',
+          '[class*="result"]'
+        ];
+        
+        let foundCount = 0;
+        for (const selector of selectors) {
+          if (videos.length >= 50) break;
+          
+          $(selector).each((index, elem) => {
+            if (videos.length >= 50) return false;
+            
+            const $item = $(elem);
+            let href = $item.attr('href') || $item.find('a').attr('href') || '';
+            
+            // hrefが見つからない場合、親要素を探す
+            if (!href) {
+              const $parent = $item.parent();
+              href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+            }
+            
+            // 動画URLのパターンをチェック
+            if (!href || (!href.includes('/v/') && !href.includes('sohu.com/v') && !href.includes('tv.sohu.com/v'))) {
+              return;
+            }
+            
+            // URLを正規化
+            let fullUrl = href;
+            if (!href.startsWith('http')) {
+              if (href.startsWith('//')) {
+                fullUrl = 'https:' + href;
+              } else if (href.startsWith('/')) {
+                fullUrl = `https://tv.sohu.com${href}`;
+              } else {
+                fullUrl = `https://tv.sohu.com/v/${href}`;
+              }
+            }
+            
+            const title = extractTitle($, $item);
+            const thumbnail = extractThumbnail($, $item);
+            const duration = extractDurationFromHtml($, $item);
+            
+            if (title && title.length > 3) {
+              // 重複チェック
+              const isDuplicate = videos.some(v => v.url === fullUrl);
+              if (!isDuplicate) {
+                videos.push({
+                  id: `sohu-${Date.now()}-${videos.length}`,
+                  title: title.substring(0, 200),
+                  thumbnail: thumbnail || '',
+                  duration: duration || '',
+                  url: fullUrl,
+                  embedUrl: fullUrl,
+                  source: 'sohu'
+                });
+                foundCount++;
+              }
+            }
+          });
+        }
+        
+        console.log(`🔍 Sohu検索: ${selector}で${foundCount}件見つかりました`);
+        
+        // 結果が見つかったら次のURLを試さない
+        if (videos.length > 0) {
+          console.log(`✅ Sohu: ${videos.length}件の動画を取得 (URL: ${url})`);
+          break;
+        }
+      } catch (urlError) {
+        console.warn(`⚠️ Sohu検索URLエラー (${url}):`, urlError.message);
+        continue;
       }
-    });
+    }
     
-    console.log(`✅ Sohu: ${videos.length}件の動画を取得`);
+    if (videos.length === 0) {
+      console.warn('⚠️ Sohu: 動画が見つかりませんでした');
+    }
+    
     return videos;
   } catch (error) {
-    console.error('Sohu検索エラー:', error.message);
+    console.error('❌ Sohu検索エラー:', error.message);
     return [];
   }
 }
