@@ -1,47 +1,23 @@
 name: Deploy to Vercel
 
+# このワークフローは無効化されています
+# VercelにGitHubリポジトリを接続すれば、GitHub Actionsを使わずに自動デプロイされます
+# 
+# 使用方法:
+# 1. https://vercel.com にアクセス
+# 2. 「Add New Project」をクリック
+# 3. GitHubリポジトリを選択
+# 4. 自動的にデプロイされます
+
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_dispatch: # 手動実行のみ（自動実行は無効化）
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: false # 常にスキップ
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
-
-      - name: Pull Vercel Environment Information
-        id: vercel-pull
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: This workflow is disabled
+        run: echo "This workflow is disabled. Please connect your GitHub repository to Vercel dashboard instead."
 
 
