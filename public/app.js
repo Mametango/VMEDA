@@ -529,12 +529,6 @@ function isIPhone() {
   // iPhone/iPodを検出（Braveブラウザなども含む）
   const ua = navigator.userAgent;
   const isIOS = /iPhone|iPod|iPad/.test(ua) && !window.MSStream;
-  console.log('🔍 デバイス判定:', {
-    userAgent: ua,
-    isIOS: isIOS,
-    platform: navigator.platform,
-    vendor: navigator.vendor
-  });
   return isIOS;
 }
 
@@ -748,15 +742,12 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
                 bodyHTML.includes('not supported')) {
               showError();
             } else {
-              console.log('✅ iframeコンテンツ確認完了');
             }
           } else {
             // iOS SafariではCORSでアクセスできない場合が多いが、正常に動作している可能性がある
-            console.log('ℹ️ iframeにアクセスできません（CORS）- 正常な場合があります');
           }
         } catch (e) {
           // CORSエラーは無視（iOS Safariでは正常な場合が多い）
-          console.log('ℹ️ iframeアクセスエラー（CORS）:', e.message);
         }
       }, 2000);
     }
@@ -773,7 +764,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   container.appendChild(iframe);
   
-  console.log('✅ iframeを作成しました:', iframe.src);
   
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
   // タイムアウトでエラー検出（Bilibiliの場合は15秒、その他は10秒）
@@ -789,7 +779,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     
     // iframeが表示されていない場合はエラー
     if (!iframeVisible || !containerVisible) {
-      console.warn('⚠️ iframeが表示されていません');
       // エラーメッセージを表示
       container.innerHTML = `
         <div class="player-error">
