@@ -737,46 +737,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       containerHeight: container.offsetHeight
     });
     
-    // デバッグ情報を更新
-    if (isIOSDevice && source === 'bilibili') {
-      const debugInfo = container.querySelector('.debug-info');
-      if (debugInfo) {
-        const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
-        // iframeの中身を確認（CORSでアクセスできない場合が多いが試す）
-        let iframeContentStatus = '確認中...';
-        let hasContent = false;
-        try {
-          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-          if (iframeDoc) {
-            const bodyText = iframeDoc.body?.innerText || '';
-            const bodyHTML = iframeDoc.body?.innerHTML || '';
-            if (bodyText.length > 0 || bodyHTML.length > 0) {
-              hasContent = true;
-              iframeContentStatus = `✅ コンテンツあり (${bodyText.length}文字)`;
-            } else {
-              iframeContentStatus = '⚠️ コンテンツなし（真っ暗）';
-            }
-          } else {
-            iframeContentStatus = 'ℹ️ CORSでアクセス不可（正常な場合あり）';
-          }
-        } catch (e) {
-          iframeContentStatus = `ℹ️ CORSエラー: ${e.message.substring(0, 30)}...`;
-        }
-        
-        debugInfo.innerHTML = `
-          <div><strong>✅ 読み込み完了</strong></div>
-          <div>ブラウザ: ${isBrave ? 'Brave' : 'Other'}</div>
-          <div>iframeサイズ: ${iframe.offsetWidth}x${iframe.offsetHeight}</div>
-          <div style="margin-top: 5px; color: ${iframeVisible ? '#0f0' : '#f00'};">
-            iframe表示: ${iframeVisible ? '✅ 表示中' : '❌ 非表示'}
-          </div>
-          <div style="margin-top: 5px; font-size: 11px; color: ${hasContent ? '#0f0' : '#f00'};">
-            ${iframeContentStatus}
-          </div>
-          ${!hasContent ? '<div style="margin-top: 5px; font-size: 10px; color: #ff0;">💡 Bilibiliのプレイヤーが読み込まれていない可能性があります</div>' : ''}
-        `;
-      }
-    }
     
     // タイムアウトを短縮（読み込み完了したので）
     if (errorTimeout) clearTimeout(errorTimeout);
