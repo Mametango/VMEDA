@@ -113,11 +113,17 @@ function displayResults(videos, searchQuery) {
     const thumbnail = video.thumbnail || '';
     const hasThumbnail = thumbnail && thumbnail.length > 0 && thumbnail.startsWith('http');
     
+    const duration = video.duration || '';
+    const showDuration = duration && duration.trim().length > 0;
+    
     return `
     <div class="video-item">
       <div class="video-header">
         <h3 class="video-title">${escapeHtml(video.title)}</h3>
-        <span class="video-source">${getSourceName(video.source)}</span>
+        <div class="video-header-right">
+          ${showDuration ? `<span class="video-duration">${escapeHtml(duration)}</span>` : ''}
+          <span class="video-source">${getSourceName(video.source)}</span>
+        </div>
       </div>
       <div class="video-player-container" id="player-${video.id}">
         ${hasThumbnail ? `

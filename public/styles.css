@@ -108,12 +108,31 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+  gap: 10px;
 }
 
 .video-title {
   font-size: 18px;
   color: #333;
   flex: 1;
+  min-width: 0;
+}
+
+.video-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.video-duration {
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .video-source {
@@ -123,6 +142,7 @@ body {
   border-radius: 20px;
   font-size: 12px;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .video-player-container {
