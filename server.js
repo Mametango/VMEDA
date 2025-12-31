@@ -6,18 +6,65 @@ const path = require('path');
 const fs = require('fs');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { kv } = require('@vercel/kv');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// このサイトを通して検索したワードを保存（ファイルに永続化、最新30個を保持）
+// このサイトを通して検索したワードを保存（Vercel KVに永続化、最新30個を保持）
 // 重複を避けるため、同じ検索ワードは最新のもののみ残す
 // 30個を超えると古いものから自動的に削除される
 // 自分の検索も含めて、すべての検索ワードを履歴として残す
 const MAX_RECENT_SEARCHES = 30; // 最新30個だけ保持
+const KV_KEY = 'recent-searches';
+
+// Vercel KVが利用可能かどうかを判定
+const useKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
+
+// 検索履歴をVercel KVから読み込む
+async function loadRecentSearchesFromKV() {
+  if (!useKV) {
+    console.log('⚠️ Vercel KVが設定されていません。ファイルシステムを使用します。');
+    return loadRecentSearchesFromFile();
+  }
+  
+  try {
+    const searches = await kv.get(KV_KEY);
+    if (Array.isArray(searches)) {
+      console.log(`📂 Vercel KVから検索履歴を読み込み: ${searches.length}件`);
+      return searches;
+    }
+  } catch (error) {
+    console.error('❌ Vercel KVからの読み込みエラー:', error);
+    // フォールバック: ファイルから読み込む
+    return loadRecentSearchesFromFile();
+  }
+  return [];
+}
+
+// 検索履歴をVercel KVに保存
+async function saveRecentSearchesToKV(searches) {
+  if (!useKV) {
+    console.log('⚠️ Vercel KVが設定されていません。ファイルシステムを使用します。');
+    saveRecentSearchesToFile(searches);
+    return;
+  }
+  
+  try {
+    // 最新30個だけ保存
+    const searchesToSave = searches.slice(0, MAX_RECENT_SEARCHES);
+    await kv.set(KV_KEY, searchesToSave);
+    console.log(`💾 Vercel KVに検索履歴を保存: ${searchesToSave.length}件`);
+  } catch (error) {
+    console.error('❌ Vercel KVへの保存エラー:', error);
+    // フォールバック: ファイルに保存
+    saveRecentSearchesToFile(searches);
+  }
+}
+
+// ファイルシステムのフォールバック関数（Vercel KVが利用できない場合）
 const SEARCHES_FILE = path.join(__dirname, 'data', 'recent-searches.json');
 
-// 検索履歴をファイルから読み込む
 function loadRecentSearchesFromFile() {
   try {
     if (fs.existsSync(SEARCHES_FILE)) {
@@ -32,16 +79,12 @@ function loadRecentSearchesFromFile() {
   return [];
 }
 
-// 検索履歴をファイルに保存
 function saveRecentSearchesToFile(searches) {
   try {
-    // dataディレクトリが存在しない場合は作成
     const dataDir = path.dirname(SEARCHES_FILE);
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
-    
-    // 最新30個だけ保存
     const searchesToSave = searches.slice(0, MAX_RECENT_SEARCHES);
     fs.writeFileSync(SEARCHES_FILE, JSON.stringify(searchesToSave, null, 2), 'utf8');
     console.log(`💾 検索履歴をファイルに保存: ${searchesToSave.length}件`);
@@ -50,8 +93,11 @@ function saveRecentSearchesToFile(searches) {
   }
 }
 
-// サーバー起動時にファイルから検索履歴を読み込む
-let recentSearches = loadRecentSearchesFromFile();
+// サーバー起動時に検索履歴を読み込む（Vercel KV優先、フォールバックはファイル）
+let recentSearches = [];
+(async () => {
+  recentSearches = await loadRecentSearchesFromKV();
+})();
 
 // セキュリティミドルウェア
 app.use(helmet({
@@ -251,8 +297,8 @@ app.post('/api/search', async (req, res) => {
       recentSearches.splice(MAX_RECENT_SEARCHES); // 30個目以降を削除
     }
     
-    // ファイルに保存（永続化）
-    saveRecentSearchesToFile(recentSearches);
+    // Vercel KVに保存（永続化、フォールバックはファイル）
+    await saveRecentSearchesToKV(recentSearches);
     
     console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${recentSearches.length}件)`);
     
@@ -987,7 +1033,8 @@ async function searchAkibaAbv(query) {
   }
 }
 
-// Bilibili検索
+// Bilibili検索（WEBスクレイピング）
+// 注意: Bilibiliはスクレイピング対策を講じている可能性があります
 async function searchBilibili(query) {
   try {
     const encodedQuery = encodeURIComponent(query);
@@ -995,43 +1042,67 @@ async function searchBilibili(query) {
     
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
-        'Referer': 'https://www.bilibili.com/'
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.bilibili.com/',
+        'Origin': 'https://www.bilibili.com',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
       },
-      timeout: 15000
+      timeout: 20000,
+      maxRedirects: 5
     });
     
     const $ = cheerio.load(response.data);
     const videos = [];
     
-    $('.video-item, .bili-video-card, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+    // 複数のセレクタを試す（BilibiliのHTML構造の変更に対応）
+    const selectors = [
+      '.video-item',
+      '.bili-video-card',
+      '.video-card',
+      'a[href*="/video/"]',
+      '.result-item',
+      '[class*="video"]'
+    ];
+    
+    for (const selector of selectors) {
+      if (videos.length >= 50) break;
       
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/video/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://www.bilibili.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
-        const embedUrl = bvid ? `//player.bilibili.com/player.html?bvid=${bvid[0]}` : fullUrl;
+      $(selector).each((index, elem) => {
+        if (videos.length >= 50) return false;
         
-        videos.push({
-          id: `bilibili-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: embedUrl,
-          source: 'bilibili'
-        });
-      }
-    });
+        const $item = $(elem);
+        const href = $item.attr('href') || $item.find('a').attr('href') || '';
+        if (!href || !href.includes('/video/')) return;
+        
+        const fullUrl = href.startsWith('http') ? href : `https://www.bilibili.com${href}`;
+        const title = extractTitle($, $item);
+        const thumbnail = extractThumbnail($, $item);
+        const duration = extractDurationFromHtml($, $item);
+        
+        if (title && title.length > 3) {
+          const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
+          const embedUrl = bvid ? `//player.bilibili.com/player.html?bvid=${bvid[0]}` : fullUrl;
+          
+          // 重複チェック
+          const isDuplicate = videos.some(v => v.url === fullUrl);
+          if (!isDuplicate) {
+            videos.push({
+              id: `bilibili-${Date.now()}-${index}`,
+              title: title.substring(0, 200),
+              thumbnail: thumbnail || '',
+              duration: duration || '',
+              url: fullUrl,
+              embedUrl: embedUrl,
+              source: 'bilibili'
+            });
+          }
+        }
+      });
+    }
     
     console.log(`✅ Bilibili: ${videos.length}件の動画を取得`);
     return videos;
