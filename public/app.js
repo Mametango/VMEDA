@@ -566,8 +566,25 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     if (normalizedUrl.startsWith('//')) {
       normalizedUrl = 'https:' + normalizedUrl;
     }
+    
+    // iPhone/Braveブラウザの場合、モバイル対応パラメータを追加
+    const isIOSDevice = isIPhone();
+    if (isIOSDevice) {
+      try {
+        const urlObj = new URL(normalizedUrl);
+        // モバイル対応パラメータを追加
+        urlObj.searchParams.set('autoplay', '0'); // 自動再生をオフ
+        urlObj.searchParams.set('high_quality', '1'); // 高画質を有効
+        urlObj.searchParams.set('danmaku', '0'); // コメントをオフ（パフォーマンス向上）
+        normalizedUrl = urlObj.toString();
+        console.log('📱 iPhone/Brave: モバイル対応パラメータを追加:', normalizedUrl);
+      } catch (e) {
+        console.warn('⚠️ URLパラメータ追加エラー:', e);
+      }
+    }
+    
     console.log('📺 Bilibili埋め込みURL:', normalizedUrl);
-    console.log('📱 iPhone判定:', isIPhone());
+    console.log('📱 iPhone判定:', isIOSDevice);
     console.log('📱 User-Agent:', navigator.userAgent);
   }
   
