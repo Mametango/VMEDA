@@ -319,10 +319,19 @@ function sortVideos(videos, sortType) {
 let currentDisplayedSearches = [];
 
 async function loadRecentSearches() {
+  // recentSearchesDivとrecentSearchesListが存在するか確認
+  if (!recentSearchesDiv || !recentSearchesList) {
+    console.error('❌ 検索履歴のDOM要素が見つかりません');
+    return;
+  }
+
   try {
-    // キャッシュを活用して高速化（サーバー側のキャッシュを活用）
+    // キャッシュを無効化して最新のデータを取得（検索履歴が表示されない問題を解決）
     const response = await fetch('/api/recent-searches', {
-      cache: 'default' // ブラウザキャッシュを活用
+      cache: 'no-cache', // キャッシュを無効化して最新データを取得
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
     });
     if (!response.ok) {
       console.error('❌ 検索履歴取得エラー:', response.status, response.statusText);
@@ -340,22 +349,23 @@ async function loadRecentSearches() {
     const data = await response.json();
     const searches = data.searches || [];
     console.log('📋 検索履歴取得:', searches.length, '件');
+    console.log('📋 検索履歴データ:', JSON.stringify(searches.slice(0, 3)));
     
+    // 検索履歴を常に表示（空の場合も含む）
     if (searches.length > 0) {
       console.log('📋 検索履歴サンプル:', searches.slice(0, 5).map(s => s.query).join(', '));
       // 新しい検索履歴を表示
       currentDisplayedSearches = searches;
       displayRecentSearches(searches);
     } else {
-      // 検索履歴が空の場合、既存の表示を保持
-      if (currentDisplayedSearches.length > 0) {
-        console.log('ℹ️ 検索履歴が空ですが、既存の表示を保持します');
-        return;
-      }
-      // 既存の表示がない場合のみ空のメッセージを表示
+      // 検索履歴が空の場合でも表示を更新
+      console.log('ℹ️ 検索履歴が空です');
       displayRecentSearches([]);
     }
+    
+    // 検索履歴エリアを確実に表示
     recentSearchesDiv.style.display = 'block';
+    console.log('✅ 検索履歴エリアを表示しました');
   } catch (error) {
     console.error('❌ 検索履歴取得エラー:', error);
     // エラー時は既存の表示を保持
@@ -371,27 +381,41 @@ async function loadRecentSearches() {
 
 // 検索履歴を表示（検索ワードのみ羅列）
 function displayRecentSearches(searches) {
+  // recentSearchesListが存在するか確認
+  if (!recentSearchesList) {
+    console.error('❌ recentSearchesListが見つかりません');
+    return;
+  }
+
   if (!searches || searches.length === 0) {
-    // 既存の表示がある場合は保持
-    if (currentDisplayedSearches.length > 0) {
-      console.log('ℹ️ 検索履歴が空ですが、既存の表示を保持します');
-      return;
-    }
+    // 検索履歴が空の場合でも表示を更新
     recentSearchesList.innerHTML = '<p class="no-recent-searches">まだ検索履歴がありません</p>';
+    console.log('ℹ️ 検索履歴が空のため、空のメッセージを表示しました');
     return;
   }
   
   // 現在表示中の検索履歴を更新
   currentDisplayedSearches = searches;
   
-  const html = searches.map(search => `
-    <div class="recent-search-item" onclick="searchInput.value='${escapeHtml(search.query)}'; searchVideos('${escapeHtml(search.query)}')">
-      <span class="recent-search-query">${escapeHtml(search.query)}</span>
-    </div>
-  `).join('');
+  const html = searches.map(search => {
+    if (!search || !search.query) {
+      console.warn('⚠️ 無効な検索履歴:', search);
+      return '';
+    }
+    return `
+      <div class="recent-search-item" onclick="searchInput.value='${escapeHtml(search.query)}'; searchVideos('${escapeHtml(search.query)}')">
+        <span class="recent-search-query">${escapeHtml(search.query)}</span>
+      </div>
+    `;
+  }).filter(html => html !== '').join('');
   
-  recentSearchesList.innerHTML = html;
-  console.log('✅ 検索履歴を表示:', searches.length, '件');
+  if (html) {
+    recentSearchesList.innerHTML = html;
+    console.log('✅ 検索履歴を表示:', searches.length, '件');
+  } else {
+    console.warn('⚠️ 検索履歴のHTMLが生成できませんでした');
+    recentSearchesList.innerHTML = '<p class="no-recent-searches">検索履歴の表示に失敗しました</p>';
+  }
 }
 
 // ページ読み込み時に他のユーザーの検索ワードを取得
