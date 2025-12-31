@@ -192,7 +192,8 @@ app.post('/api/search', async (req, res) => {
     const sanitizedQuery = validation.query;
     console.log(`🔍 検索開始: "${sanitizedQuery}"`);
     
-    // 検索ワードを保存（他のユーザー向け、最新30個を保持）
+    // このサイトを通して検索したワードを保存（最新30個を保持）
+    // 自分の検索も含めて、すべての検索ワードを履歴として残す
     const searchEntry = {
       query: sanitizedQuery,
       timestamp: Date.now(),
@@ -212,6 +213,8 @@ app.post('/api/search', async (req, res) => {
     if (recentSearches.length > MAX_RECENT_SEARCHES) {
       recentSearches.splice(MAX_RECENT_SEARCHES); // 30個目以降を削除
     }
+    
+    console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${recentSearches.length}件)`);
     
     // 定義されている検索関数のみを使用
     const allSearches = [
