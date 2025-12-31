@@ -841,19 +841,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   container.appendChild(iframe);
   
-  console.log('✅ iframeを作成しました:', {
-    src: iframe.src,
-    source: source,
-    isIPhone: isIOSDeviceForDebug,
-    isBrave: isBrave,
-    containerWidth: container.offsetWidth,
-    containerHeight: container.offsetHeight,
-    iframeWidth: iframe.offsetWidth,
-    iframeHeight: iframe.offsetHeight,
-    normalizedUrl: normalizedUrl,
-    embedUrl: embedUrl,
-    originalUrl: originalUrl
-  });
+  console.log('✅ iframeを作成しました:', iframe.src);
   
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
   // タイムアウトでエラー検出（Bilibiliの場合は15秒、その他は10秒）
