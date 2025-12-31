@@ -47,6 +47,8 @@ const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
 const resultsDiv = document.getElementById('results');
 const loadingDiv = document.getElementById('loading');
+const recentSearchesDiv = document.getElementById('recent-searches');
+const recentSearchesList = document.getElementById('recent-searches-list');
 
 // 検索実行
 async function searchVideos(query) {

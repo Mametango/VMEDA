@@ -9,6 +9,10 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 他のユーザーの検索ワードを保存（メモリ内、最大100件）
+const recentSearches = [];
+const MAX_RECENT_SEARCHES = 100;
+
 // セキュリティミドルウェア
 app.use(helmet({
   contentSecurityPolicy: {
@@ -1222,6 +1226,47 @@ async function searchSohu(query) {
   } catch (error) {
     console.error('Sohu検索エラー:', error.message);
     return [];
+  }
+}
+
+// 他のユーザーの検索ワードを取得するAPI
+app.get('/api/recent-searches', (req, res) => {
+  try {
+    // 最近の検索ワードを返す（最大20件、自分のIPを除外）
+    const clientIp = req.ip || req.connection.remoteAddress;
+    const otherSearches = recentSearches
+      .filter(entry => entry.ip !== clientIp) // 自分の検索は除外
+      .slice(0, 20) // 最大20件
+      .map(entry => ({
+        query: entry.query,
+        timestamp: entry.timestamp,
+        timeAgo: getTimeAgo(entry.timestamp)
+      }));
+    
+    res.json({ searches: otherSearches });
+  } catch (error) {
+    console.error('❌ 最近の検索取得エラー:', error);
+    res.status(500).json({ error: '検索履歴の取得に失敗しました' });
+  }
+});
+
+// 時間差を計算する関数
+function getTimeAgo(timestamp) {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  
+  if (seconds < 60) {
+    return `${seconds}秒前`;
+  } else if (minutes < 60) {
+    return `${minutes}分前`;
+  } else if (hours < 24) {
+    return `${hours}時間前`;
+  } else {
+    const days = Math.floor(hours / 24);
+    return `${days}日前`;
   }
 }
 
