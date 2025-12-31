@@ -237,6 +237,12 @@ body {
   /* iOS Safari対応 */
   -webkit-overflow-scrolling: touch;
   overflow: hidden;
+  /* iPhone Safariで確実に表示されるように */
+  display: block;
+  -webkit-transform: translateZ(0); /* ハードウェアアクセラレーション */
+  transform: translateZ(0);
+  /* タッチ操作を有効化 */
+  touch-action: manipulation;
 }
 
 .play-btn {
@@ -681,6 +687,20 @@ body {
   .video-duration {
     font-size: 10px;
     padding: 3px 8px;
+  }
+
+  .video-player-container {
+    padding-top: 56.25%; /* 16:9 アスペクト比を維持 */
+    height: 0; /* padding-topで高さを制御 */
+    min-height: 180px; /* 小さい画面でも最低限の高さを確保 */
+  }
+
+  .video-player {
+    min-height: 180px;
+  }
+
+  .video-thumbnail-wrapper {
+    min-height: 180px;
   }
 }
 
