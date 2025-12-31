@@ -154,18 +154,16 @@ async function loadRecentSearches() {
   }
 }
 
-// 他のユーザーの検索ワードを表示（履歴表示風）
+// 検索履歴を表示（検索ワードのみ羅列）
 function displayRecentSearches(searches) {
   if (searches.length === 0) {
     recentSearchesList.innerHTML = '<p class="no-recent-searches">まだ検索履歴がありません</p>';
     return;
   }
   
-  const html = searches.map((search, index) => `
+  const html = searches.map(search => `
     <div class="recent-search-item" onclick="searchInput.value='${escapeHtml(search.query)}'; searchVideos('${escapeHtml(search.query)}')">
-      <span class="recent-search-number">${index + 1}</span>
       <span class="recent-search-query">${escapeHtml(search.query)}</span>
-      <span class="recent-search-time">${search.timeAgo}</span>
     </div>
   `).join('');
   
