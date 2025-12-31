@@ -492,12 +492,13 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
     return;
   }
   
-  // iPhoneの場合は、まずiframeで埋め込み再生を試みる
-  // 失敗した場合のみ元のURLを新しいウィンドウで開く
+  // iPhoneの場合は、すべての動画を全画面表示で再生
   const isMobile = isIPhone();
   if (isMobile) {
-    console.log('📱 iPhone検出: iframeで埋め込み再生を試みます');
-    // 埋め込み再生を試みる（下記のiframe作成処理に進む）
+    console.log('📱 iPhone検出: 全画面表示で再生します');
+    // iPhoneの場合は、元のURLを新しいウィンドウで全画面表示で開く
+    window.open(originalUrl, '_blank');
+    return;
   }
   
   // 他の動画が再生中の場合、停止する
