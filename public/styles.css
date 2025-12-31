@@ -454,6 +454,16 @@ body {
     height: 100%;
   }
 
+  /* 動画アイテムの高さを確保 */
+  .video-item {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .video-item .video-player-container {
+    flex-shrink: 0;
+  }
+
   .sort-container {
     flex-direction: column;
     gap: 10px;
