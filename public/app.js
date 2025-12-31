@@ -140,7 +140,7 @@ function displayResults(videos, searchQuery) {
   resultsDiv.innerHTML = html;
 }
 
-// 検索履歴を取得
+// 検索履歴を取得（自分の検索も他の人の検索も含む）
 async function loadRecentSearches() {
   try {
     console.log('📋 検索履歴を取得中...');
@@ -152,19 +152,22 @@ async function loadRecentSearches() {
     
     const data = await response.json();
     console.log('📋 検索履歴取得:', data.searches?.length || 0, '件');
+    if (data.searches && data.searches.length > 0) {
+      console.log('📋 検索履歴サンプル:', data.searches.slice(0, 5).map(s => s.query).join(', '));
+    }
     
+    // 検索履歴を常に表示（自分の検索も他の人の検索も含む）
     if (data.searches && data.searches.length > 0) {
       displayRecentSearches(data.searches);
-      recentSearchesDiv.classList.remove('hidden');
     } else {
       // 検索履歴がない場合でも表示（空のメッセージを表示）
       displayRecentSearches([]);
-      recentSearchesDiv.classList.remove('hidden');
     }
+    recentSearchesDiv.style.display = 'block';
   } catch (error) {
     console.error('❌ 検索履歴取得エラー:', error);
     displayRecentSearches([]);
-    recentSearchesDiv.classList.remove('hidden');
+    recentSearchesDiv.style.display = 'block';
   }
 }
 

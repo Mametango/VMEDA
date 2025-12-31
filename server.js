@@ -1259,8 +1259,8 @@ async function searchSohu(query) {
 // 検索履歴を取得するAPI（このサイトを通して検索したワードを最新30個返す）
 app.get('/api/recent-searches', (req, res) => {
   try {
-    // このサイトを通して検索したワードを最新30個返す（自分の検索も含む）
-    // すべての検索ワードを履歴として残す
+    // このサイトを通して検索したワードを最新30個返す
+    // 自分の検索も他の人の検索も含めて、すべての検索ワードを履歴として表示
     const searches = recentSearches
       .slice(0, MAX_RECENT_SEARCHES) // 最新30件
       .map(entry => ({
@@ -1269,7 +1269,10 @@ app.get('/api/recent-searches', (req, res) => {
         timeAgo: getTimeAgo(entry.timestamp)
       }));
     
-    console.log(`📋 検索履歴取得: ${searches.length}件`);
+    console.log(`📋 検索履歴取得: ${searches.length}件 (全検索: ${recentSearches.length}件)`);
+    if (searches.length > 0) {
+      console.log(`📋 検索履歴サンプル: ${searches.slice(0, 3).map(s => s.query).join(', ')}`);
+    }
     res.json({ searches: searches });
   } catch (error) {
     console.error('❌ 検索履歴取得エラー:', error);
