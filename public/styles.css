@@ -258,16 +258,16 @@ body {
 }
 
 .video-thumbnail-wrapper {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  max-width: 640px;
-  aspect-ratio: 16 / 9;
+  height: 100%;
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
   background: #1a1a1a;
   transition: transform 0.3s ease;
-  margin: 0 auto;
 }
 
 .video-thumbnail-wrapper:hover {
