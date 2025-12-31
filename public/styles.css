@@ -354,17 +354,33 @@ body {
     padding: 10px;
   }
 
+  .container {
+    max-width: 100%;
+    padding: 0;
+  }
+
   .site-title {
-    font-size: 32px;
+    font-size: 28px;
+    margin-bottom: 20px;
+  }
+
+  .header {
+    margin-bottom: 20px;
+  }
+
+  .search-section {
+    margin-bottom: 20px;
   }
 
   .search-container {
     flex-direction: column;
     gap: 10px;
+    max-width: 100%;
   }
 
   .search-input {
     font-size: 16px; /* iOSで自動ズームを防ぐ最小サイズ */
+    width: 100%;
   }
 
   .search-btn {
@@ -381,33 +397,64 @@ body {
     padding: 6px 12px;
   }
 
+  .results {
+    display: block;
+    gap: 15px;
+  }
+
   .video-item {
     width: 100%;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+    padding: 15px;
   }
 
-  .video-thumbnail-wrapper {
+  .video-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .video-header-right {
     width: 100%;
-  }
-
-  .video-info {
-    padding: 10px;
+    justify-content: space-between;
   }
 
   .video-title {
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .video-info {
+    padding: 10px 0;
   }
 
   .video-meta {
     font-size: 12px;
     margin-top: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .video-player-container {
+    width: 100%;
+    margin: 10px 0;
+    padding: 0;
+  }
+
+  .video-thumbnail-wrapper {
+    position: relative;
+    width: 100%;
+    height: auto;
+    padding-top: 56.25%; /* 16:9 */
   }
 
   .sort-container {
     flex-direction: column;
     gap: 10px;
     align-items: stretch;
+    padding: 10px;
+    margin: 15px 0;
   }
 
   .sort-label {
@@ -417,11 +464,11 @@ body {
   .sort-select {
     width: 100%;
     font-size: 14px;
+    max-width: 100%;
   }
 
-  .video-player-container {
-    width: 100%;
-    margin: 0;
+  .ad-container {
+    margin: 15px 0;
     padding: 10px;
   }
 }
