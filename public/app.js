@@ -710,20 +710,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // 読み込み完了を検出
   iframe.onload = () => {
-    const isIOSDevice = isIPhone();
-    const isBrave = navigator.userAgent.includes('Brave');
-    console.log('✅ iframe読み込み完了:', normalizedUrl);
-    console.log('📊 iframe状態:', {
-      source: source,
-      isIPhone: isIOSDevice,
-      isBrave: isBrave,
-      iframeWidth: iframe.offsetWidth,
-      iframeHeight: iframe.offsetHeight,
-      containerWidth: container.offsetWidth,
-      containerHeight: container.offsetHeight
-    });
-    
-    
     // タイムアウトを短縮（読み込み完了したので）
     if (errorTimeout) clearTimeout(errorTimeout);
     
