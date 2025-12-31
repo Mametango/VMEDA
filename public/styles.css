@@ -348,6 +348,84 @@ body {
   background: rgba(102, 126, 234, 1);
 }
 
+/* レスポンシブデザイン（モバイル対応） */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  .site-title {
+    font-size: 32px;
+  }
+
+  .search-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .search-input {
+    font-size: 16px; /* iOSで自動ズームを防ぐ最小サイズ */
+  }
+
+  .search-btn {
+    width: 100%;
+  }
+
+  .recent-searches-list {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .recent-search-item {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+
+  .video-item {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .video-thumbnail-wrapper {
+    width: 100%;
+  }
+
+  .video-info {
+    padding: 10px;
+  }
+
+  .video-title {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .video-meta {
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .sort-container {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .sort-label {
+    font-size: 14px;
+  }
+
+  .sort-select {
+    width: 100%;
+    font-size: 14px;
+  }
+
+  .video-player-container {
+    width: 100%;
+    margin: 0;
+    padding: 10px;
+  }
+}
+
 .player-error {
   position: absolute;
   top: 50%;
