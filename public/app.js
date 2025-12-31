@@ -616,11 +616,21 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     });
   }
   
+  // Bilibiliの場合は、iPhone/Braveブラウザで特別な設定
+  if (source === 'bilibili' && isIPhone()) {
+    // iPhone/Braveブラウザの場合、より寛容な設定を適用
+    // sandbox属性は設定しない（Bilibiliのプレイヤーが動作しなくなる可能性があるため）
+    iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline; accelerometer; gyroscope; clipboard-write; clipboard-read');
+    iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+    console.log('📱 iPhone/Brave: Bilibili用の特別な設定を適用');
+  } else {
+    // その他の場合は通常の設定
+    iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline');
+  }
+  
   iframe.src = normalizedUrl;
   iframe.allowFullscreen = true;
   iframe.className = 'video-player';
-  // iPhoneでも全画面表示を許可
-  iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline');
   iframe.setAttribute('loading', 'lazy');
   iframe.setAttribute('frameborder', '0');
   iframe.setAttribute('scrolling', 'no');
