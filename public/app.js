@@ -698,9 +698,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     
     // Bilibiliの場合は、特別な処理を行う
     if (source === 'bilibili') {
-      const isIOSDevice = isIPhone();
+      const isIOSDeviceForBilibili = isIPhone();
       console.log('📺 Bilibili動画の読み込み完了を検出:', {
-        isIPhone: isIOSDevice,
+        isIPhone: isIOSDeviceForBilibili,
         browser: navigator.userAgent.includes('Brave') ? 'Brave' : 'Other',
         iframeSrc: iframe.src,
         iframeWidth: iframe.offsetWidth,
@@ -795,9 +795,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   container.style.overflow = 'hidden';
   
   // デバッグ情報を表示する要素を作成（iPhone/Braveブラウザ用）
-  const isIOSDevice = isIPhone();
+  const isIOSDeviceForDebug = isIPhone();
   const isBrave = navigator.userAgent.includes('Brave');
-  if (isIOSDevice && source === 'bilibili') {
+  if (isIOSDeviceForDebug && source === 'bilibili') {
     const debugInfo = document.createElement('div');
     debugInfo.className = 'debug-info';
     debugInfo.style.cssText = 'position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: #fff; padding: 10px; border-radius: 5px; font-size: 12px; z-index: 1000; max-width: 90%; word-break: break-all;';
@@ -855,7 +855,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   console.log('✅ iframeを作成しました:', {
     src: iframe.src,
     source: source,
-    isIPhone: isIOSDevice,
+    isIPhone: isIOSDeviceForDebug,
     isBrave: isBrave,
     containerWidth: container.offsetWidth,
     containerHeight: container.offsetHeight,
