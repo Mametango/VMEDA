@@ -80,12 +80,12 @@ async function saveRecentSearchesToMongoDB(searches) {
     const collection = db.collection(COLLECTION_NAME);
     const searchesToSave = searches.slice(0, MAX_RECENT_SEARCHES);
     
+    // プライバシー保護のため、検索ワードのみを保存（個人情報は含めない）
     await collection.updateOne(
       { _id: 'searches' },
       { 
         $set: { 
-          searches: searchesToSave,
-          updatedAt: new Date()
+          searches: searchesToSave
         } 
       },
       { upsert: true }
@@ -313,11 +313,9 @@ app.post('/api/search', async (req, res) => {
     let currentSearches = await loadRecentSearchesFromMongoDB();
     
     // このサイトを通して検索したワードを保存（最新30個を保持）
-    // 自分の検索も含めて、すべての検索ワードを履歴として残す
+    // プライバシー保護のため、検索ワードのみを保存（IPアドレスやその他の個人情報は収集しない）
     const searchEntry = {
-      query: sanitizedQuery,
-      timestamp: Date.now(),
-      ip: req.ip || req.connection.remoteAddress
+      query: sanitizedQuery
     };
     
     // 同じ検索ワードが既にある場合は削除（重複を避ける）
