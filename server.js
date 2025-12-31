@@ -6,61 +6,93 @@ const path = require('path');
 const fs = require('fs');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { kv } = require('@vercel/kv');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// このサイトを通して検索したワードを保存（メモリ内、最新30個を保持）
-// 注意: サーバーレス環境では、リクエスト間でデータは保持されません
-// Vercel KVが利用可能な場合は、Vercel KVを使用します
+// このサイトを通して検索したワードを保存（MongoDB Atlasに永続化、最新30個を保持）
 // 重複を避けるため、同じ検索ワードは最新のもののみ残す
 // 30個を超えると古いものから自動的に削除される
 // 自分の検索も含めて、すべての検索ワードを履歴として残す
 const MAX_RECENT_SEARCHES = 30; // 最新30個だけ保持
-const KV_KEY = 'recent-searches';
 
-// Vercel KVが利用可能かどうかを判定
-const useKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
+// MongoDB接続設定
+const MONGODB_URI = process.env.MONGODB_URI;
+const DB_NAME = 'vmeda';
+const COLLECTION_NAME = 'recent_searches';
 
-// 検索履歴をVercel KVから読み込む
-async function loadRecentSearchesFromKV() {
-  if (!useKV) {
-    console.log('⚠️ Vercel KVが設定されていません。ファイルシステムを使用します。');
-    return loadRecentSearchesFromFile();
+let mongoClient = null;
+let mongoDb = null;
+
+// MongoDBに接続
+async function connectToMongoDB() {
+  if (!MONGODB_URI) {
+    console.log('⚠️ MongoDB URIが設定されていません。メモリ内に保存します。');
+    return null;
   }
-  
+
+  if (mongoClient) {
+    return mongoDb;
+  }
+
   try {
-    const searches = await kv.get(KV_KEY);
-    if (Array.isArray(searches)) {
-      console.log(`📂 Vercel KVから検索履歴を読み込み: ${searches.length}件`);
-      return searches;
+    mongoClient = new MongoClient(MONGODB_URI);
+    await mongoClient.connect();
+    mongoDb = mongoClient.db(DB_NAME);
+    console.log('✅ MongoDB Atlasに接続しました');
+    return mongoDb;
+  } catch (error) {
+    console.error('❌ MongoDB接続エラー:', error.message);
+    return null;
+  }
+}
+
+// 検索履歴をMongoDBから読み込む
+async function loadRecentSearchesFromMongoDB() {
+  const db = await connectToMongoDB();
+  if (!db) {
+    return [];
+  }
+
+  try {
+    const collection = db.collection(COLLECTION_NAME);
+    const result = await collection.findOne({ _id: 'searches' });
+    if (result && Array.isArray(result.searches)) {
+      console.log(`📂 MongoDBから検索履歴を読み込み: ${result.searches.length}件`);
+      return result.searches;
     }
   } catch (error) {
-    console.error('❌ Vercel KVからの読み込みエラー:', error);
-    // フォールバック: ファイルから読み込む
-    return loadRecentSearchesFromFile();
+    console.error('❌ MongoDBからの読み込みエラー:', error.message);
   }
   return [];
 }
 
-// 検索履歴をVercel KVに保存
-async function saveRecentSearchesToKV(searches) {
-  if (!useKV) {
-    console.log('⚠️ Vercel KVが設定されていません。ファイルシステムを使用します。');
-    saveRecentSearchesToFile(searches);
+// 検索履歴をMongoDBに保存
+async function saveRecentSearchesToMongoDB(searches) {
+  const db = await connectToMongoDB();
+  if (!db) {
+    // MongoDBが利用できない場合はメモリ内に保存
     return;
   }
-  
+
   try {
-    // 最新30個だけ保存
+    const collection = db.collection(COLLECTION_NAME);
     const searchesToSave = searches.slice(0, MAX_RECENT_SEARCHES);
-    await kv.set(KV_KEY, searchesToSave);
-    console.log(`💾 Vercel KVに検索履歴を保存: ${searchesToSave.length}件`);
+    
+    await collection.updateOne(
+      { _id: 'searches' },
+      { 
+        $set: { 
+          searches: searchesToSave,
+          updatedAt: new Date()
+        } 
+      },
+      { upsert: true }
+    );
+    console.log(`💾 MongoDBに検索履歴を保存: ${searchesToSave.length}件`);
   } catch (error) {
-    console.error('❌ Vercel KVへの保存エラー:', error);
-    // フォールバック: ファイルに保存
-    saveRecentSearchesToFile(searches);
+    console.error('❌ MongoDBへの保存エラー:', error.message);
   }
 }
 
@@ -95,10 +127,10 @@ function saveRecentSearchesToFile(searches) {
   }
 }
 
-// サーバー起動時に検索履歴を読み込む（Vercel KV優先、フォールバックはファイル）
+// サーバー起動時に検索履歴を読み込む（MongoDB優先）
 let recentSearches = [];
 (async () => {
-  recentSearches = await loadRecentSearchesFromKV();
+  recentSearches = await loadRecentSearchesFromMongoDB();
 })();
 
 // セキュリティミドルウェア
