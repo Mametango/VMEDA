@@ -610,7 +610,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
         urlObj.searchParams.set('high_quality', '1'); // 高画質
         urlObj.searchParams.set('danmaku', '0'); // コメントオフ
         normalizedUrl = urlObj.toString();
-        console.log('📱 iPhone/Brave: モバイル対応パラメータを追加:', normalizedUrl);
       } catch (e) {
         console.warn('⚠️ URLパラメータ追加エラー:', e);
       }
@@ -629,7 +628,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     console.log('📱 iPhone/iOS: プロキシ経由で動画を読み込み:', proxyUrl);
   } else if (isIOSDevice && source === 'bilibili') {
     // Bilibiliの場合は直接埋め込みURLを使用（プロキシ経由では動作しない）
-    console.log('📱 iPhone/iOS + Bilibili: 直接埋め込みURLを使用:', normalizedUrl);
   }
   
   // Bilibiliの場合は、iPhone/Braveブラウザで特別な設定
