@@ -189,6 +189,18 @@ app.post('/api/search', async (req, res) => {
     const sanitizedQuery = validation.query;
     console.log(`🔍 検索開始: "${sanitizedQuery}"`);
     
+    // 検索ワードを保存（他のユーザー向け）
+    const searchEntry = {
+      query: sanitizedQuery,
+      timestamp: Date.now(),
+      ip: req.ip || req.connection.remoteAddress
+    };
+    recentSearches.unshift(searchEntry); // 先頭に追加
+    // 最大件数を超えた場合は古いものを削除
+    if (recentSearches.length > MAX_RECENT_SEARCHES) {
+      recentSearches.pop();
+    }
+    
     // 定義されている検索関数のみを使用
     const allSearches = [
       searchBilibili(query),
