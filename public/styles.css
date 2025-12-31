@@ -334,6 +334,9 @@ body {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 10px;
 }
 
 .recent-search-item {

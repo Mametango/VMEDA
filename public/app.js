@@ -178,8 +178,8 @@ function displayRecentSearches(searches) {
 // ページ読み込み時に他のユーザーの検索ワードを取得
 loadRecentSearches();
 
-// 定期的に他のユーザーの検索ワードを更新（30秒ごと）
-setInterval(loadRecentSearches, 30000);
+// 定期的に他のユーザーの検索ワードを更新（10秒ごと、より頻繁に更新）
+setInterval(loadRecentSearches, 10000);
 
 // 動画サイトごとの埋め込み対応状況を判定（緩和版）
 // 基本的には埋め込みを試み、エラーが発生した場合のみ元のURLにリンク

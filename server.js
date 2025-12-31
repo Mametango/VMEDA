@@ -10,8 +10,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 他のユーザーの検索ワードを保存（メモリ内、最大100件）
+// 重複を避けるため、同じ検索ワードは最新のもののみ残す
 const recentSearches = [];
 const MAX_RECENT_SEARCHES = 100;
+const DISPLAY_COUNT = 30; // 表示する検索ワードの数
 
 // セキュリティミドルウェア
 app.use(helmet({
@@ -195,6 +197,13 @@ app.post('/api/search', async (req, res) => {
       timestamp: Date.now(),
       ip: req.ip || req.connection.remoteAddress
     };
+    
+    // 同じ検索ワードが既にある場合は削除（重複を避ける）
+    const existingIndex = recentSearches.findIndex(entry => entry.query === sanitizedQuery);
+    if (existingIndex !== -1) {
+      recentSearches.splice(existingIndex, 1);
+    }
+    
     recentSearches.unshift(searchEntry); // 先頭に追加
     // 最大件数を超えた場合は古いものを削除
     if (recentSearches.length > MAX_RECENT_SEARCHES) {
@@ -1244,11 +1253,11 @@ async function searchSohu(query) {
 // 他のユーザーの検索ワードを取得するAPI
 app.get('/api/recent-searches', (req, res) => {
   try {
-    // 最近の検索ワードを返す（最大20件、自分のIPを除外）
+    // 最近の検索ワードを返す（最大30件、自分のIPを除外）
     const clientIp = req.ip || req.connection.remoteAddress;
     const otherSearches = recentSearches
       .filter(entry => entry.ip !== clientIp) // 自分の検索は除外
-      .slice(0, 20) // 最大20件
+      .slice(0, DISPLAY_COUNT) // 最大30件
       .map(entry => ({
         query: entry.query,
         timestamp: entry.timestamp,
