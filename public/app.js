@@ -551,30 +551,34 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     normalizedUrl = `https://${normalizedUrl}`;
   }
   
-  // iPhoneでBilibiliの動画を再生する場合、埋め込みではなく元のURLを直接開く
-  if (isIPhone() && source === 'bilibili') {
-    console.log('📱 iPhone + Bilibili: 埋め込みプレイヤーは動作しないため、元のURLを直接開きます');
-    // 元のURLを新しいウィンドウで開く（ユーザーの直接的な操作として）
-    window.open(originalUrl, '_blank');
-    return;
-  }
-  
-  // Bilibiliの埋め込みURLを完全なURLに変換（デスクトップ対応）
+  // Bilibiliの埋め込みURLを完全なURLに変換（iPhone Safari対応）
   if (source === 'bilibili' && normalizedUrl.includes('player.bilibili.com')) {
     // 既にhttps://で始まっている場合はそのまま、//で始まっている場合はhttps:を追加
     if (normalizedUrl.startsWith('//')) {
       normalizedUrl = 'https:' + normalizedUrl;
     }
     console.log('📺 Bilibili埋め込みURL:', normalizedUrl);
+    console.log('📱 iPhone判定:', isIPhone());
+    console.log('📱 User-Agent:', navigator.userAgent);
   }
   
   // iPhoneでデスクトップに偽装するため、プロキシ経由で読み込む
-  // Bilibiliの場合は既に上で処理済み
+  // ただし、Bilibiliの場合はプロキシ経由では動作しないため、直接埋め込みURLを使用
   if (isIPhone() && source !== 'bilibili') {
     // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
     const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(normalizedUrl)}`;
     normalizedUrl = proxyUrl;
     console.log('📱 iPhone: プロキシ経由で動画を読み込み:', proxyUrl);
+  } else if (isIPhone() && source === 'bilibili') {
+    // Bilibiliの場合は直接埋め込みURLを使用（プロキシ経由では動作しない）
+    console.log('📱 iPhone + Bilibili: 直接埋め込みURLを使用:', normalizedUrl);
+    console.log('📱 iPhone + Bilibili: デバッグ情報:', {
+      embedUrl: embedUrl,
+      originalUrl: originalUrl,
+      normalizedUrl: normalizedUrl,
+      userAgent: navigator.userAgent,
+      isIPhone: isIPhone()
+    });
   }
   
   iframe.src = normalizedUrl;
@@ -647,9 +651,16 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // タイムアウトを短縮（読み込み完了したので）
     if (errorTimeout) clearTimeout(errorTimeout);
     
-    // Bilibiliの場合は、特別な処理を行う（デスクトップのみ、iPhoneは既に処理済み）
-    if (source === 'bilibili' && !isIPhone()) {
-      console.log('📺 Bilibili動画の読み込み完了を検出（デスクトップ）');
+    // Bilibiliの場合は、特別な処理を行う
+    if (source === 'bilibili') {
+      console.log('📺 Bilibili動画の読み込み完了を検出:', {
+        isIPhone: isIPhone(),
+        iframeSrc: iframe.src,
+        iframeWidth: iframe.offsetWidth,
+        iframeHeight: iframe.offsetHeight,
+        containerWidth: container.offsetWidth,
+        containerHeight: container.offsetHeight
+      });
       // BilibiliのプレイヤーはJavaScriptで動的に読み込まれるため、
       // 少し待ってからエラーチェックを行う
       setTimeout(() => {
@@ -680,8 +691,15 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
               console.log('✅ Bilibili iframeコンテンツ確認完了');
             }
           } else {
-            // デスクトップではCORSでアクセスできる場合が多い
-            console.log('ℹ️ Bilibili iframeにアクセスできません（CORS）');
+            // iOS SafariではCORSでアクセスできない場合が多いが、正常に動作している可能性がある
+            console.log('ℹ️ Bilibili iframeにアクセスできません（CORS）:', {
+              isIPhone: isIPhone(),
+              iframeVisible: iframe.offsetWidth > 0 && iframe.offsetHeight > 0,
+              iframeWidth: iframe.offsetWidth,
+              iframeHeight: iframe.offsetHeight,
+              containerWidth: container.offsetWidth,
+              containerHeight: container.offsetHeight
+            });
           }
         } catch (e) {
           // CORSエラーは無視
