@@ -655,14 +655,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // Bilibiliの場合は追加の属性を設定
   if (source === 'bilibili') {
-    console.log('📺 Bilibili iframe属性設定:', {
-      src: iframe.src,
-      allow: iframe.getAttribute('allow'),
-      allowFullscreen: iframe.allowFullscreen,
-      webkitallowfullscreen: iframe.getAttribute('webkitallowfullscreen'),
-      playsinline: iframe.getAttribute('playsinline'),
-      isIPhone: isIPhone()
-    });
+    // 属性は既に設定済み
   }
   
   iframe.style.width = '100%';
