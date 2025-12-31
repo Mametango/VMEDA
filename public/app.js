@@ -593,6 +593,19 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   iframe.setAttribute('webkitallowfullscreen', 'true');
   iframe.setAttribute('mozallowfullscreen', 'true');
   iframe.setAttribute('playsinline', 'false'); // iPhoneで全画面表示
+  
+  // Bilibiliの場合は追加の属性を設定
+  if (source === 'bilibili') {
+    console.log('📺 Bilibili iframe属性設定:', {
+      src: iframe.src,
+      allow: iframe.getAttribute('allow'),
+      allowFullscreen: iframe.allowFullscreen,
+      webkitallowfullscreen: iframe.getAttribute('webkitallowfullscreen'),
+      playsinline: iframe.getAttribute('playsinline'),
+      isIPhone: isIPhone()
+    });
+  }
+  
   iframe.style.width = '100%';
   iframe.style.height = '100%';
   iframe.style.position = 'absolute';
@@ -747,8 +760,18 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   container.style.overflow = 'hidden';
   container.appendChild(iframe);
   
-  console.log('✅ iframeを作成しました:', iframe.src);
-  console.log('📱 コンテナサイズ:', container.offsetWidth, 'x', container.offsetHeight);
+  console.log('✅ iframeを作成しました:', {
+    src: iframe.src,
+    source: source,
+    isIPhone: isIPhone(),
+    containerWidth: container.offsetWidth,
+    containerHeight: container.offsetHeight,
+    iframeWidth: iframe.offsetWidth,
+    iframeHeight: iframe.offsetHeight,
+    normalizedUrl: normalizedUrl,
+    embedUrl: embedUrl,
+    originalUrl: originalUrl
+  });
   
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
   // タイムアウトでエラー検出（Bilibiliの場合は15秒、その他は10秒）
