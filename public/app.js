@@ -301,12 +301,9 @@ let currentDisplayedSearches = [];
 
 async function loadRecentSearches() {
   try {
-    // キャッシュを活用して高速化（ブラウザキャッシュも使用）
+    // キャッシュを活用して高速化（サーバー側のキャッシュを活用）
     const response = await fetch('/api/recent-searches', {
-      cache: 'default', // ブラウザキャッシュを活用
-      headers: {
-        'Cache-Control': 'max-age=5' // 5秒間キャッシュ
-      }
+      cache: 'default' // ブラウザキャッシュを活用
     });
     if (!response.ok) {
       console.error('❌ 検索履歴取得エラー:', response.status, response.statusText);

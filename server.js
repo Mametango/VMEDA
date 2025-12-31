@@ -371,7 +371,8 @@ app.post('/api/search', async (req, res) => {
     const sanitizedQuery = validation.query;
     console.log(`🔍 検索開始: "${sanitizedQuery}"`);
     
-    // サーバーレス環境では、毎回MongoDBから最新の検索履歴を読み込む
+    // サーバーレス環境では、毎回MongoDBから最新の検索履歴を読み込む（キャッシュを無効化して最新を取得）
+    invalidateRecentSearchesCache();
     let currentSearches = await loadRecentSearchesFromMongoDB();
     
     // このサイトを通して検索したワードを保存（最新30個を保持）
