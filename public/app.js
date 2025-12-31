@@ -576,6 +576,11 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
         urlObj.searchParams.set('autoplay', '0'); // 自動再生をオフ
         urlObj.searchParams.set('high_quality', '1'); // 高画質を有効
         urlObj.searchParams.set('danmaku', '0'); // コメントをオフ（パフォーマンス向上）
+        // モバイルデバイス向けの追加パラメータ
+        urlObj.searchParams.set('page', '1'); // ページ番号
+        urlObj.searchParams.set('as_wide', '1'); // ワイド表示
+        urlObj.searchParams.set('high_quality', '1'); // 高画質
+        urlObj.searchParams.set('danmaku', '0'); // コメントオフ
         normalizedUrl = urlObj.toString();
         console.log('📱 iPhone/Brave: モバイル対応パラメータを追加:', normalizedUrl);
       } catch (e) {
