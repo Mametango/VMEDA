@@ -309,6 +309,9 @@ app.post('/api/search', async (req, res) => {
     const sanitizedQuery = validation.query;
     console.log(`🔍 検索開始: "${sanitizedQuery}"`);
     
+    // サーバーレス環境では、毎回MongoDBから最新の検索履歴を読み込む
+    let currentSearches = await loadRecentSearchesFromMongoDB();
+    
     // このサイトを通して検索したワードを保存（最新30個を保持）
     // 自分の検索も含めて、すべての検索ワードを履歴として残す
     const searchEntry = {
@@ -318,23 +321,23 @@ app.post('/api/search', async (req, res) => {
     };
     
     // 同じ検索ワードが既にある場合は削除（重複を避ける）
-    const existingIndex = recentSearches.findIndex(entry => entry.query === sanitizedQuery);
+    const existingIndex = currentSearches.findIndex(entry => entry.query === sanitizedQuery);
     if (existingIndex !== -1) {
-      recentSearches.splice(existingIndex, 1);
+      currentSearches.splice(existingIndex, 1);
     }
     
     // 最新の検索ワードを先頭に追加
-    recentSearches.unshift(searchEntry);
+    currentSearches.unshift(searchEntry);
     
     // 最新30個だけを保持（古いものは自動的に削除）
-    if (recentSearches.length > MAX_RECENT_SEARCHES) {
-      recentSearches.splice(MAX_RECENT_SEARCHES); // 30個目以降を削除
+    if (currentSearches.length > MAX_RECENT_SEARCHES) {
+      currentSearches.splice(MAX_RECENT_SEARCHES); // 30個目以降を削除
     }
     
     // MongoDBに保存（永続化）
-    await saveRecentSearchesToMongoDB(recentSearches);
+    await saveRecentSearchesToMongoDB(currentSearches);
     
-    console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${recentSearches.length}件)`);
+    console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${currentSearches.length}件)`);
     
     // 定義されている検索関数のみを使用
     const allSearches = [
