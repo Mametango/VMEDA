@@ -1368,18 +1368,21 @@ async function searchSohu(query) {
 }
 
 // 検索履歴を取得するAPI（このサイトを通して検索したワードを最新30個返す）
-app.get('/api/recent-searches', (req, res) => {
+app.get('/api/recent-searches', async (req, res) => {
   try {
+    // Vercel KVから最新の検索履歴を読み込む（フォールバックはファイル）
+    const allSearches = await loadRecentSearchesFromKV();
+    
     // このサイトを通して検索したワードを最新30個返す
     // 自分の検索も他の人の検索も含めて、すべての検索ワードを履歴として表示
     // 検索ワードのみを返す（時間情報は不要）
-    const searches = recentSearches
+    const searches = allSearches
       .slice(0, MAX_RECENT_SEARCHES) // 最新30件
       .map(entry => ({
         query: entry.query
       }));
     
-    console.log(`📋 検索履歴取得: ${searches.length}件 (全検索: ${recentSearches.length}件)`);
+    console.log(`📋 検索履歴取得: ${searches.length}件 (全検索: ${allSearches.length}件)`);
     if (searches.length > 0) {
       console.log(`📋 検索履歴サンプル: ${searches.slice(0, 3).map(s => s.query).join(', ')}`);
     }
