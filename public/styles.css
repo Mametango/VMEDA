@@ -384,12 +384,13 @@ body {
   }
 
   .recent-searches-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 6px;
     max-height: 400px;
     padding: 5px;
     width: fit-content;
-    flex-direction: row;
-    flex-wrap: wrap;
   }
 
   .recent-search-item {
