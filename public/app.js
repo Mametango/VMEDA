@@ -492,14 +492,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
     return;
   }
   
-  // iPhoneの場合は、すべての動画を全画面表示で再生
-  const isMobile = isIPhone();
-  if (isMobile) {
-    console.log('📱 iPhone検出: 全画面表示で再生します');
-    // iPhoneの場合は、元のURLを新しいウィンドウで全画面表示で開く
-    window.open(originalUrl, '_blank');
-    return;
-  }
+  // iPhoneでもデスクトップと同じ埋め込み動画プレイヤーを使用
+  // レスポンシブデザインを削除したため、iPhoneでも同じ仕様で動作
   
   // 他の動画が再生中の場合、停止する
   if (currentPlayingVideoId && currentPlayingVideoId !== videoId) {
@@ -573,24 +567,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
       const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
       if (iframeVisible) {
         console.log('ℹ️ iframeは表示されているため、エラー表示をスキップ');
-        return;
-      }
-      
-      // iPhoneの場合は、エラー時に元のURLを新しいウィンドウで開く（全画面表示）
-      if (isMobile) {
-        console.log('📱 iPhone: iframe再生失敗、元のURLを全画面表示で開きます');
-        container.innerHTML = `
-          <div class="player-error">
-            <p>⚠️ 埋め込み再生に失敗しました</p>
-            <p class="error-detail">全画面表示で再生します...</p>
-            <a href="${originalUrl}" target="_blank" class="open-original-btn" onclick="window.open('${originalUrl}', '_blank'); return false;">全画面表示で開く</a>
-            <button class="retry-btn" onclick="showPlayer('${videoId}', '${escapeHtml(embedUrl)}', '${escapeHtml(originalUrl)}', '${source || ''}')">再試行</button>
-          </div>
-        `;
-        // 自動的に新しいウィンドウで開く
-        setTimeout(() => {
-          window.open(originalUrl, '_blank');
-        }, 500);
         return;
       }
       
