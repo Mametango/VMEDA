@@ -622,44 +622,96 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   };
   
   // iframeのエラーイベント
-  iframe.onerror = () => {
+  iframe.onerror = (error) => {
+    console.error('❌ iframeエラー:', error);
     showError();
   };
   
   // 読み込み完了を検出
   iframe.onload = () => {
-    console.log('✅ iframe読み込み完了');
+    console.log('✅ iframe読み込み完了:', normalizedUrl);
+    console.log('📊 iframe状態:', {
+      source: source,
+      isIPhone: isIPhone(),
+      iframeWidth: iframe.offsetWidth,
+      iframeHeight: iframe.offsetHeight,
+      containerWidth: container.offsetWidth,
+      containerHeight: container.offsetHeight
+    });
+    
     // タイムアウトを短縮（読み込み完了したので）
     if (errorTimeout) clearTimeout(errorTimeout);
     
-    // iOS Safariではiframeにアクセスできない場合が多いため、
-    // 読み込み完了後は成功とみなす
-    setTimeout(() => {
-      try {
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (iframeDoc) {
-          const bodyText = iframeDoc.body?.innerText || '';
-          const bodyHTML = iframeDoc.body?.innerHTML || '';
-          // エラーメッセージを検出
-          if (bodyText.includes('could not be loaded') || 
-              bodyText.includes('not supported') ||
-              bodyText.includes('network failed') ||
-              bodyText.includes('server failed') ||
-              bodyHTML.includes('could not be loaded') ||
-              bodyHTML.includes('not supported')) {
-            showError();
+    // Bilibiliの場合は、特別な処理を行う
+    if (source === 'bilibili') {
+      console.log('📺 Bilibili動画の読み込み完了を検出');
+      // BilibiliのプレイヤーはJavaScriptで動的に読み込まれるため、
+      // 少し待ってからエラーチェックを行う
+      setTimeout(() => {
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (iframeDoc) {
+            const bodyText = iframeDoc.body?.innerText || '';
+            const bodyHTML = iframeDoc.body?.innerHTML || '';
+            console.log('📺 Bilibili iframeコンテンツ確認:', {
+              bodyTextLength: bodyText.length,
+              bodyHTMLLength: bodyHTML.length,
+              hasError: bodyText.includes('could not be loaded') || 
+                        bodyText.includes('not supported') ||
+                        bodyText.includes('network failed') ||
+                        bodyText.includes('server failed')
+            });
+            
+            // エラーメッセージを検出
+            if (bodyText.includes('could not be loaded') || 
+                bodyText.includes('not supported') ||
+                bodyText.includes('network failed') ||
+                bodyText.includes('server failed') ||
+                bodyHTML.includes('could not be loaded') ||
+                bodyHTML.includes('not supported')) {
+              console.error('❌ Bilibili動画のエラーを検出');
+              showError();
+            } else {
+              console.log('✅ Bilibili iframeコンテンツ確認完了');
+            }
           } else {
-            console.log('✅ iframeコンテンツ確認完了');
+            // iOS SafariではCORSでアクセスできない場合が多いが、正常に動作している可能性がある
+            console.log('ℹ️ Bilibili iframeにアクセスできません（CORS）- 正常な場合があります');
           }
-        } else {
-          // iOS SafariではCORSでアクセスできない場合が多いが、正常に動作している可能性がある
-          console.log('ℹ️ iframeにアクセスできません（CORS）- 正常な場合があります');
+        } catch (e) {
+          // CORSエラーは無視（iOS Safariでは正常な場合が多い）
+          console.log('ℹ️ Bilibili iframeアクセスエラー（CORS）:', e.message);
         }
-      } catch (e) {
-        // CORSエラーは無視（iOS Safariでは正常な場合が多い）
-        console.log('ℹ️ iframeアクセスエラー（CORS）:', e.message);
-      }
-    }, 2000);
+      }, 3000); // Bilibiliの場合は3秒待つ
+    } else {
+      // その他の動画サイトの場合
+      setTimeout(() => {
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (iframeDoc) {
+            const bodyText = iframeDoc.body?.innerText || '';
+            const bodyHTML = iframeDoc.body?.innerHTML || '';
+            // エラーメッセージを検出
+            if (bodyText.includes('could not be loaded') || 
+                bodyText.includes('not supported') ||
+                bodyText.includes('network failed') ||
+                bodyText.includes('server failed') ||
+                bodyHTML.includes('could not be loaded') ||
+                bodyHTML.includes('not supported')) {
+              showError();
+            } else {
+              console.log('✅ iframeコンテンツ確認完了');
+            }
+          } else {
+            // iOS SafariではCORSでアクセスできない場合が多いが、正常に動作している可能性がある
+            console.log('ℹ️ iframeにアクセスできません（CORS）- 正常な場合があります');
+          }
+        } catch (e) {
+          // CORSエラーは無視（iOS Safariでは正常な場合が多い）
+          console.log('ℹ️ iframeアクセスエラー（CORS）:', e.message);
+        }
+      }, 2000);
+    }
   };
   
   // コンテナをクリアしてiframeを追加
@@ -676,7 +728,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   console.log('📱 コンテナサイズ:', container.offsetWidth, 'x', container.offsetHeight);
   
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
-  // タイムアウトでエラー検出（10秒後にチェック）
+  // タイムアウトでエラー検出（Bilibiliの場合は15秒、その他は10秒）
+  const timeoutDuration = source === 'bilibili' ? 15000 : 10000;
   errorTimeout = setTimeout(() => {
     if (hasError) return;
     
@@ -685,7 +738,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
     const containerVisible = container.offsetWidth > 0 && container.offsetHeight > 0;
     
-    console.log('🔍 iframe状態確認:', {
+    console.log('🔍 iframe状態確認（タイムアウト）:', {
+      source: source,
+      isIPhone: isIPhone(),
       iframeVisible,
       containerVisible,
       iframeWidth: iframe.offsetWidth,
@@ -697,14 +752,23 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // iframeが表示されていない場合はエラー
     if (!iframeVisible || !containerVisible) {
       console.warn('⚠️ iframeが表示されていません');
-      // iOS SafariではCORSでiframeにアクセスできない場合が多いため、
-      // エラーを表示せずに、元のURLへのリンクを表示
-      container.innerHTML = `
-        <div class="player-error">
-          <p>📱 動画を再生するには、元のサイトで開いてください</p>
-          <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
-        </div>
-      `;
+      // Bilibiliの場合は、元のURLへのリンクを表示
+      if (source === 'bilibili') {
+        container.innerHTML = `
+          <div class="player-error">
+            <p>📱 Bilibili動画を再生するには、元のサイトで開いてください</p>
+            <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
+          </div>
+        `;
+      } else {
+        // その他の動画サイトの場合
+        container.innerHTML = `
+          <div class="player-error">
+            <p>📱 動画を再生するには、元のサイトで開いてください</p>
+            <a href="${originalUrl}" target="_blank" class="open-original-btn">元のサイトで開く</a>
+          </div>
+        `;
+      }
       return;
     }
     
@@ -718,7 +782,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       // CORSエラーは無視（iOS Safariでは正常な場合が多い）
       console.log('ℹ️ iframeにアクセスできません（CORS）:', e.message);
     }
-  }, 10000);
+  }, timeoutDuration);
 };
 
 // ソース名取得
