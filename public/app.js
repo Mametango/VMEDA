@@ -477,6 +477,11 @@ function initVideoObserver() {
   });
 }
 
+// iPhoneかどうかを判定する関数
+function isIPhone() {
+  return /iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
 // プレイヤー表示（グローバルスコープに公開）
 window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
   console.log('▶ プレイヤー表示:', videoId, embedUrl, 'source:', source);
@@ -484,6 +489,13 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
   
   if (!container) {
     console.error('❌ プレイヤーコンテナが見つかりません:', `player-${videoId}`);
+    return;
+  }
+  
+  // iPhoneの場合は元のURLを新しいウィンドウで開く（全画面表示）
+  if (isIPhone()) {
+    console.log('📱 iPhone検出: 全画面表示で再生します');
+    window.open(originalUrl, '_blank');
     return;
   }
   
