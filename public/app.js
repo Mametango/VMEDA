@@ -49,6 +49,11 @@ const resultsDiv = document.getElementById('results');
 const loadingDiv = document.getElementById('loading');
 const recentSearchesDiv = document.getElementById('recent-searches');
 const recentSearchesList = document.getElementById('recent-searches-list');
+const sortContainer = document.getElementById('sort-container');
+const sortSelect = document.getElementById('sort-select');
+
+// 現在の検索結果を保持
+let currentVideos = [];
 
 // 検索実行
 async function searchVideos(query) {
@@ -86,7 +91,16 @@ async function searchVideos(query) {
       console.warn('⚠️ 検索結果が空です。テストデータが返されているか確認してください。');
     }
     
-    displayResults(data.results || [], query.trim());
+    const videos = data.results || [];
+    currentVideos = videos;
+    displayResults(videos, query.trim());
+    
+    // ソートUIを表示
+    if (videos.length > 0) {
+      sortContainer.classList.remove('hidden');
+    } else {
+      sortContainer.classList.add('hidden');
+    }
     
     // 検索実行後、検索履歴を更新
     setTimeout(() => {

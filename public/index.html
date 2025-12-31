@@ -36,6 +36,20 @@
       <div id="recent-searches-list" class="recent-searches-list"></div>
     </div>
 
+    <div id="sort-container" class="sort-container hidden">
+      <label for="sort-select" class="sort-label">並び替え:</label>
+      <select id="sort-select" class="sort-select">
+        <option value="default">デフォルト</option>
+        <option value="duration-desc">再生時間が長い順</option>
+        <option value="duration-asc">再生時間が短い順</option>
+        <option value="date-desc">追加日時の新しい順</option>
+        <option value="date-asc">追加日時の古い順</option>
+        <option value="title-asc">タイトル順（A-Z）</option>
+        <option value="title-desc">タイトル順（Z-A）</option>
+        <option value="source-asc">ソース順</option>
+      </select>
+    </div>
+
     <div id="results" class="results"></div>
   </div>
 

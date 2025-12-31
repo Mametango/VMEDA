@@ -371,6 +371,21 @@ body {
     padding: 10px;
   }
 
+  .sort-container {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .sort-label {
+    font-size: 13px;
+  }
+
+  .sort-select {
+    padding: 8px 12px;
+    font-size: 13px;
+    max-width: 100%;
+  }
+
   .site-title {
     font-size: 32px;
     margin-bottom: 20px;
