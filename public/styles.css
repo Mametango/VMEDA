@@ -299,6 +299,11 @@ body {
   justify-content: center;
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none; /* クリックイベントを親要素に渡す */
+}
+
+.play-overlay .play-btn-thumbnail {
+  pointer-events: auto; /* 再生ボタンはクリック可能 */
 }
 
 .video-thumbnail-wrapper:hover .play-overlay {

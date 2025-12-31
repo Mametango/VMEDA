@@ -159,8 +159,8 @@ function displayResults(videos, searchQuery) {
       <div class="video-player-container" id="player-${video.id}">
         ${hasThumbnail ? `
           <div class="video-thumbnail-wrapper" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}')">
-            <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" class="video-thumbnail" loading="lazy" onerror="this.onerror=null; this.style.display='none'; const overlay = this.nextElementSibling; if(overlay) overlay.style.display='flex';">
-            <div class="play-overlay" style="display: none;">
+            <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" class="video-thumbnail" loading="lazy" onerror="this.onerror=null; this.style.display='none'; const overlay = this.nextElementSibling; if(overlay) { overlay.style.display='flex'; overlay.style.opacity='1'; }">
+            <div class="play-overlay">
               <button class="play-btn-thumbnail">▶</button>
             </div>
           </div>
