@@ -647,9 +647,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // タイムアウトを短縮（読み込み完了したので）
     if (errorTimeout) clearTimeout(errorTimeout);
     
-    // Bilibiliの場合は、特別な処理を行う
-    if (source === 'bilibili') {
-      console.log('📺 Bilibili動画の読み込み完了を検出');
+    // Bilibiliの場合は、特別な処理を行う（デスクトップのみ、iPhoneは既に処理済み）
+    if (source === 'bilibili' && !isIPhone()) {
+      console.log('📺 Bilibili動画の読み込み完了を検出（デスクトップ）');
       // BilibiliのプレイヤーはJavaScriptで動的に読み込まれるため、
       // 少し待ってからエラーチェックを行う
       setTimeout(() => {
@@ -680,11 +680,11 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
               console.log('✅ Bilibili iframeコンテンツ確認完了');
             }
           } else {
-            // iOS SafariではCORSでアクセスできない場合が多いが、正常に動作している可能性がある
-            console.log('ℹ️ Bilibili iframeにアクセスできません（CORS）- 正常な場合があります');
+            // デスクトップではCORSでアクセスできる場合が多い
+            console.log('ℹ️ Bilibili iframeにアクセスできません（CORS）');
           }
         } catch (e) {
-          // CORSエラーは無視（iOS Safariでは正常な場合が多い）
+          // CORSエラーは無視
           console.log('ℹ️ Bilibili iframeアクセスエラー（CORS）:', e.message);
         }
       }, 3000); // Bilibiliの場合は3秒待つ
