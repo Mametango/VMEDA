@@ -1466,6 +1466,7 @@ async function searchSohu(query) {
         for (const selector of selectors) {
           if (videos.length >= 50) break;
           
+          const beforeCount = videos.length;
           $(selector).each((index, elem) => {
             if (videos.length >= 50) return false;
             
@@ -1516,9 +1517,14 @@ async function searchSohu(query) {
               }
             }
           });
+          
+          const selectorCount = videos.length - beforeCount;
+          if (selectorCount > 0) {
+            console.log(`🔍 Sohu検索: セレクタ "${selector}"で${selectorCount}件見つかりました`);
+          }
         }
         
-        console.log(`🔍 Sohu検索: ${selector}で${foundCount}件見つかりました`);
+        console.log(`🔍 Sohu検索: 合計${foundCount}件の動画を取得しました`);
         
         // 結果が見つかったら次のURLを試さない
         if (videos.length > 0) {
