@@ -45,6 +45,13 @@ mongodb+srv://username:password@cluster.mongodb.net/vmeda?retryWrites=true&w=maj
 6. 表示される接続文字列からクラスター名をコピー
    - 例: `cluster0.xxxxx.mongodb.net`
    - または: `cluster0.abcd1.mongodb.net`
+   - または: `ac-xxxxx-shard-00-00.xxxxx.mongodb.net`（シャード形式の場合）
+
+**注意**: 
+- `ac-1awighg-shard-00-02.n6dvuzf.mongodb.net:27017` のような形式を見た場合
+- クラスター名は `n6dvuzf.mongodb.net` の部分です
+- 接続文字列では `cluster0.n6dvuzf.mongodb.net` または `ac-1awighg-shard-00-00.n6dvuzf.mongodb.net` のような形式を使用します
+- **「Connect your application」から取得した接続文字列を使用することを推奨**します（自動的に正しい形式が生成されます）
 
 ## 完全な手順
 
