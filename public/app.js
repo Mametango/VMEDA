@@ -219,6 +219,78 @@ function isEmbeddable(url, source) {
   return true;
 }
 
+// 現在再生中の動画IDを追跡
+let currentPlayingVideoId = null;
+
+// 動画を停止する関数
+function stopVideo(videoId) {
+  const container = document.getElementById(`player-${videoId}`);
+  if (!container) return;
+  
+  const iframe = container.querySelector('iframe');
+  if (iframe) {
+    // iframeのsrcを削除して動画を停止
+    iframe.src = '';
+    // コンテナをクリアして再生ボタンを表示
+    container.innerHTML = `
+      <button class="play-btn" onclick="showPlayer('${videoId}', '${escapeHtml(iframe.getAttribute('data-embed-url') || '')}', '${escapeHtml(iframe.getAttribute('data-original-url') || '')}', '${iframe.getAttribute('data-source') || ''}')">
+        ▶ 再生
+      </button>
+    `;
+    console.log('⏹️ 動画を停止しました:', videoId);
+  }
+  
+  if (currentPlayingVideoId === videoId) {
+    currentPlayingVideoId = null;
+  }
+}
+
+// スクロール時に画面外の動画を停止
+function handleScroll() {
+  if (!currentPlayingVideoId) return;
+  
+  const container = document.getElementById(`player-${currentPlayingVideoId}`);
+  if (!container) return;
+  
+  const rect = container.getBoundingClientRect();
+  const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+  
+  // 画面外にスクロールされたら停止
+  if (!isVisible) {
+    stopVideo(currentPlayingVideoId);
+  }
+}
+
+// スクロールイベントリスナーを追加（スロットリング）
+let scrollTimeout;
+window.addEventListener('scroll', () => {
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout);
+  }
+  scrollTimeout = setTimeout(handleScroll, 100);
+}, { passive: true });
+
+// Intersection Observerを使用してより効率的に監視
+let videoObserver = null;
+function initVideoObserver() {
+  if (videoObserver) return;
+  
+  videoObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting && currentPlayingVideoId) {
+        const containerId = entry.target.id;
+        const videoId = containerId.replace('player-', '');
+        if (videoId === currentPlayingVideoId) {
+          stopVideo(videoId);
+        }
+      }
+    });
+  }, {
+    threshold: 0.1,
+    rootMargin: '50px'
+  });
+}
+
 // プレイヤー表示（グローバルスコープに公開）
 window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
   console.log('▶ プレイヤー表示:', videoId, embedUrl, 'source:', source);
@@ -229,6 +301,14 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
     return;
   }
   
+  // 他の動画が再生中の場合、停止する
+  if (currentPlayingVideoId && currentPlayingVideoId !== videoId) {
+    stopVideo(currentPlayingVideoId);
+  }
+  
+  // 現在の動画IDを記録
+  currentPlayingVideoId = videoId;
+  
   // 埋め込み可能かどうかを判定（基本的には試してみる）
   const canEmbed = isEmbeddable(embedUrl, source);
   console.log('🔍 埋め込み判定:', canEmbed, 'URL:', embedUrl, 'Source:', source);
@@ -238,11 +318,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
   
   // 既に表示されている場合は閉じる
   if (container.querySelector('iframe')) {
-    container.innerHTML = `
-      <button class="play-btn" onclick="showPlayer('${videoId}', '${escapeHtml(embedUrl)}', '${escapeHtml(originalUrl)}', '${source || ''}')">
-        ▶ 再生
-      </button>
-    `;
+    stopVideo(videoId);
     return;
   }
 
