@@ -131,57 +131,23 @@ function displayResults(videos) {
   resultsDiv.innerHTML = html;
 }
 
-// 動画サイトごとの埋め込み対応状況を判定
+// 動画サイトごとの埋め込み対応状況を判定（緩和版）
+// 基本的には埋め込みを試み、エラーが発生した場合のみ元のURLにリンク
 function isEmbeddable(url, source) {
-  // 埋め込み可能なサイト
-  const embeddableSites = [
-    'bilibili.com',
-    'player.bilibili.com',
-    'dailymotion.com',
-    'vimeo.com',
-    'player.vimeo.com'
-  ];
-  
-  // 埋め込みが難しいサイト（iOS Safariで特に問題がある）
-  const problematicSites = [
-    'sohu.com',
-    'tv.sohu.com',
-    'youku.com',
-    'iqiyi.com',
-    'v.qq.com',
-    'ixigua.com',
-    'fc2.com',
-    'akiba-abv.com',
-    'jpdmv.com',
-    'douga4.top',
-    'spankbang.com',
-    'x1hub.com',
-    'porntube.com',
-    'javguru.com',
-    'japanhub.net',
-    'tktube.com'
+  // 明らかに埋め込みが不可能なサイトのみ除外
+  // その他は埋め込みを試みる
+  const definitelyNotEmbeddable = [
+    // 特に問題があるサイトのみ
   ];
   
   // URLで判定
   if (url) {
-    for (const site of embeddableSites) {
-      if (url.includes(site)) return true;
-    }
-    for (const site of problematicSites) {
+    for (const site of definitelyNotEmbeddable) {
       if (url.includes(site)) return false;
     }
   }
   
-  // ソースで判定
-  if (source) {
-    const embeddableSources = ['bilibili', 'dailymotion', 'vimeo'];
-    const problematicSources = ['sohu', 'youku', 'iqiyi', 'tencent', 'xigua', 'fc2', 'akibaabv', 'jpdmv', 'douga4', 'spankbang', 'x1hub', 'porntube', 'javguru', 'japanhub', 'tktube'];
-    
-    if (embeddableSources.includes(source)) return true;
-    if (problematicSources.includes(source)) return false;
-  }
-  
-  // デフォルトは埋め込み可能とみなす
+  // デフォルトは埋め込み可能とみなす（試してみる）
   return true;
 }
 
@@ -195,21 +161,12 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
     return;
   }
   
-  // 埋め込み可能かどうかを判定
+  // 埋め込み可能かどうかを判定（基本的には試してみる）
   const canEmbed = isEmbeddable(embedUrl, source);
   console.log('🔍 埋め込み判定:', canEmbed, 'URL:', embedUrl, 'Source:', source);
   
-  // 埋め込みができない場合は、元のURLに直接リンク
-  if (!canEmbed) {
-    container.innerHTML = `
-      <div class="player-error" style="padding: 40px; text-align: center; background: rgba(0,0,0,0.8); border-radius: 8px;">
-        <p style="color: white; font-size: 18px; margin-bottom: 20px;">📱 この動画は埋め込み再生に対応していません</p>
-        <p style="color: #ccc; font-size: 14px; margin-bottom: 30px;">元のサイトで開いてご覧ください</p>
-        <a href="${originalUrl}" target="_blank" class="open-original-btn" style="display: inline-block; padding: 15px 30px; background: #4CAF50; color: white; text-decoration: none; border-radius: 30px; font-size: 16px; font-weight: bold;">元のサイトで開く</a>
-      </div>
-    `;
-    return;
-  }
+  // 埋め込みが明らかに不可能な場合のみ、元のURLに直接リンク
+  // それ以外は埋め込みを試み、エラーが発生した場合にフォールバック
   
   // 既に表示されている場合は閉じる
   if (container.querySelector('iframe')) {
