@@ -411,7 +411,6 @@ app.post('/api/search', async (req, res) => {
       searchIQiyi(query),
       searchTencentVideo(query),
       searchXiguaVideo(query),
-      searchSohu(query),
       searchGoogle(query),
       searchJPdmv(query),
       searchDouga4(query),
