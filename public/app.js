@@ -664,15 +664,34 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // 読み込み完了を検出
   iframe.onload = () => {
+    const isIOSDevice = isIPhone();
+    const isBrave = navigator.userAgent.includes('Brave');
     console.log('✅ iframe読み込み完了:', normalizedUrl);
     console.log('📊 iframe状態:', {
       source: source,
-      isIPhone: isIPhone(),
+      isIPhone: isIOSDevice,
+      isBrave: isBrave,
       iframeWidth: iframe.offsetWidth,
       iframeHeight: iframe.offsetHeight,
       containerWidth: container.offsetWidth,
       containerHeight: container.offsetHeight
     });
+    
+    // デバッグ情報を更新
+    if (isIOSDevice && source === 'bilibili') {
+      const debugInfo = container.querySelector('.debug-info');
+      if (debugInfo) {
+        const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
+        debugInfo.innerHTML = `
+          <div><strong>✅ 読み込み完了</strong></div>
+          <div>ブラウザ: ${isBrave ? 'Brave' : 'Other'}</div>
+          <div>iframeサイズ: ${iframe.offsetWidth}x${iframe.offsetHeight}</div>
+          <div style="margin-top: 5px; color: ${iframeVisible ? '#0f0' : '#f00'};">
+            iframe表示: ${iframeVisible ? '✅ 表示中' : '❌ 非表示'}
+          </div>
+        `;
+      }
+    }
     
     // タイムアウトを短縮（読み込み完了したので）
     if (errorTimeout) clearTimeout(errorTimeout);
