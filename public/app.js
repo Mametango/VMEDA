@@ -559,16 +559,12 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     }
   }
   
-  // iPhoneでデスクトップに偽装するため、URLにパラメータを追加
-  // 一部の動画サイトはモバイルデバイスからのアクセスを制限しているため
+  // iPhoneでデスクトップに偽装するため、プロキシ経由で読み込む
   if (isIPhone()) {
-    // URLにデスクトップモードを示すパラメータを追加（サイトによって異なる）
-    const urlObj = new URL(normalizedUrl);
-    // デスクトップ版を強制するパラメータを追加
-    urlObj.searchParams.set('mobile', '0');
-    urlObj.searchParams.set('desktop', '1');
-    urlObj.searchParams.set('force_desktop', '1');
-    normalizedUrl = urlObj.toString();
+    // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
+    const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(normalizedUrl)}`;
+    normalizedUrl = proxyUrl;
+    console.log('📱 iPhone: プロキシ経由で動画を読み込み:', proxyUrl);
   }
   
   iframe.src = normalizedUrl;
