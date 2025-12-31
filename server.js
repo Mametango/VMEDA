@@ -429,7 +429,7 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合
     const videos = [];
-    const allSiteNames = ['Bilibili', 'Youku', 'iQiyi', 'Tencent Video', 'Xigua Video', 'Sohu', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv'];
+    const allSiteNames = ['Bilibili', 'Youku', 'iQiyi', 'Tencent Video', 'Xigua Video', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv'];
     
     // 結果を追加（中国サイトの結果が先に来る）
     allResults.forEach((result, index) => {
