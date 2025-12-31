@@ -498,7 +498,16 @@ function initVideoObserver() {
 
 // iPhoneかどうかを判定する関数
 function isIPhone() {
-  return /iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  // iPhone/iPodを検出（Braveブラウザなども含む）
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPod|iPad/.test(ua) && !window.MSStream;
+  console.log('🔍 デバイス判定:', {
+    userAgent: ua,
+    isIOS: isIOS,
+    platform: navigator.platform,
+    vendor: navigator.vendor
+  });
+  return isIOS;
 }
 
 // プレイヤー表示（グローバルスコープに公開）
@@ -562,22 +571,26 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     console.log('📱 User-Agent:', navigator.userAgent);
   }
   
-  // iPhoneでデスクトップに偽装するため、プロキシ経由で読み込む
+  // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
   // ただし、Bilibiliの場合はプロキシ経由では動作しないため、直接埋め込みURLを使用
-  if (isIPhone() && source !== 'bilibili') {
+  const isIOSDevice = isIPhone();
+  if (isIOSDevice && source !== 'bilibili') {
     // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
     const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(normalizedUrl)}`;
     normalizedUrl = proxyUrl;
-    console.log('📱 iPhone: プロキシ経由で動画を読み込み:', proxyUrl);
-  } else if (isIPhone() && source === 'bilibili') {
+    console.log('📱 iPhone/iOS: プロキシ経由で動画を読み込み:', proxyUrl);
+  } else if (isIOSDevice && source === 'bilibili') {
     // Bilibiliの場合は直接埋め込みURLを使用（プロキシ経由では動作しない）
-    console.log('📱 iPhone + Bilibili: 直接埋め込みURLを使用:', normalizedUrl);
-    console.log('📱 iPhone + Bilibili: デバッグ情報:', {
+    console.log('📱 iPhone/iOS + Bilibili: 直接埋め込みURLを使用:', normalizedUrl);
+    console.log('📱 iPhone/iOS + Bilibili: デバッグ情報:', {
       embedUrl: embedUrl,
       originalUrl: originalUrl,
       normalizedUrl: normalizedUrl,
       userAgent: navigator.userAgent,
-      isIPhone: isIPhone()
+      platform: navigator.platform,
+      vendor: navigator.vendor,
+      isIPhone: isIOSDevice,
+      browser: navigator.userAgent.includes('Brave') ? 'Brave' : 'Other'
     });
   }
   
@@ -666,13 +679,16 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     
     // Bilibiliの場合は、特別な処理を行う
     if (source === 'bilibili') {
+      const isIOSDevice = isIPhone();
       console.log('📺 Bilibili動画の読み込み完了を検出:', {
-        isIPhone: isIPhone(),
+        isIPhone: isIOSDevice,
+        browser: navigator.userAgent.includes('Brave') ? 'Brave' : 'Other',
         iframeSrc: iframe.src,
         iframeWidth: iframe.offsetWidth,
         iframeHeight: iframe.offsetHeight,
         containerWidth: container.offsetWidth,
-        containerHeight: container.offsetHeight
+        containerHeight: container.offsetHeight,
+        userAgent: navigator.userAgent
       });
       // BilibiliのプレイヤーはJavaScriptで動的に読み込まれるため、
       // 少し待ってからエラーチェックを行う
