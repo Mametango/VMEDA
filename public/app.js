@@ -492,11 +492,12 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
     return;
   }
   
-  // iPhoneの場合は元のURLを新しいウィンドウで開く（全画面表示）
-  if (isIPhone()) {
-    console.log('📱 iPhone検出: 全画面表示で再生します');
-    window.open(originalUrl, '_blank');
-    return;
+  // iPhoneの場合は、まずiframeで埋め込み再生を試みる
+  // 失敗した場合のみ元のURLを新しいウィンドウで開く
+  const isMobile = isIPhone();
+  if (isMobile) {
+    console.log('📱 iPhone検出: iframeで埋め込み再生を試みます');
+    // 埋め込み再生を試みる（下記のiframe作成処理に進む）
   }
   
   // 他の動画が再生中の場合、停止する
@@ -530,13 +531,15 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source) {
   iframe.src = normalizedUrl;
   iframe.allowFullscreen = true;
   iframe.className = 'video-player';
-  iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media');
+  // iPhoneでも全画面表示を許可
+  iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline');
   iframe.setAttribute('loading', 'lazy');
   iframe.setAttribute('frameborder', '0');
   iframe.setAttribute('scrolling', 'no');
-  // iOS Safari対応
+  // iOS Safari対応（全画面表示を許可）
   iframe.setAttribute('webkitallowfullscreen', 'true');
   iframe.setAttribute('mozallowfullscreen', 'true');
+  iframe.setAttribute('playsinline', 'false'); // iPhoneで全画面表示
   iframe.style.width = '100%';
   iframe.style.height = '100%';
   iframe.style.position = 'absolute';
