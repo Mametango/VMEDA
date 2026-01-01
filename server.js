@@ -421,7 +421,9 @@ app.post('/api/search', async (req, res) => {
       searchJapanhub(query),
       searchTktube(query),
       searchFC2(query),
-      searchAkibaAbv(query)
+      searchAkibaAbv(query),
+      searchMissAV(query),
+      search91Porn(query)
     ];
     
     // すべての検索を並行実行
@@ -429,7 +431,7 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合
     const videos = [];
-    const allSiteNames = ['Bilibili', 'Youku', 'iQiyi', 'Tencent Video', 'Xigua Video', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv'];
+    const allSiteNames = ['Bilibili', 'Youku', 'iQiyi', 'Tencent Video', 'Xigua Video', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv', 'MissAV', '91Porn'];
     
     // 結果を追加（中国サイトの結果が先に来る）
     allResults.forEach((result, index) => {
@@ -529,7 +531,7 @@ async function searchGoogle(query) {
     
     // 動画サイトのドメインパターン（YouTubeは除外）
     const videoSiteDomains = [
-      'bilibili.com', 'jpdmv.com', 'douga4.top',
+      'bilibili.com', 'jpdmv.com', 'douga4.top', 'missav.com', '91porn.com',
       'dailymotion.com', 'vimeo.com', 'nicovideo.jp', 'fc2.com',
       'xvideos.com', 'pornhub.com', 'xhamster.com', 'spankbang.com',
       'x1hub.com', 'porntube.com', 'jav.guru', 'japanhub.net', 'tktube.com',
@@ -732,8 +734,11 @@ async function searchSpankbang(query) {
     
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Referer': 'https://spankbang.com/',
+        'Cookie': 'age_verified=1; sb_csrf_session=1'
       },
       timeout: 15000
     });
