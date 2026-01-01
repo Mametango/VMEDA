@@ -68,15 +68,11 @@ async function searchVideos(query) {
     return;
   }
   
-  // デフォルトの「動画」というワードでの検索を明示的に防止
-  // ユーザーが明示的に検索ボタンをクリックした場合のみ検索を実行
+  // デフォルトの「動画」というワードでの検索を完全に防止（いかなる場合も実行しない）
   const trimmedQuery = query.trim();
   if (trimmedQuery === '動画') {
-    // 検索入力欄が空で、かつユーザーが明示的に検索ボタンをクリックしていない場合は検索しない
-    if (!searchInput || !searchInput.value || searchInput.value.trim() !== '動画') {
-      console.log('⚠️ デフォルトの「動画」検索は実行されません');
-      return;
-    }
+    console.log('⚠️ デフォルトの「動画」検索は完全に無効化されています');
+    return;
   }
   
   console.log('🔍 検索実行:', trimmedQuery);
