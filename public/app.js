@@ -549,34 +549,15 @@ function displayRecentSearches(searches) {
 // ページ読み込み時に他のユーザーの検索ワードを取得
 loadRecentSearches();
 
-// ページ読み込み時に自動的に検索を実行
+// ページ読み込み時の自動検索は無効化
+// URLパラメータから検索キーワードを取得して検索入力欄に設定（検索は実行しない）
 (function() {
-  // URLパラメータから検索キーワードを取得
   const urlParams = new URLSearchParams(window.location.search);
   const queryParam = urlParams.get('q');
   
-  // デフォルトの検索キーワード（URLパラメータがない場合）
-  const defaultQuery = '動画';
-  
-  // 検索キーワードを決定（URLパラメータがあればそれを使用、なければデフォルト）
-  const searchQuery = queryParam || defaultQuery;
-  
-  // ページ読み込み完了後に検索を実行
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      // 検索入力欄にキーワードを設定
-      if (searchInput) {
-        searchInput.value = searchQuery;
-      }
-      // 検索を実行
-      searchVideos(searchQuery);
-    });
-  } else {
-    // 既に読み込み完了している場合
-    if (searchInput) {
-      searchInput.value = searchQuery;
-    }
-    searchVideos(searchQuery);
+  // URLパラメータがある場合は検索入力欄に設定するだけ（検索は実行しない）
+  if (queryParam && searchInput) {
+    searchInput.value = queryParam;
   }
 })();
 
