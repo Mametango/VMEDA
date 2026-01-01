@@ -676,17 +676,68 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // douga4の場合は、動画ページから実際の動画URLを取得する（非同期）
   if (source === 'douga4' && normalizedUrl.includes('douga4.top')) {
+    // デバッグ情報を表示（douga4専用）
+    const isIOSDevice = isIPhone();
+    const isBrave = navigator.userAgent.includes('Brave');
+    if (isIOSDevice || isBrave) {
+      const debugInfo = document.createElement('div');
+      debugInfo.className = 'debug-info-douga4';
+      debugInfo.style.cssText = 'position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-size: 12px; z-index: 10000; max-width: 90%; word-break: break-all;';
+      debugInfo.innerHTML = `
+        <div><strong>douga4デバッグ情報</strong></div>
+        <div>ブラウザ: ${navigator.userAgent.includes('Brave') ? 'Brave' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'}</div>
+        <div>デバイス: ${isIOSDevice ? 'iPhone/iOS' : 'Other'}</div>
+        <div>元のURL: ${normalizedUrl}</div>
+        <div>iframeサイズ: 読み込み中...</div>
+        <div>コンテナサイズ: 読み込み中...</div>
+        <div>状態: URL取得中...</div>
+      `;
+      container.appendChild(debugInfo);
+      
+      // 定期的にサイズ情報を更新
+      const updateDebugInfo = () => {
+        if (debugInfo.parentNode) {
+          const iframeSize = `${iframe.offsetWidth}×${iframe.offsetHeight}`;
+          const containerSize = `${container.offsetWidth}×${container.offsetHeight}`;
+          const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0 ? '表示中' : '非表示';
+          debugInfo.innerHTML = `
+            <div><strong>douga4デバッグ情報</strong></div>
+            <div>ブラウザ: ${navigator.userAgent.includes('Brave') ? 'Brave' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'}</div>
+            <div>デバイス: ${isIOSDevice ? 'iPhone/iOS' : 'Other'}</div>
+            <div>元のURL: ${normalizedUrl.substring(0, 50)}...</div>
+            <div>iframeサイズ: ${iframeSize}</div>
+            <div>コンテナサイズ: ${containerSize}</div>
+            <div>iframe表示: ${iframeVisible}</div>
+            <div>状態: <span id="douga4-status">更新中...</span></div>
+          `;
+        }
+      };
+      
+      setInterval(updateDebugInfo, 1000);
+    }
+    
     // サーバー側で動画URLを取得するエンドポイントを呼び出す
+    const statusEl = document.getElementById('douga4-status');
+    if (statusEl) statusEl.textContent = 'サーバーからURL取得中...';
+    
     fetch(`/api/douga4-video?url=${encodeURIComponent(normalizedUrl)}`)
-      .then(response => response.json())
+      .then(response => {
+        if (statusEl) statusEl.textContent = 'レスポンス受信...';
+        return response.json();
+      })
       .then(data => {
+        if (statusEl) statusEl.textContent = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
         if (data.embedUrl && data.embedUrl !== normalizedUrl) {
           // 取得した動画URLを使用
+          if (statusEl) statusEl.textContent = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
           iframe.src = data.embedUrl;
+        } else {
+          if (statusEl) statusEl.textContent = '元のURLを使用';
         }
       })
       .catch(error => {
         // エラーが発生しても元のURLを使用
+        if (statusEl) statusEl.textContent = `エラー: ${error.message}`;
       });
   }
   
