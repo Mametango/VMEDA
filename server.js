@@ -180,9 +180,10 @@ function invalidateRecentSearchesCache() {
 }
 
 // Vercel環境ではプロキシの背後で動作するため、trust proxyを有効化
+// ただし、express-rate-limitの警告を避けるため、具体的なプロキシ数を指定
 if (process.env.VERCEL === '1' || process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', true);
-  console.log('✅ Trust proxy設定を有効化しました（Vercel環境）');
+  app.set('trust proxy', 1); // Vercelは1つのプロキシの背後
+  console.log('✅ Trust proxy設定を有効化しました（Vercel環境、プロキシ数: 1）');
 }
 
 // セキュリティミドルウェア
@@ -901,6 +902,10 @@ app.post('/api/search', async (req, res) => {
     const searchDuration = searchEndTime - searchStartTime;
     console.log(`✅ すべての検索関数の実行が完了しました（${allResults.length}件、実行時間: ${searchDuration}ms）`);
     
+    // 結果を統合
+    const videos = [];
+    const allSiteNames = searchFunctions.map(sf => sf.name);
+    
     // 各検索関数の実行結果を確認
     console.log(`📊 各検索関数の実行結果を確認中...`);
     allResults.forEach((result, index) => {
@@ -920,10 +925,6 @@ app.post('/api/search', async (req, res) => {
         }
       }
     });
-    
-    // 結果を統合
-    const videos = [];
-    const allSiteNames = searchFunctions.map(sf => sf.name);
     
     // 結果を追加（中国サイトの結果が先に来る）
     let totalFromSites = 0;
