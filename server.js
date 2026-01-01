@@ -468,7 +468,9 @@ app.post('/api/search', async (req, res) => {
       searchFC2(query),
       searchAkibaAbv(query),
       searchMissAV(query),
-      search91Porn(query)
+      search91Porn(query),
+      searchThisAV(query),
+      searchMadou(query)
     ];
     
     // すべての検索を並行実行
@@ -476,7 +478,7 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合
     const videos = [];
-    const allSiteNames = ['Bilibili', 'Youku', 'iQiyi', 'Tencent Video', 'Xigua Video', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv', 'MissAV', '91Porn'];
+    const allSiteNames = ['Bilibili', 'Youku', 'iQiyi', 'Tencent Video', 'Xigua Video', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'Japanhub', 'Tktube', 'FC2', 'AkibaAbv', 'MissAV', '91Porn', 'ThisAV', 'Madou'];
     
     // 結果を追加（中国サイトの結果が先に来る）
     allResults.forEach((result, index) => {
@@ -584,7 +586,8 @@ async function searchGoogle(query) {
       'dailymotion.com', 'vimeo.com', 'nicovideo.jp', 'fc2.com',
       'xvideos.com', 'pornhub.com', 'xhamster.com', 'spankbang.com',
       'x1hub.com', 'porntube.com', 'jav.guru', 'japanhub.net', 'tktube.com',
-      'akiba-abv.com', 'sohu.com', 'youku.com', 'iqiyi.com', 'qq.com', 'ixigua.com'
+      'akiba-abv.com', 'sohu.com', 'youku.com', 'iqiyi.com', 'qq.com', 'ixigua.com',
+      'thisav.com', 'madou.club'
     ];
     
     // すべてのリンクを取得

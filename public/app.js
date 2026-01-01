@@ -1093,6 +1093,8 @@ function getSourceName(source) {
     'jav': 'JAV',
     '91porn': '91Porn',
     '91porn2': '91Porn2',
+    'thisav': 'ThisAV',
+    'madou': 'Madou',
     'caoliu': 'Caoliu',
     'caoliu1024': 'CaoLiu1024',
     'sis': 'Sis',
