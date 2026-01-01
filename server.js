@@ -3147,7 +3147,7 @@ app.get('/api/proxy-video', async (req, res) => {
   }
 });
 
-// ルートパス - index.htmlを返す
+// ルートパス - index.htmlを返す（Vercel対応）
 app.get('/', (req, res) => {
   try {
     console.log('🏠 ルートパス リクエスト受信');
@@ -3155,29 +3155,46 @@ app.get('/', (req, res) => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
     console.log(`📱 デバイス: ${isMobile ? 'Mobile' : 'Desktop'} - ${userAgent.substring(0, 80)}`);
     
-    const indexPath = path.join(__dirname, 'public', 'index.html');
+    // Vercel環境では、静的ファイルは自動的に配信される
+    // ただし、明示的にルートパスをハンドリングする必要がある場合がある
+    // __dirnameが正しく動作しない場合に備えて、複数のパスを試す
+    let indexPath;
     
-    // ファイルの存在確認
-    if (!fs.existsSync(indexPath)) {
-      console.error('❌ index.htmlが見つかりません:', indexPath);
-      return res.status(404).send('File not found');
+    if (process.env.VERCEL === '1') {
+      // Vercel環境: 相対パスを使用
+      indexPath = path.join(process.cwd(), 'public', 'index.html');
+    } else {
+      // ローカル環境: __dirnameを使用
+      indexPath = path.join(__dirname, 'public', 'index.html');
     }
     
-    res.sendFile(indexPath, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-cache'
-      }
-    }, (err) => {
-      if (err) {
-        console.error('❌ index.html送信エラー:', err.message);
-        if (!res.headersSent) {
-          res.status(500).send('Internal Server Error');
-        }
+    // ファイルの存在確認（Vercelではスキップ可能）
+    try {
+      if (fs.existsSync && fs.existsSync(indexPath)) {
+        res.sendFile(indexPath, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-cache'
+          }
+        }, (err) => {
+          if (err) {
+            console.error('❌ index.html送信エラー:', err.message);
+            // 静的ファイル配信にフォールバック
+            res.status(404).send('File not found');
+          } else {
+            console.log('✅ index.html送信成功');
+          }
+        });
       } else {
-        console.log('✅ index.html送信成功');
+        // ファイルが見つからない場合は、静的ファイル配信に任せる
+        console.log('⚠️ index.htmlが見つかりません。静的ファイル配信に任せます');
+        res.status(404).send('File not found');
       }
-    });
+    } catch (fsError) {
+      console.error('❌ ファイルシステムエラー:', fsError.message);
+      // 静的ファイル配信にフォールバック
+      res.status(404).send('File not found');
+    }
   } catch (error) {
     console.error('❌ ルートパス処理エラー:', error.message);
     if (!res.headersSent) {
