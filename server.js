@@ -2285,6 +2285,11 @@ async function searchJavmix(query) {
             const duration = extractDurationFromHtml($, $item);
             
             if (title && title.length > 3) {
+              // 検索クエリとタイトルの関連性をチェック
+              if (!isTitleRelevant(title, query)) {
+                return; // 関連性がない場合はスキップ
+              }
+              
               videos.push({
                 id: `javmix-${Date.now()}-${index}`,
                 title: title.substring(0, 200),
