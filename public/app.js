@@ -766,8 +766,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       // BilibiliのプレイヤーはJavaScriptで動的に読み込まれるため、
       // 少し待ってからエラーチェックを行う
       setTimeout(() => {
-        // 既存のデバッグ情報を削除
-        container.querySelectorAll('.debug-info').forEach(el => el.remove());
+        // 既存のデバッグ情報を削除（douga4のデバッグ情報は除外）
+        container.querySelectorAll('.debug-info:not(.debug-info-douga4)').forEach(el => el.remove());
         try {
           const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
           if (iframeDoc) {
@@ -791,8 +791,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     } else {
       // その他の動画サイトの場合
       setTimeout(() => {
-        // 既存のデバッグ情報を削除
-        container.querySelectorAll('.debug-info').forEach(el => el.remove());
+        // 既存のデバッグ情報を削除（douga4のデバッグ情報は除外）
+        container.querySelectorAll('.debug-info:not(.debug-info-douga4)').forEach(el => el.remove());
         try {
           const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
           if (iframeDoc) {
