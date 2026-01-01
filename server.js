@@ -464,7 +464,8 @@ app.post('/api/search', async (req, res) => {
       searchAkibaAbv(sanitizedQuery),
       search91Porn(sanitizedQuery),
       searchThisAV(sanitizedQuery),
-      searchMadou(sanitizedQuery)
+      searchMadou(sanitizedQuery),
+      searchJavmix(sanitizedQuery)
     ];
     
     // すべての検索を並行実行
@@ -2177,6 +2178,120 @@ async function searchMadou(query) {
     return videos;
   } catch (error) {
     console.error('Madou検索エラー:', error.message);
+    return [];
+  }
+}
+
+// Javmix.TV検索
+async function searchJavmix(query) {
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    // 複数のURLパターンを試す
+    const urls = [
+      `https://javmix.tv/search?q=${encodedQuery}`,
+      `https://javmix.tv/search/${encodedQuery}`,
+      `https://javmix.tv/?q=${encodedQuery}`
+    ];
+    
+    let videos = [];
+    
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'ja,en-US;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://javmix.tv/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000
+        });
+        
+        const $ = cheerio.load(response.data);
+        
+        // 複数のセレクタを試す
+        const selectors = [
+          '.video-item',
+          '.item',
+          'a[href*="/video/"]',
+          'a[href*="/watch/"]',
+          'a[href*="/v/"]',
+          'a[href*="/play/"]',
+          '[class*="video"]',
+          '[class*="item"]',
+          '.result-item',
+          '.search-result-item',
+          'article',
+          '[class*="card"]'
+        ];
+        
+        const seenUrls = new Set();
+        
+        selectors.forEach(selector => {
+          $(selector).each((index, elem) => {
+            if (videos.length >= 50) return false;
+            
+            const $item = $(elem);
+            let href = $item.attr('href') || $item.find('a').attr('href') || '';
+            
+            // hrefが見つからない場合は親要素を探す
+            if (!href) {
+              const $parent = $item.parent();
+              href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+            }
+            
+            // Javmix.TVの動画URLパターンを確認
+            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/play/'))) return;
+            
+            // 相対URLを絶対URLに変換
+            let fullUrl = href;
+            if (href.startsWith('//')) {
+              fullUrl = 'https:' + href;
+            } else if (href.startsWith('/')) {
+              fullUrl = `https://javmix.tv${href}`;
+            } else if (!href.startsWith('http')) {
+              fullUrl = `https://javmix.tv/${href}`;
+            }
+            
+            // 重複チェック
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            const title = extractTitle($, $item);
+            const thumbnail = extractThumbnail($, $item);
+            const duration = extractDurationFromHtml($, $item);
+            
+            if (title && title.length > 3) {
+              videos.push({
+                id: `javmix-${Date.now()}-${index}`,
+                title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'javmix'
+              });
+            }
+          });
+        });
+        
+        // 結果が見つかったらループを抜ける
+        if (videos.length > 0) break;
+      } catch (urlError) {
+        console.warn(`⚠️ Javmix.TV URL試行エラー (${url}):`, urlError.message);
+        continue;
+      }
+    }
+    
+    console.log(`✅ Javmix.TV: ${videos.length}件の動画を取得`);
+    return videos;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ Javmix.TV検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ Javmix.TV検索エラー:', error.message);
+    }
     return [];
   }
 }
