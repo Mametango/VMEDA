@@ -452,7 +452,6 @@ app.post('/api/search', async (req, res) => {
     // 定義されている検索関数のみを使用
     const allSearches = [
       searchBilibili(sanitizedQuery),
-      searchIQiyi(sanitizedQuery),
       searchTencentVideo(sanitizedQuery),
       searchXiguaVideo(sanitizedQuery),
       searchJPdmv(sanitizedQuery),
@@ -475,7 +474,7 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合
     const videos = [];
-    const allSiteNames = ['Bilibili', 'iQiyi', 'Tencent Video', 'Xigua Video', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'FC2', 'AkibaAbv', '91Porn', 'ThisAV', 'Madou'];
+    const allSiteNames = ['Bilibili', 'Tencent Video', 'Xigua Video', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'FC2', 'AkibaAbv', '91Porn', 'ThisAV', 'Madou'];
     
     // 結果を追加（中国サイトの結果が先に来る）
     let totalFromSites = 0;
