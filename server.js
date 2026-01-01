@@ -364,6 +364,29 @@ function extractDurationFromHtml($, $elem) {
   return durationText;
 }
 
+// 検索クエリとタイトルの関連性をチェック
+function isTitleRelevant(title, query) {
+  if (!title || !query) return true; // タイトルやクエリがない場合はスキップ
+  
+  const titleLower = title.toLowerCase();
+  const queryLower = query.toLowerCase().trim();
+  
+  // クエリが空の場合は関連ありとみなす
+  if (queryLower.length === 0) return true;
+  
+  // クエリを単語に分割（日本語と英語に対応）
+  const queryWords = queryLower.split(/\s+/).filter(word => word.length > 0);
+  
+  // クエリが1単語の場合は、その単語がタイトルに含まれているかチェック
+  if (queryWords.length === 1) {
+    return titleLower.includes(queryWords[0]);
+  }
+  
+  // クエリが複数単語の場合は、少なくとも1つの単語がタイトルに含まれているかチェック
+  // （すべての単語が含まれている必要はないが、少なくとも1つは必要）
+  return queryWords.some(word => titleLower.includes(word));
+}
+
 // 入力検証関数
 function validateQuery(query) {
   if (!query || typeof query !== 'string') {
@@ -812,6 +835,11 @@ async function searchDouga4(query) {
       const duration = extractDurationFromHtml($, $item);
       
       if (title && title.length > 3) {
+        // 検索クエリとタイトルの関連性をチェック
+        if (!isTitleRelevant(title, query)) {
+          return; // 関連性がない場合はスキップ
+        }
+        
         videos.push({
           id: `douga4-${Date.now()}-${index}`,
           title: title.substring(0, 200),
@@ -1446,6 +1474,11 @@ async function searchBilibili(query) {
         const duration = extractDurationFromHtml($, $item);
         
         if (title && title.length > 3) {
+          // 検索クエリとタイトルの関連性をチェック
+          if (!isTitleRelevant(title, query)) {
+            return; // 関連性がない場合はスキップ
+          }
+          
           const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
           const embedUrl = bvid ? `//player.bilibili.com/player.html?bvid=${bvid[0]}` : fullUrl;
           
@@ -2369,6 +2402,11 @@ async function searchPPP(query) {
             const duration = extractDurationFromHtml($, $item);
             
             if (title && title.length > 3) {
+              // 検索クエリとタイトルの関連性をチェック
+              if (!isTitleRelevant(title, query)) {
+                return; // 関連性がない場合はスキップ
+              }
+              
               videos.push({
                 id: `ppp-${Date.now()}-${index}`,
                 title: title.substring(0, 200),
