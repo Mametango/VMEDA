@@ -779,7 +779,8 @@ app.post('/api/search', async (req, res) => {
       searchBilibili(sanitizedQuery),
       searchDouga4(sanitizedQuery),
       searchJavmix(sanitizedQuery),
-      searchPPP(sanitizedQuery)
+      searchPPP(sanitizedQuery),
+      searchMat6tube(sanitizedQuery)
     ];
     
     // すべての検索を並行実行
@@ -789,7 +790,7 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合
     const videos = [];
-    const allSiteNames = ['Bilibili', 'Douga4', 'Javmix.TV', 'PPP.Porn'];
+    const allSiteNames = ['Bilibili', 'Douga4', 'Javmix.TV', 'PPP.Porn', 'Mat6tube'];
     
     // 結果を追加（中国サイトの結果が先に来る）
     let totalFromSites = 0;
