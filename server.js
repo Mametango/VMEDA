@@ -179,6 +179,12 @@ function invalidateRecentSearchesCache() {
   console.log('📋 検索履歴キャッシュを無効化');
 }
 
+// Vercel環境ではプロキシの背後で動作するため、trust proxyを有効化
+if (process.env.VERCEL === '1' || process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', true);
+  console.log('✅ Trust proxy設定を有効化しました（Vercel環境）');
+}
+
 // セキュリティミドルウェア
 app.use(helmet({
   contentSecurityPolicy: {
