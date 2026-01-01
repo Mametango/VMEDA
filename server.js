@@ -1554,6 +1554,110 @@ async function searchSohu(query) {
   }
 }
 
+// MissAV検索
+async function searchMissAV(query) {
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://missav.com/search/${encodedQuery}`;
+    
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Referer': 'https://missav.com/'
+      },
+      timeout: 15000
+    });
+    
+    const $ = cheerio.load(response.data);
+    const videos = [];
+    
+    $('.item, .video-item, a[href*="/videos/"]').each((index, elem) => {
+      if (videos.length >= 50) return false;
+      
+      const $item = $(elem);
+      const href = $item.attr('href') || $item.find('a').attr('href') || '';
+      if (!href || !href.includes('/videos/')) return;
+      
+      const fullUrl = href.startsWith('http') ? href : `https://missav.com${href}`;
+      const title = extractTitle($, $item);
+      const thumbnail = extractThumbnail($, $item);
+      const duration = extractDurationFromHtml($, $item);
+      
+      if (title && title.length > 3) {
+        videos.push({
+          id: `missav-${Date.now()}-${index}`,
+          title: title.substring(0, 200),
+          thumbnail: thumbnail || '',
+          duration: duration || '',
+          url: fullUrl,
+          embedUrl: fullUrl,
+          source: 'missav'
+        });
+      }
+    });
+    
+    console.log(`✅ MissAV: ${videos.length}件の動画を取得`);
+    return videos;
+  } catch (error) {
+    console.error('MissAV検索エラー:', error.message);
+    return [];
+  }
+}
+
+// 91Porn検索
+async function search91Porn(query) {
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://91porn.com/search/${encodedQuery}`;
+    
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Referer': 'https://91porn.com/'
+      },
+      timeout: 15000
+    });
+    
+    const $ = cheerio.load(response.data);
+    const videos = [];
+    
+    $('.item, .video-item, a[href*="/view/"]').each((index, elem) => {
+      if (videos.length >= 50) return false;
+      
+      const $item = $(elem);
+      const href = $item.attr('href') || $item.find('a').attr('href') || '';
+      if (!href || !href.includes('/view/')) return;
+      
+      const fullUrl = href.startsWith('http') ? href : `https://91porn.com${href}`;
+      const title = extractTitle($, $item);
+      const thumbnail = extractThumbnail($, $item);
+      const duration = extractDurationFromHtml($, $item);
+      
+      if (title && title.length > 3) {
+        videos.push({
+          id: `91porn-${Date.now()}-${index}`,
+          title: title.substring(0, 200),
+          thumbnail: thumbnail || '',
+          duration: duration || '',
+          url: fullUrl,
+          embedUrl: fullUrl,
+          source: '91porn'
+        });
+      }
+    });
+    
+    console.log(`✅ 91Porn: ${videos.length}件の動画を取得`);
+    return videos;
+  } catch (error) {
+    console.error('91Porn検索エラー:', error.message);
+    return [];
+  }
+}
+
 // 検索履歴を取得するAPI（このサイトを通して検索したワードを最新30個返す）
 app.get('/api/recent-searches', async (req, res) => {
   try {
