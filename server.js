@@ -498,7 +498,7 @@ function extractThumbnail($, $elem) {
   }
   
   // 背景画像として設定されているサムネイルを探す
-  const styleAttr = $elem.attr('style') || $elem.css('background-image') || '';
+  const styleAttr = $elem.attr('style') || '';
   if (styleAttr) {
     const bgImageMatch = styleAttr.match(/url\(['"]?([^'")]+)['"]?\)/);
     if (bgImageMatch && bgImageMatch[1]) {
