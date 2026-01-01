@@ -482,11 +482,12 @@ async function loadRecentSearches() {
   }
 
   try {
-    // キャッシュを無効化して最新のデータを取得（検索履歴が表示されない問題を解決）
+    // 検索履歴を最優先で取得（高速化のためキャッシュを活用）
     const response = await fetch('/api/recent-searches', {
-      cache: 'no-cache', // キャッシュを無効化して最新データを取得
+      cache: 'default', // キャッシュを活用して高速化
+      priority: 'high', // 優先度を高く設定
       headers: {
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'max-age=10' // 10秒間キャッシュ
       }
     });
     if (!response.ok) {
@@ -605,12 +606,12 @@ loadRecentSearches();
   console.log('ℹ️ ページ読み込み完了: 自動検索は実行されません');
 })();
 
-// 定期的に検索履歴を更新（30秒ごと、頻繁すぎると消える可能性があるため間隔を長く）
+// 定期的に検索履歴を更新（10秒ごと、高速化のため間隔を短縮）
 // エラー時や空の場合は既存の表示を保持するため、検索履歴が消えることはありません
 setInterval(() => {
   console.log('🔄 検索履歴を定期更新中...');
   loadRecentSearches();
-}, 30000); // 30秒ごとに更新
+}, 10000); // 10秒ごとに更新（高速化のため30秒から短縮）
 
 // 動画サイトごとの埋め込み対応状況を判定（緩和版）
 // 基本的には埋め込みを試み、エラーが発生した場合のみ元のURLにリンク
