@@ -645,7 +645,6 @@ async function searchGoogle(query) {
           if (bvid) embedUrl = `//player.bilibili.com/player.html?bvid=${bvid[0]}`;
         } else if (href.includes('jpdmv.com')) source = 'jpdmv';
         else if (href.includes('douga4.top')) source = 'douga4';
-        else if (href.includes('missav.com')) source = 'missav';
         else if (href.includes('91porn.com')) source = '91porn';
         else if (href.includes('thisav.com')) source = 'thisav';
         else if (href.includes('madou.club')) source = 'madou';
