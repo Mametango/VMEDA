@@ -1600,6 +1600,72 @@ function getTimeAgo(timestamp) {
   }
 }
 
+// douga4動画ページから実際の動画URLを取得するエンドポイント
+app.get('/api/douga4-video', async (req, res) => {
+  try {
+    const videoUrl = req.query.url;
+    if (!videoUrl || !videoUrl.includes('douga4.top')) {
+      return res.status(400).json({ error: 'douga4のURLが必要です' });
+    }
+    
+    console.log('📺 douga4動画URL取得リクエスト:', videoUrl);
+    
+    // デスクトップのUser-Agentでリクエスト
+    const response = await axios.get(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Referer': 'https://av.douga4.top/',
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000,
+      maxRedirects: 5
+    });
+    
+    const $ = cheerio.load(response.data);
+    
+    // 動画プレイヤーのiframeやvideo要素を探す
+    let embedUrl = videoUrl; // デフォルトは元のURL
+    
+    // iframe要素を探す
+    const iframe = $('iframe[src]').first();
+    if (iframe.length > 0) {
+      const iframeSrc = iframe.attr('src');
+      if (iframeSrc) {
+        embedUrl = iframeSrc.startsWith('http') ? iframeSrc : `https://av.douga4.top${iframeSrc}`;
+      }
+    }
+    
+    // video要素を探す
+    const video = $('video source[src]').first();
+    if (video.length > 0) {
+      const videoSrc = video.attr('src');
+      if (videoSrc) {
+        embedUrl = videoSrc.startsWith('http') ? videoSrc : `https://av.douga4.top${videoSrc}`;
+      }
+    }
+    
+    // JavaScriptから動画URLを抽出（data属性など）
+    const scriptTags = $('script').toArray();
+    for (const script of scriptTags) {
+      const scriptContent = $(script).html() || '';
+      // 動画URLのパターンを探す
+      const videoUrlMatch = scriptContent.match(/['"](https?:\/\/[^'"]*\.(mp4|m3u8|flv|webm)[^'"]*)['"]/i);
+      if (videoUrlMatch) {
+        embedUrl = videoUrlMatch[1];
+        break;
+      }
+    }
+    
+    console.log('✅ douga4動画URL取得:', embedUrl);
+    res.json({ embedUrl: embedUrl, originalUrl: videoUrl });
+  } catch (error) {
+    console.error('❌ douga4動画URL取得エラー:', error.message);
+    res.status(500).json({ error: '動画URLの取得に失敗しました', embedUrl: req.query.url });
+  }
+});
+
 // 動画プロキシエンドポイント（iPhoneでデスクトップに偽装）
 app.get('/api/proxy-video', async (req, res) => {
   try {
