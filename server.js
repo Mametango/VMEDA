@@ -1393,7 +1393,7 @@ async function searchBilibili(query) {
     ];
     
     for (const selector of selectors) {
-      if (videos.length >= 50) break;
+      if (videos.length >= 100) break;
       
       $(selector).each((index, elem) => {
         if (videos.length >= 100) return false;
@@ -1686,7 +1686,7 @@ async function searchSohu(query) {
         
         let foundCount = 0;
         for (const selector of selectors) {
-          if (videos.length >= 50) break;
+          if (videos.length >= 100) break;
           
           const beforeCount = videos.length;
           $(selector).each((index, elem) => {
