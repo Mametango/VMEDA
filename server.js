@@ -59,7 +59,8 @@ async function connectToMongoDB() {
 
 // 検索履歴をMongoDBから読み込む
 async function loadRecentSearchesFromMongoDB() {
-  const db = await connectToMongoDB();
+  try {
+    const db = await connectToMongoDB();
   if (!db) {
     return [];
   }
@@ -3278,7 +3279,12 @@ app.get('/', (req, res) => {
 
 // Favicon
 app.get('/favicon.ico', (req, res) => {
-  res.status(204).end();
+  try {
+    res.status(204).end();
+  } catch (error) {
+    console.error('❌ Faviconエラー:', error.message);
+    res.status(500).end();
+  }
 });
 
 // サーバー起動（Vercel以外の環境用）
