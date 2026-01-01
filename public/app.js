@@ -525,14 +525,17 @@ function displayRecentSearches(searches) {
   // 現在表示中の検索履歴を更新
   currentDisplayedSearches = searches;
   
-  const html = searches.map(search => {
+  const html = searches.map((search, index) => {
     if (!search || !search.query) {
       console.warn('⚠️ 無効な検索履歴:', search);
       return '';
     }
+    // 検索ワードを短縮（長すぎる場合は省略）
+    const displayQuery = search.query.length > 20 ? search.query.substring(0, 20) + '...' : search.query;
     return `
-      <div class="recent-search-item" onclick="searchInput.value='${escapeHtml(search.query)}'; searchVideos('${escapeHtml(search.query)}')">
-        <span class="recent-search-query">${escapeHtml(search.query)}</span>
+      <div class="recent-search-item" onclick="searchInput.value='${escapeHtml(search.query)}'; searchVideos('${escapeHtml(search.query)}')" title="${escapeHtml(search.query)}">
+        <span class="recent-search-icon">🔍</span>
+        <span class="recent-search-query">${escapeHtml(displayQuery)}</span>
       </div>
     `;
   }).filter(html => html !== '').join('');
