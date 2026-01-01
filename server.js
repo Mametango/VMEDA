@@ -439,6 +439,8 @@ app.post('/api/search', async (req, res) => {
         if (result.value.length > 0) {
           console.log(`✅ ${allSiteNames[index] || 'Unknown'}: ${result.value.length}件の動画を取得`);
           videos.push(...result.value);
+        } else {
+          console.log(`ℹ️ ${allSiteNames[index] || 'Unknown'}: 検索結果なし（0件）`);
         }
       } else {
         // 404エラーは警告レベル、その他はエラーレベル
@@ -450,6 +452,8 @@ app.post('/api/search', async (req, res) => {
         }
       }
     });
+    
+    console.log(`📊 検索結果サマリー: 全${videos.length}件の動画を取得（${allSiteNames.length}サイトから検索）`);
     
     // 重複を除去（URLベース）& YouTubeを除外
     const uniqueVideos = [];

@@ -121,30 +121,39 @@ async function searchVideos(query) {
   }
 }
 
-// 結果表示（無限スクロール対応）
-function displayResults(videos, searchQuery, isInitial = false) {
+// 結果表示（ページネーション対応）
+function displayResults(videos, searchQuery) {
   if (videos.length === 0) {
     resultsDiv.innerHTML = `
       <div class="no-results">検索結果が見つかりませんでした</div>
     `;
-    displayedCount = 0;
+    // ページネーションを非表示
+    const paginationDiv = document.getElementById('pagination');
+    if (paginationDiv) {
+      paginationDiv.innerHTML = '';
+    }
     return;
   }
 
-  // 初期表示の場合はリセット
-  if (isInitial) {
-    displayedCount = 0;
-    resultsDiv.innerHTML = '';
-    // 初期表示時はcurrentVideosも更新（ソート時にも使用されるため）
-    currentVideos = videos;
-  }
-
-  // 表示する動画を取得（現在表示済みの数から追加分を取得）
-  const videosToShow = videos.slice(displayedCount, displayedCount + VIDEOS_PER_PAGE);
+  // 総ページ数を再計算
+  totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
+  
+  // 現在のページに表示する動画を取得
+  const startIndex = (currentPage - 1) * VIDEOS_PER_PAGE;
+  const endIndex = startIndex + VIDEOS_PER_PAGE;
+  const videosToShow = videos.slice(startIndex, endIndex);
   
   if (videosToShow.length === 0) {
-    // 全て表示済み
-    return;
+    // ページが存在しない場合は1ページ目に戻す
+    currentPage = 1;
+    const firstPageVideos = videos.slice(0, VIDEOS_PER_PAGE);
+    if (firstPageVideos.length === 0) {
+      resultsDiv.innerHTML = `
+        <div class="no-results">検索結果が見つかりませんでした</div>
+      `;
+      return;
+    }
+    return displayResults(videos, searchQuery);
   }
 
   const html = videosToShow.map(video => {
