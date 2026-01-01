@@ -236,20 +236,22 @@ function displayResults(videos, searchQuery, isInitial = false) {
       const playBtn = videoElement.querySelector('.play-btn');
       
       [thumbnailWrapper, playBtn].filter(Boolean).forEach(element => {
-    // タッチイベントを検出してクリックイベントとして処理
-    element.addEventListener('touchend', function(e) {
-      // タッチイベントをクリックイベントとして扱う（ユーザーの直接的な操作として）
-      e.preventDefault();
-      // クリックイベントを発火（ユーザーの直接的な操作として扱う）
-      const clickEvent = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-        detail: 1,
-        buttons: 1
+        // タッチイベントを検出してクリックイベントとして処理
+        element.addEventListener('touchend', function(e) {
+          // タッチイベントをクリックイベントとして扱う（ユーザーの直接的な操作として）
+          e.preventDefault();
+          // クリックイベントを発火（ユーザーの直接的な操作として扱う）
+          const clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            detail: 1,
+            buttons: 1
+          });
+          this.dispatchEvent(clickEvent);
+        }, { passive: false });
       });
-      this.dispatchEvent(clickEvent);
-    }, { passive: false });
+    }
   });
   
   // 検索結果表示後、広告を検索結果の間に挿入
