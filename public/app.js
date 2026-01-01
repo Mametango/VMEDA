@@ -662,6 +662,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline');
   }
   
+  // iframeのsrcを設定（douga4の場合は後で更新される可能性がある）
   iframe.src = normalizedUrl;
   iframe.allowFullscreen = true;
   iframe.className = 'video-player';
@@ -672,6 +673,22 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   iframe.setAttribute('webkitallowfullscreen', 'true');
   iframe.setAttribute('mozallowfullscreen', 'true');
   iframe.setAttribute('playsinline', 'false'); // iPhoneで全画面表示
+  
+  // douga4の場合は、動画ページから実際の動画URLを取得する（非同期）
+  if (source === 'douga4' && normalizedUrl.includes('douga4.top')) {
+    // サーバー側で動画URLを取得するエンドポイントを呼び出す
+    fetch(`/api/douga4-video?url=${encodeURIComponent(normalizedUrl)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.embedUrl && data.embedUrl !== normalizedUrl) {
+          // 取得した動画URLを使用
+          iframe.src = data.embedUrl;
+        }
+      })
+      .catch(error => {
+        // エラーが発生しても元のURLを使用
+      });
+  }
   
   iframe.style.width = '100%';
   iframe.style.height = '100%';
