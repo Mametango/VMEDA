@@ -454,6 +454,79 @@ function extractThumbnail($, $elem) {
     }
   }
   
+  // 背景画像として設定されているサムネイルを探す
+  const styleAttr = $elem.attr('style') || $elem.css('background-image') || '';
+  if (styleAttr) {
+    const bgImageMatch = styleAttr.match(/url\(['"]?([^'")]+)['"]?\)/);
+    if (bgImageMatch && bgImageMatch[1]) {
+      let thumbnail = bgImageMatch[1].trim();
+      if (thumbnail && thumbnail.length > 5) {
+        if (thumbnail.startsWith('//')) {
+          return 'https:' + thumbnail;
+        }
+        if (thumbnail.startsWith('http://')) {
+          return thumbnail.replace('http://', 'https://');
+        }
+        if (thumbnail.startsWith('https://')) {
+          return thumbnail;
+        }
+        if (thumbnail.startsWith('/')) {
+          // 相対パスの場合は、現在のサイトのドメインを推測
+          const baseUrl = $elem.closest('a').attr('href') || '';
+          if (baseUrl.includes('bilibili.com')) {
+            return `https://www.bilibili.com${thumbnail}`;
+          } else if (baseUrl.includes('douga4.top')) {
+            return `https://av.douga4.top${thumbnail}`;
+          } else if (baseUrl.includes('javmix.tv')) {
+            return `https://javmix.tv${thumbnail}`;
+          } else if (baseUrl.includes('ppp.porn')) {
+            return `https://ppp.porn${thumbnail}`;
+          }
+        }
+        return thumbnail;
+      }
+    }
+  }
+  
+  // 親要素の背景画像もチェック
+  const $parent = $elem.parent();
+  if ($parent.length > 0) {
+    const parentStyle = $parent.attr('style') || $parent.css('background-image') || '';
+    if (parentStyle) {
+      const bgImageMatch = parentStyle.match(/url\(['"]?([^'")]+)['"]?\)/);
+      if (bgImageMatch && bgImageMatch[1]) {
+        let thumbnail = bgImageMatch[1].trim();
+        if (thumbnail && thumbnail.length > 5) {
+          if (thumbnail.startsWith('//')) {
+            return 'https:' + thumbnail;
+          }
+          if (thumbnail.startsWith('http://')) {
+            return thumbnail.replace('http://', 'https://');
+          }
+          if (thumbnail.startsWith('https://')) {
+            return thumbnail;
+          }
+          return thumbnail;
+        }
+      }
+    }
+  }
+  
+  // data属性から背景画像を探す
+  const dataBgImage = $elem.attr('data-bg') || $elem.attr('data-background') || $elem.attr('data-bg-image') || '';
+  if (dataBgImage && dataBgImage.length > 5) {
+    if (dataBgImage.startsWith('//')) {
+      return 'https:' + dataBgImage;
+    }
+    if (dataBgImage.startsWith('http://')) {
+      return dataBgImage.replace('http://', 'https://');
+    }
+    if (dataBgImage.startsWith('https://')) {
+      return dataBgImage;
+    }
+    return dataBgImage;
+  }
+  
   return '';
 }
 
