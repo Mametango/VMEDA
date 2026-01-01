@@ -650,6 +650,8 @@ async function searchGoogle(query) {
         else if (href.includes('douga4.top')) source = 'douga4';
         else if (href.includes('missav.com')) source = 'missav';
         else if (href.includes('91porn.com')) source = '91porn';
+        else if (href.includes('thisav.com')) source = 'thisav';
+        else if (href.includes('madou.club')) source = 'madou';
         else if (href.includes('dailymotion.com')) {
           source = 'dailymotion';
           const videoId = href.match(/dailymotion\.com\/video\/([^&\n?#\/]+)/);
