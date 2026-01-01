@@ -1,3 +1,12 @@
+// Vercelサーバーレス環境でのエラーハンドリング
+process.on('uncaughtException', (error) => {
+  console.error('❌ 未処理の例外:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ 未処理のPromise拒否:', reason);
+});
+
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
