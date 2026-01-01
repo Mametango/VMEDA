@@ -806,9 +806,8 @@ app.post('/api/search', async (req, res) => {
     
     console.log(`📊 検索結果サマリー: 全${videos.length}件の動画を取得（${allSiteNames.length}サイトから検索、合計${totalFromSites}件）`);
     
-    // 重複を除去（URLベース）& YouTubeを除外
+    // 重複を除去（URL正規化 + タイトル類似度）& YouTubeを除外
     const uniqueVideos = [];
-    const seenUrls = new Set();
     videos.forEach(video => {
       // YouTubeを除外
       if (video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be'))) {
@@ -818,8 +817,8 @@ app.post('/api/search', async (req, res) => {
         return;
       }
       
-      if (!seenUrls.has(video.url)) {
-        seenUrls.add(video.url);
+      // 重複チェック（URL正規化 + タイトル類似度）
+      if (!isVideoDuplicate(video, uniqueVideos)) {
         uniqueVideos.push(video);
       }
     });
