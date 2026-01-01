@@ -580,8 +580,14 @@ function displayRecentSearches(searches) {
   }
 }
 
+// ページ読み込み時に検索履歴エリアを即座に表示（データ取得前に表示）
+if (recentSearchesDiv) {
+  recentSearchesDiv.style.display = 'block';
+}
+
 // ページ読み込み時に他のユーザーの検索ワードを取得（検索は実行しない）
 // 注意: loadRecentSearches()は検索履歴を表示するだけで、検索は実行しない
+// 最優先で検索履歴を取得（即座に実行）
 loadRecentSearches();
 
 // ページ読み込み時の自動検索は完全に無効化

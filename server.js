@@ -2654,10 +2654,11 @@ app.get('/api/recent-searches', async (req, res) => {
       console.log(`📋 検索履歴サンプル: ${searches.slice(0, 3).map(s => s.query).join(', ')}`);
     }
     
-    // キャッシュヘッダーを追加（クライアント側のキャッシュを有効化）
+    // キャッシュヘッダーを追加（クライアント側のキャッシュを有効化、高速化のため）
     res.set({
-      'Cache-Control': 'public, max-age=5', // 5秒間キャッシュ
-      'ETag': `"${searches.length}-${Date.now()}"` // ETagでキャッシュ検証
+      'Cache-Control': 'public, max-age=10', // 10秒間キャッシュ（高速化のため延長）
+      'ETag': `"${searches.length}-${Date.now()}"`, // ETagでキャッシュ検証
+      'X-Content-Type-Options': 'nosniff' // セキュリティヘッダー
     });
     
     res.json({ searches: searches });
