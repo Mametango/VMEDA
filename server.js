@@ -915,8 +915,10 @@ async function searchPorntube(query) {
     
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Referer': 'https://porntube.com/'
       },
       timeout: 15000
     });
@@ -924,29 +926,54 @@ async function searchPorntube(query) {
     const $ = cheerio.load(response.data);
     const videos = [];
     
-    $('.video-item, .item, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+    // 複数のセレクタを試す
+    const selectors = [
+      '.video-item',
+      '.item',
+      'a[href*="/video/"]',
+      'a[href*="/watch/"]',
+      '[class*="video"]',
+      '[class*="item"]'
+    ];
+    
+    selectors.forEach(selector => {
+      if (videos.length >= 50) return;
       
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/video/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://porntube.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `porntube-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'porntube'
-        });
-      }
+      $(selector).each((index, elem) => {
+        if (videos.length >= 50) return false;
+        
+        const $item = $(elem);
+        let href = $item.attr('href') || $item.find('a').attr('href') || '';
+        
+        // hrefが見つからない場合は親要素を探す
+        if (!href) {
+          const $parent = $item.parent();
+          href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+        }
+        
+        if (!href || (!href.includes('/video/') && !href.includes('/watch/'))) return;
+        
+        const fullUrl = href.startsWith('http') ? href : `https://porntube.com${href}`;
+        const title = extractTitle($, $item);
+        const thumbnail = extractThumbnail($, $item);
+        const duration = extractDurationFromHtml($, $item);
+        
+        if (title && title.length > 3) {
+          // 重複チェック
+          const isDuplicate = videos.some(v => v.url === fullUrl);
+          if (!isDuplicate) {
+            videos.push({
+              id: `porntube-${Date.now()}-${index}`,
+              title: title.substring(0, 200),
+              thumbnail: thumbnail || '',
+              duration: duration || '',
+              url: fullUrl,
+              embedUrl: fullUrl,
+              source: 'porntube'
+            });
+          }
+        }
+      });
     });
     
     console.log(`✅ Porntube: ${videos.length}件の動画を取得`);
@@ -1093,8 +1120,10 @@ async function searchTktube(query) {
     
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Referer': 'https://tktube.com/'
       },
       timeout: 15000
     });
@@ -1102,29 +1131,55 @@ async function searchTktube(query) {
     const $ = cheerio.load(response.data);
     const videos = [];
     
-    $('.video-item, .item, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+    // 複数のセレクタを試す
+    const selectors = [
+      '.video-item',
+      '.item',
+      'a[href*="/video/"]',
+      'a[href*="/watch/"]',
+      'a[href*="/v/"]',
+      '[class*="video"]',
+      '[class*="item"]'
+    ];
+    
+    selectors.forEach(selector => {
+      if (videos.length >= 50) return;
       
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/video/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://tktube.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `tktube-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'tktube'
-        });
-      }
+      $(selector).each((index, elem) => {
+        if (videos.length >= 50) return false;
+        
+        const $item = $(elem);
+        let href = $item.attr('href') || $item.find('a').attr('href') || '';
+        
+        // hrefが見つからない場合は親要素を探す
+        if (!href) {
+          const $parent = $item.parent();
+          href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+        }
+        
+        if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+        
+        const fullUrl = href.startsWith('http') ? href : `https://tktube.com${href}`;
+        const title = extractTitle($, $item);
+        const thumbnail = extractThumbnail($, $item);
+        const duration = extractDurationFromHtml($, $item);
+        
+        if (title && title.length > 3) {
+          // 重複チェック
+          const isDuplicate = videos.some(v => v.url === fullUrl);
+          if (!isDuplicate) {
+            videos.push({
+              id: `tktube-${Date.now()}-${index}`,
+              title: title.substring(0, 200),
+              thumbnail: thumbnail || '',
+              duration: duration || '',
+              url: fullUrl,
+              embedUrl: fullUrl,
+              source: 'tktube'
+            });
+          }
+        }
+      });
     });
     
     console.log(`✅ Tktube: ${videos.length}件の動画を取得`);
@@ -1143,8 +1198,10 @@ async function searchFC2(query) {
     
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Referer': 'https://fc2.com/'
       },
       timeout: 15000
     });
@@ -1152,29 +1209,55 @@ async function searchFC2(query) {
     const $ = cheerio.load(response.data);
     const videos = [];
     
-    $('.video-item, .item, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+    // 複数のセレクタを試す
+    const selectors = [
+      '.video-item',
+      '.item',
+      'a[href*="/video/"]',
+      'a[href*="/watch/"]',
+      'a[href*="/v/"]',
+      '[class*="video"]',
+      '[class*="item"]'
+    ];
+    
+    selectors.forEach(selector => {
+      if (videos.length >= 50) return;
       
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/video/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://fc2.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `fc2-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'fc2'
-        });
-      }
+      $(selector).each((index, elem) => {
+        if (videos.length >= 50) return false;
+        
+        const $item = $(elem);
+        let href = $item.attr('href') || $item.find('a').attr('href') || '';
+        
+        // hrefが見つからない場合は親要素を探す
+        if (!href) {
+          const $parent = $item.parent();
+          href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+        }
+        
+        if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+        
+        const fullUrl = href.startsWith('http') ? href : `https://fc2.com${href}`;
+        const title = extractTitle($, $item);
+        const thumbnail = extractThumbnail($, $item);
+        const duration = extractDurationFromHtml($, $item);
+        
+        if (title && title.length > 3) {
+          // 重複チェック
+          const isDuplicate = videos.some(v => v.url === fullUrl);
+          if (!isDuplicate) {
+            videos.push({
+              id: `fc2-${Date.now()}-${index}`,
+              title: title.substring(0, 200),
+              thumbnail: thumbnail || '',
+              duration: duration || '',
+              url: fullUrl,
+              embedUrl: fullUrl,
+              source: 'fc2'
+            });
+          }
+        }
+      });
     });
     
     console.log(`✅ FC2: ${videos.length}件の動画を取得`);
@@ -1677,29 +1760,56 @@ async function searchMissAV(query) {
     const $ = cheerio.load(response.data);
     const videos = [];
     
-    $('.item, .video-item, a[href*="/videos/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+    // 複数のセレクタを試す
+    const selectors = [
+      '.item',
+      '.video-item',
+      'a[href*="/videos/"]',
+      'a[href*="/video/"]',
+      'a[href*="/watch/"]',
+      'a[href*="/v/"]',
+      '[class*="video"]',
+      '[class*="item"]'
+    ];
+    
+    selectors.forEach(selector => {
+      if (videos.length >= 50) return;
       
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/videos/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://missav.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `missav-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'missav'
-        });
-      }
+      $(selector).each((index, elem) => {
+        if (videos.length >= 50) return false;
+        
+        const $item = $(elem);
+        let href = $item.attr('href') || $item.find('a').attr('href') || '';
+        
+        // hrefが見つからない場合は親要素を探す
+        if (!href) {
+          const $parent = $item.parent();
+          href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+        }
+        
+        if (!href || (!href.includes('/videos/') && !href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+        
+        const fullUrl = href.startsWith('http') ? href : `https://missav.com${href}`;
+        const title = extractTitle($, $item);
+        const thumbnail = extractThumbnail($, $item);
+        const duration = extractDurationFromHtml($, $item);
+        
+        if (title && title.length > 3) {
+          // 重複チェック
+          const isDuplicate = videos.some(v => v.url === fullUrl);
+          if (!isDuplicate) {
+            videos.push({
+              id: `missav-${Date.now()}-${index}`,
+              title: title.substring(0, 200),
+              thumbnail: thumbnail || '',
+              duration: duration || '',
+              url: fullUrl,
+              embedUrl: fullUrl,
+              source: 'missav'
+            });
+          }
+        }
+      });
     });
     
     console.log(`✅ MissAV: ${videos.length}件の動画を取得`);
@@ -1729,29 +1839,56 @@ async function search91Porn(query) {
     const $ = cheerio.load(response.data);
     const videos = [];
     
-    $('.item, .video-item, a[href*="/view/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+    // 複数のセレクタを試す
+    const selectors = [
+      '.item',
+      '.video-item',
+      'a[href*="/view/"]',
+      'a[href*="/video/"]',
+      'a[href*="/watch/"]',
+      'a[href*="/v/"]',
+      '[class*="video"]',
+      '[class*="item"]'
+    ];
+    
+    selectors.forEach(selector => {
+      if (videos.length >= 50) return;
       
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/view/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://91porn.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `91porn-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: '91porn'
-        });
-      }
+      $(selector).each((index, elem) => {
+        if (videos.length >= 50) return false;
+        
+        const $item = $(elem);
+        let href = $item.attr('href') || $item.find('a').attr('href') || '';
+        
+        // hrefが見つからない場合は親要素を探す
+        if (!href) {
+          const $parent = $item.parent();
+          href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+        }
+        
+        if (!href || (!href.includes('/view/') && !href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+        
+        const fullUrl = href.startsWith('http') ? href : `https://91porn.com${href}`;
+        const title = extractTitle($, $item);
+        const thumbnail = extractThumbnail($, $item);
+        const duration = extractDurationFromHtml($, $item);
+        
+        if (title && title.length > 3) {
+          // 重複チェック
+          const isDuplicate = videos.some(v => v.url === fullUrl);
+          if (!isDuplicate) {
+            videos.push({
+              id: `91porn-${Date.now()}-${index}`,
+              title: title.substring(0, 200),
+              thumbnail: thumbnail || '',
+              duration: duration || '',
+              url: fullUrl,
+              embedUrl: fullUrl,
+              source: '91porn'
+            });
+          }
+        }
+      });
     });
     
     console.log(`✅ 91Porn: ${videos.length}件の動画を取得`);
