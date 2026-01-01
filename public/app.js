@@ -62,10 +62,24 @@ let totalPages = 1; // 総ページ数
 
 // 検索実行
 async function searchVideos(query) {
+  // 空のクエリや空白のみのクエリは検索しない
   if (!query || query.trim().length === 0) {
-    alert('検索キーワードを入力してください');
+    console.log('⚠️ 空の検索クエリは無視されます');
     return;
   }
+  
+  // デフォルトの「動画」というワードでの検索を明示的に防止
+  // ユーザーが明示的に検索ボタンをクリックした場合のみ検索を実行
+  const trimmedQuery = query.trim();
+  if (trimmedQuery === '動画') {
+    // 検索入力欄が空で、かつユーザーが明示的に検索ボタンをクリックしていない場合は検索しない
+    if (!searchInput || !searchInput.value || searchInput.value.trim() !== '動画') {
+      console.log('⚠️ デフォルトの「動画」検索は実行されません');
+      return;
+    }
+  }
+  
+  console.log('🔍 検索実行:', trimmedQuery);
 
   loadingDiv.classList.remove('hidden');
   resultsDiv.innerHTML = '';
@@ -1268,3 +1282,4 @@ if (sortSelect) {
 } else {
   console.error('❌ sortSelect要素が見つかりません');
 }
+
