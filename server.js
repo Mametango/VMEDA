@@ -533,7 +533,7 @@ function extractThumbnail($, $elem) {
   
   // 親要素の背景画像もチェック（$parentは既に宣言済みなので再宣言しない）
   if ($parent && $parent.length > 0) {
-    const parentStyle = $parent.attr('style') || $parent.css('background-image') || '';
+    const parentStyle = $parent.attr('style') || '';
     if (parentStyle) {
       const bgImageMatch = parentStyle.match(/url\(['"]?([^'")]+)['"]?\)/);
       if (bgImageMatch && bgImageMatch[1]) {
