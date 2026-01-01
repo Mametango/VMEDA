@@ -226,7 +226,12 @@ app.use((req, res, next) => {
 });
 
 // 静的ファイル配信（Vercel対応）
-app.use(express.static(path.join(__dirname, 'public'), {
+// Vercel環境では、静的ファイルは自動的に配信されるが、明示的に設定することも可能
+const publicPath = process.env.VERCEL === '1' 
+  ? path.join(process.cwd(), 'public')
+  : path.join(__dirname, 'public');
+
+app.use(express.static(publicPath, {
   maxAge: '1d', // キャッシュ1日
   etag: true,
   setHeaders: (res, filePath) => {
