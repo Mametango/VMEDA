@@ -552,16 +552,19 @@ function displayRecentSearches(searches) {
 // ページ読み込み時に他のユーザーの検索ワードを取得
 loadRecentSearches();
 
-// ページ読み込み時の自動検索は無効化
-// URLパラメータから検索キーワードを取得して検索入力欄に設定（検索は実行しない）
+// ページ読み込み時の自動検索は完全に無効化
+// URLパラメータから検索キーワードを取得して検索入力欄に設定するだけ（検索は実行しない）
 (function() {
   const urlParams = new URLSearchParams(window.location.search);
   const queryParam = urlParams.get('q');
   
-  // URLパラメータがある場合は検索入力欄に設定するだけ（検索は実行しない）
+  // URLパラメータがある場合のみ検索入力欄に設定（検索は実行しない）
+  // デフォルトの「動画」というワードでの自動検索は一切実行しない
   if (queryParam && searchInput) {
     searchInput.value = queryParam;
   }
+  // 明示的に自動検索を実行しないことを確認
+  console.log('ℹ️ ページ読み込み完了: 自動検索は実行されません');
 })();
 
 // 定期的に検索履歴を更新（30秒ごと、頻繁すぎると消える可能性があるため間隔を長く）
