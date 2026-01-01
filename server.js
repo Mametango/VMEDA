@@ -472,7 +472,9 @@ app.post('/api/search', async (req, res) => {
     ];
     
     // すべての検索を並行実行
+    console.log(`🚀 ${allSearches.length}個の検索関数を並行実行開始...`);
     const allResults = await Promise.allSettled(allSearches);
+    console.log(`✅ すべての検索関数の実行が完了しました（${allResults.length}件）`);
     
     // 結果を統合
     const videos = [];
@@ -480,25 +482,36 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を追加（中国サイトの結果が先に来る）
     let totalFromSites = 0;
+    let successCount = 0;
+    let errorCount = 0;
+    let zeroCount = 0;
+    
+    console.log(`📊 各サイトの検索結果を確認中...`);
     allResults.forEach((result, index) => {
+      const siteName = allSiteNames[index] || `Unknown[${index}]`;
       if (result.status === 'fulfilled' && Array.isArray(result.value)) {
         if (result.value.length > 0) {
-          console.log(`✅ ${allSiteNames[index] || 'Unknown'}: ${result.value.length}件の動画を取得`);
+          console.log(`✅ ${siteName}: ${result.value.length}件の動画を取得`);
           videos.push(...result.value);
           totalFromSites += result.value.length;
+          successCount++;
         } else {
-          console.log(`ℹ️ ${allSiteNames[index] || 'Unknown'}: 検索結果なし（0件）`);
+          console.log(`ℹ️ ${siteName}: 検索結果なし（0件）`);
+          zeroCount++;
         }
       } else {
         // 404エラーは警告レベル、その他はエラーレベル
         const error = result.reason;
+        errorCount++;
         if (error?.response?.status === 404) {
-          console.warn(`⚠️ ${allSiteNames[index] || 'Unknown'}検索: ページが見つかりません（404）`);
+          console.warn(`⚠️ ${siteName}検索: ページが見つかりません（404）`);
         } else {
-          console.error(`❌ ${allSiteNames[index] || 'Unknown'}検索エラー:`, error?.message || error);
+          console.error(`❌ ${siteName}検索エラー:`, error?.message || error?.stack || error);
         }
       }
     });
+    
+    console.log(`📊 検索結果サマリー: 成功${successCount}サイト、エラー${errorCount}サイト、0件${zeroCount}サイト`);
     
     console.log(`📊 検索結果サマリー: 全${videos.length}件の動画を取得（${allSiteNames.length}サイトから検索、合計${totalFromSites}件）`);
     
