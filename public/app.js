@@ -822,12 +822,14 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       normalizedUrl = 'http://' + normalizedUrl;
     }
     
-    // IVFreeの動画ページを直接iframeで表示
-    // 動画ページ自体が埋め込み可能な構造になっている可能性がある
+    // IVFreeの場合は、プロキシ経由で広告を除去して表示
+    // ポップアップ広告を抑制するため、プロキシエンドポイントを使用
+    normalizedUrl = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
   }
   
   // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
-  // ただし、Bilibili、douga4、ivfreeの場合はプロキシ経由では動作しない可能性があるため、直接埋め込みURLを使用
+  // ただし、Bilibili、douga4の場合はプロキシ経由では動作しない可能性があるため、直接埋め込みURLを使用
+  // IVFreeは既にプロキシ経由で処理されているため除外
   const isIOSDevice = isIPhone();
   if (isIOSDevice && source !== 'bilibili' && source !== 'douga4' && source !== 'ivfree') {
     // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
@@ -844,6 +846,13 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   } else {
     // その他の場合は通常の設定
     iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline');
+  }
+  
+  // IVFreeの場合は、sandbox属性を追加してポップアップを制限（ただし動画再生に必要な権限は許可）
+  if (source === 'ivfree') {
+    // sandbox属性でポップアップを制限（ただし、動画再生に必要な権限は許可）
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups-to-escape-sandbox allow-presentation');
+    // ポップアップを完全にブロックするため、allow-popupsは含めない
   }
   
   // iframeのsrcを設定（douga4の場合は後で更新される可能性がある）

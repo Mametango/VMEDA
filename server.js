@@ -3593,7 +3593,7 @@ app.get('/api/douga4-video', async (req, res) => {
   }
 });
 
-// IVFree動画URL取得エンドポイント
+// IVFree動画URL取得エンドポイント（広告除去版）
 app.get('/api/ivfree-video', async (req, res) => {
   try {
     const videoUrl = req.query.url;
@@ -3617,6 +3617,27 @@ app.get('/api/ivfree-video', async (req, res) => {
     });
     
     const $ = cheerio.load(response.data);
+    
+    // ポップアップ広告を生成するスクリプトを除去
+    $('script').each((index, elem) => {
+      const scriptContent = $(elem).html() || '';
+      // ポップアップ広告関連のスクリプトを除去
+      if (
+        scriptContent.includes('window.open') ||
+        scriptContent.includes('popup') ||
+        scriptContent.includes('popunder') ||
+        scriptContent.includes('advertisement') ||
+        scriptContent.includes('adsbygoogle') ||
+        scriptContent.includes('googlesyndication') ||
+        scriptContent.includes('doubleclick') ||
+        scriptContent.includes('advertising')
+      ) {
+        $(elem).remove();
+      }
+    });
+    
+    // ポップアップ広告を生成するaタグを除去
+    $('a[onclick*="window.open"], a[onclick*="popup"], a[target="_blank"][href*="ad"]').remove();
     
     // 動画プレイヤーのiframeやvideo要素を探す
     let embedUrl = videoUrl; // デフォルトは元のURL
@@ -3664,6 +3685,64 @@ app.get('/api/ivfree-video', async (req, res) => {
   } catch (error) {
     console.error('❌ IVFree動画URL取得エラー:', error.message);
     res.status(500).json({ error: '動画URLの取得に失敗しました', embedUrl: req.query.url });
+  }
+});
+
+// IVFree動画ページプロキシエンドポイント（広告除去版）
+app.get('/api/ivfree-proxy', async (req, res) => {
+  try {
+    const videoUrl = req.query.url;
+    if (!videoUrl || !videoUrl.includes('ivfree.asia')) {
+      return res.status(400).json({ error: 'IVFreeのURLが必要です' });
+    }
+    
+    console.log('📺 IVFreeプロキシリクエスト:', videoUrl);
+    
+    // デスクトップのUser-Agentでリクエスト
+    const response = await axios.get(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Referer': 'http://ivfree.asia/',
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000,
+      maxRedirects: 5
+    });
+    
+    let html = response.data;
+    
+    // ポップアップ広告を生成するJavaScriptを除去
+    html = html.replace(/<script[^>]*>[\s\S]*?window\.open[\s\S]*?<\/script>/gi, '');
+    html = html.replace(/<script[^>]*>[\s\S]*?popup[\s\S]*?<\/script>/gi, '');
+    html = html.replace(/<script[^>]*>[\s\S]*?popunder[\s\S]*?<\/script>/gi, '');
+    html = html.replace(/<script[^>]*>[\s\S]*?adsbygoogle[\s\S]*?<\/script>/gi, '');
+    html = html.replace(/<script[^>]*>[\s\S]*?googlesyndication[\s\S]*?<\/script>/gi, '');
+    html = html.replace(/<script[^>]*>[\s\S]*?doubleclick[\s\S]*?<\/script>/gi, '');
+    
+    // ポップアップ広告を生成するaタグのonclick属性を除去
+    html = html.replace(/onclick\s*=\s*["'][^"']*window\.open[^"']*["']/gi, '');
+    html = html.replace(/onclick\s*=\s*["'][^"']*popup[^"']*["']/gi, '');
+    
+    // 広告関連のiframeを除去
+    html = html.replace(/<iframe[^>]*adsbygoogle[^>]*>[\s\S]*?<\/iframe>/gi, '');
+    html = html.replace(/<iframe[^>]*googlesyndication[^>]*>[\s\S]*?<\/iframe>/gi, '');
+    html = html.replace(/<iframe[^>]*doubleclick[^>]*>[\s\S]*?<\/iframe>/gi, '');
+    
+    // Content Security Policyを追加してポップアップを制限
+    html = html.replace(/<head>/i, '<head><meta http-equiv="Content-Security-Policy" content="default-src \'self\' http://ivfree.asia https://ivfree.asia; script-src \'self\' http://ivfree.asia https://ivfree.asia \'unsafe-inline\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' http://ivfree.asia https://ivfree.asia data:; media-src \'self\' http://ivfree.asia https://ivfree.asia; frame-src \'self\' http://ivfree.asia https://ivfree.asia; object-src \'none\'; base-uri \'self\'; form-action \'self\'; frame-ancestors \'self\'; upgrade-insecure-requests;">');
+    
+    // Content-Typeを設定
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    
+    console.log('✅ IVFreeプロキシレスポンス送信');
+    res.send(html);
+  } catch (error) {
+    console.error('❌ IVFreeプロキシエラー:', error.message);
+    res.status(500).send(`<html><body><h1>エラー</h1><p>ページの読み込みに失敗しました: ${error.message}</p></body></html>`);
   }
 });
 
