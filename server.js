@@ -579,10 +579,10 @@ async function searchGoogle(query) {
     
     // 動画サイトのドメインパターン（YouTubeは除外）
     const videoSiteDomains = [
-      'bilibili.com', 'jpdmv.com', 'douga4.top', 'missav.com', '91porn.com',
+      'bilibili.com', 'jpdmv.com', 'douga4.top', '91porn.com',
       'dailymotion.com', 'vimeo.com', 'nicovideo.jp', 'fc2.com',
       'xvideos.com', 'pornhub.com', 'xhamster.com', 'spankbang.com',
-      'x1hub.com', 'porntube.com', 'jav.guru', 'japanhub.net', 'tktube.com',
+      'x1hub.com', 'porntube.com', 'jav.guru',
       'akiba-abv.com', 'sohu.com', 'youku.com', 'iqiyi.com', 'qq.com', 'ixigua.com',
       'thisav.com', 'madou.club'
     ];

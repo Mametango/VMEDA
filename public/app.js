@@ -1052,8 +1052,6 @@ function getSourceName(source) {
     'x1hub': 'X1hub',
     'porntube': 'Porntube',
     'javguru': 'JavGuru',
-    'japanhub': 'Japanhub',
-    'tktube': 'Tktube',
     'akibaabv': 'AkibaAbv',
     'fc2': 'FC2',
     'sohu': 'Sohu',
