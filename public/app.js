@@ -203,6 +203,16 @@ function displayResults(videos, searchQuery) {
       }
     }
     
+    // IVFreeの場合は、サムネイルがなくてもデフォルト画像を表示
+    if (!thumbnail && video.source === 'ivfree') {
+      // IVFreeのデフォルトサムネイル（タイトルからIDを抽出）
+      const idMatch = video.title.match(/\[([A-Z]+-\d+)\]/);
+      if (idMatch) {
+        const id = idMatch[1].toLowerCase();
+        thumbnail = `http://ivfree.asia/images/${id}.jpg`;
+      }
+    }
+    
     const hasThumbnail = thumbnail && thumbnail.length > 0 && (thumbnail.startsWith('http://') || thumbnail.startsWith('https://') || thumbnail.startsWith('data:'));
     
     const duration = video.duration || '';
@@ -791,17 +801,30 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // 動画ページ自体が埋め込み可能な構造になっている可能性がある
   }
   
+  // IVFreeの埋め込みURLを完全なURLに変換（iPhone Safari対応）
+  if (source === 'ivfree' && normalizedUrl.includes('ivfree.asia')) {
+    // 既にhttps://で始まっている場合はそのまま、//で始まっている場合はhttps:を追加
+    if (normalizedUrl.startsWith('//')) {
+      normalizedUrl = 'https:' + normalizedUrl;
+    } else if (!normalizedUrl.startsWith('http')) {
+      normalizedUrl = 'http://' + normalizedUrl;
+    }
+    
+    // IVFreeの動画ページを直接iframeで表示
+    // 動画ページ自体が埋め込み可能な構造になっている可能性がある
+  }
+  
   // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
-  // ただし、Bilibiliとdouga4の場合はプロキシ経由では動作しない可能性があるため、直接埋め込みURLを使用
+  // ただし、Bilibili、douga4、ivfreeの場合はプロキシ経由では動作しない可能性があるため、直接埋め込みURLを使用
   const isIOSDevice = isIPhone();
-  if (isIOSDevice && source !== 'bilibili' && source !== 'douga4') {
+  if (isIOSDevice && source !== 'bilibili' && source !== 'douga4' && source !== 'ivfree') {
     // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
     const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(normalizedUrl)}`;
     normalizedUrl = proxyUrl;
   }
   
-  // Bilibiliとdouga4の場合は、iPhone/Braveブラウザで特別な設定
-  if ((source === 'bilibili' || source === 'douga4') && isIPhone()) {
+  // Bilibili、douga4、ivfreeの場合は、iPhone/Braveブラウザで特別な設定
+  if ((source === 'bilibili' || source === 'douga4' || source === 'ivfree') && isIPhone()) {
     // iPhone/Braveブラウザの場合、より寛容な設定を適用
     // sandbox属性は設定しない（プレイヤーが動作しなくなる可能性があるため）
     iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline; accelerometer; gyroscope; clipboard-write; clipboard-read');
@@ -1023,6 +1046,44 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
         // エラーが発生しても元のURLを使用
         douga4StatusText = `エラー: ${error.message}`;
         douga4UpdateDebugInfo();
+      });
+  }
+  
+  // IVFreeの動画URLを取得（douga4と同様の処理）
+  if (source === 'ivfree' && normalizedUrl.includes('ivfree.asia')) {
+    let ivfreeStatusText = 'IVFree動画URL取得中...';
+    const ivfreeUpdateDebugInfo = () => {
+      if (container.querySelector('.debug-info')) {
+        container.querySelector('.debug-info').textContent = ivfreeStatusText;
+      }
+    };
+    
+    ivfreeUpdateDebugInfo();
+    
+    fetch(`/api/ivfree-video?url=${encodeURIComponent(normalizedUrl)}`)
+      .then(response => {
+        ivfreeStatusText = 'レスポンス受信...';
+        ivfreeUpdateDebugInfo();
+        return response.json();
+      })
+      .then(data => {
+        ivfreeStatusText = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
+        ivfreeUpdateDebugInfo();
+        if (data.embedUrl && data.embedUrl !== normalizedUrl) {
+          // 取得した動画URLを使用
+          ivfreeStatusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
+          ivfreeUpdateDebugInfo();
+          iframe.src = data.embedUrl;
+          setTimeout(ivfreeUpdateDebugInfo, 500);
+        } else {
+          ivfreeStatusText = '元のURLを使用';
+          ivfreeUpdateDebugInfo();
+        }
+      })
+      .catch(error => {
+        // エラーが発生しても元のURLを使用
+        ivfreeStatusText = `エラー: ${error.message}`;
+        ivfreeUpdateDebugInfo();
       });
   }
   

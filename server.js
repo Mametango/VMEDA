@@ -3167,7 +3167,31 @@ async function searchIVFree(query) {
         if (seenUrls.has(fullUrl)) return;
         seenUrls.add(fullUrl);
         
-        const thumbnail = extractThumbnail($, $item);
+        // サムネイルを取得（複数の方法を試す）
+        let thumbnail = extractThumbnail($, $item);
+        
+        // サムネイルが見つからない場合、親要素から探す
+        if (!thumbnail) {
+          const $parent = $item.parent();
+          thumbnail = extractThumbnail($, $parent);
+        }
+        
+        // さらに上の親要素から探す
+        if (!thumbnail) {
+          const $grandParent = $item.parent().parent();
+          thumbnail = extractThumbnail($, $grandParent);
+        }
+        
+        // サムネイルが見つからない場合、デフォルト画像を使用
+        if (!thumbnail) {
+          // IVFreeのデフォルトサムネイルパターンを試す
+          const idMatch = titleText.match(/\[([A-Z]+-\d+)\]/);
+          if (idMatch) {
+            const id = idMatch[1].toLowerCase();
+            thumbnail = `http://ivfree.asia/images/${id}.jpg`;
+          }
+        }
+        
         const duration = extractDurationFromHtml($, $item);
         
         videos.push({
@@ -3176,7 +3200,7 @@ async function searchIVFree(query) {
           thumbnail: thumbnail || '',
           duration: duration || '',
           url: fullUrl,
-          embedUrl: fullUrl,
+          embedUrl: fullUrl, // 動画ページのURL（埋め込みURLは後で取得）
           source: 'ivfree'
         });
       });
@@ -3565,6 +3589,80 @@ app.get('/api/douga4-video', async (req, res) => {
     res.json({ embedUrl: embedUrl, originalUrl: videoUrl });
   } catch (error) {
     console.error('❌ douga4動画URL取得エラー:', error.message);
+    res.status(500).json({ error: '動画URLの取得に失敗しました', embedUrl: req.query.url });
+  }
+});
+
+// IVFree動画URL取得エンドポイント
+app.get('/api/ivfree-video', async (req, res) => {
+  try {
+    const videoUrl = req.query.url;
+    if (!videoUrl || !videoUrl.includes('ivfree.asia')) {
+      return res.status(400).json({ error: 'IVFreeのURLが必要です' });
+    }
+    
+    console.log('📺 IVFree動画URL取得リクエスト:', videoUrl);
+    
+    // デスクトップのUser-Agentでリクエスト
+    const response = await axios.get(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Referer': 'http://ivfree.asia/',
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000,
+      maxRedirects: 5
+    });
+    
+    const $ = cheerio.load(response.data);
+    
+    // 動画プレイヤーのiframeやvideo要素を探す
+    let embedUrl = videoUrl; // デフォルトは元のURL
+    let thumbnail = '';
+    
+    // iframe要素を探す
+    const iframe = $('iframe[src]').first();
+    if (iframe.length > 0) {
+      const iframeSrc = iframe.attr('src');
+      if (iframeSrc) {
+        embedUrl = iframeSrc.startsWith('http') ? iframeSrc : `http://ivfree.asia${iframeSrc}`;
+      }
+    }
+    
+    // video要素を探す
+    const video = $('video source[src]').first();
+    if (video.length > 0) {
+      const videoSrc = video.attr('src');
+      if (videoSrc) {
+        embedUrl = videoSrc.startsWith('http') ? videoSrc : `http://ivfree.asia${videoSrc}`;
+      }
+    }
+    
+    // JavaScriptから動画URLを抽出（data属性など）
+    const scriptTags = $('script').toArray();
+    for (const script of scriptTags) {
+      const scriptContent = $(script).html() || '';
+      // 動画URLのパターンを探す
+      const videoUrlMatch = scriptContent.match(/['"](https?:\/\/[^'"]*\.(mp4|m3u8|flv|webm)[^'"]*)['"]/i);
+      if (videoUrlMatch) {
+        embedUrl = videoUrlMatch[1];
+        break;
+      }
+    }
+    
+    // サムネイルを取得
+    thumbnail = extractThumbnail($, $('body'));
+    if (!thumbnail) {
+      // og:imageを探す
+      thumbnail = $('meta[property="og:image"]').attr('content') || '';
+    }
+    
+    console.log('✅ IVFree動画URL取得:', embedUrl);
+    res.json({ embedUrl: embedUrl, originalUrl: videoUrl, thumbnail: thumbnail });
+  } catch (error) {
+    console.error('❌ IVFree動画URL取得エラー:', error.message);
     res.status(500).json({ error: '動画URLの取得に失敗しました', embedUrl: req.query.url });
   }
 });
