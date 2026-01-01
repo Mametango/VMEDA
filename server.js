@@ -823,20 +823,37 @@ app.post('/api/search', async (req, res) => {
     
     // 重複を除去（URL正規化 + タイトル類似度）& YouTubeを除外
     const uniqueVideos = [];
-    videos.forEach(video => {
-      // YouTubeを除外
-      if (video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be'))) {
-        return;
-      }
-      if (video.source === 'youtube') {
-        return;
-      }
-      
-      // 重複チェック（URL正規化 + タイトル類似度）
-      if (!isVideoDuplicate(video, uniqueVideos)) {
-        uniqueVideos.push(video);
-      }
-    });
+    try {
+      videos.forEach(video => {
+        try {
+          // 動画オブジェクトの検証
+          if (!video || typeof video !== 'object') {
+            console.warn('⚠️ 無効な動画オブジェクトをスキップ:', video);
+            return;
+          }
+          
+          // YouTubeを除外
+          if (video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be'))) {
+            return;
+          }
+          if (video.source === 'youtube') {
+            return;
+          }
+          
+          // 重複チェック（URL正規化 + タイトル類似度）
+          if (!isVideoDuplicate(video, uniqueVideos)) {
+            uniqueVideos.push(video);
+          }
+        } catch (e) {
+          console.error('❌ 動画処理中にエラー:', e.message, video);
+          // エラーが発生した動画はスキップして続行
+        }
+      });
+    } catch (e) {
+      console.error('❌ 重複除去処理でエラー:', e.message);
+      // エラーが発生した場合は、重複除去なしで全件返す
+      uniqueVideos.push(...videos.filter(v => v && v.url && !v.url.includes('youtube.com') && !v.url.includes('youtu.be')));
+    }
     
     console.log(`✅ 検索完了: ${uniqueVideos.length}件の結果を取得（重複除去後）`);
     console.log(`📊 詳細: 統合前${videos.length}件 → 重複除去後${uniqueVideos.length}件`);
