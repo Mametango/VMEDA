@@ -3149,24 +3149,41 @@ app.get('/api/proxy-video', async (req, res) => {
 
 // ルートパス - index.htmlを返す
 app.get('/', (req, res) => {
-  console.log('🏠 ルートパス リクエスト受信');
-  const userAgent = req.get('user-agent') || '';
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
-  console.log(`📱 デバイス: ${isMobile ? 'Mobile' : 'Desktop'} - ${userAgent.substring(0, 80)}`);
-  
-  res.sendFile(path.join(__dirname, 'public', 'index.html'), {
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-cache'
+  try {
+    console.log('🏠 ルートパス リクエスト受信');
+    const userAgent = req.get('user-agent') || '';
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+    console.log(`📱 デバイス: ${isMobile ? 'Mobile' : 'Desktop'} - ${userAgent.substring(0, 80)}`);
+    
+    const indexPath = path.join(__dirname, 'public', 'index.html');
+    
+    // ファイルの存在確認
+    if (!fs.existsSync(indexPath)) {
+      console.error('❌ index.htmlが見つかりません:', indexPath);
+      return res.status(404).send('File not found');
     }
-  }, (err) => {
-    if (err) {
-      console.error('❌ index.html送信エラー:', err);
-      res.status(500).send('Internal Server Error');
-    } else {
-      console.log('✅ index.html送信成功');
+    
+    res.sendFile(indexPath, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache'
+      }
+    }, (err) => {
+      if (err) {
+        console.error('❌ index.html送信エラー:', err.message);
+        if (!res.headersSent) {
+          res.status(500).send('Internal Server Error');
+        }
+      } else {
+        console.log('✅ index.html送信成功');
+      }
+    });
+  } catch (error) {
+    console.error('❌ ルートパス処理エラー:', error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-  });
+  }
 });
 
 // Favicon
