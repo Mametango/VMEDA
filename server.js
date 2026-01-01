@@ -415,7 +415,6 @@ app.post('/api/search', async (req, res) => {
     
     const sanitizedQuery = validation.query;
     console.log(`🔍 検索開始: "${sanitizedQuery}"`);
-    console.log(`📋 検索関数数: ${allSearches.length}個のサイトから検索します`);
     
     // サーバーレス環境では、毎回MongoDBから最新の検索履歴を読み込む（キャッシュを無効化して最新を取得）
     invalidateRecentSearchesCache();
