@@ -779,9 +779,13 @@ app.post('/api/search', async (req, res) => {
       searchBilibili(sanitizedQuery),
       searchDouga4(sanitizedQuery),
       searchJavmix(sanitizedQuery),
-      searchPPP(sanitizedQuery),
-      searchMat6tube(sanitizedQuery)
+      searchPPP(sanitizedQuery)
     ];
+    
+    // searchMat6tubeが定義されている場合のみ追加
+    if (typeof searchMat6tube === 'function') {
+      allSearches.push(searchMat6tube(sanitizedQuery));
+    }
     
     // すべての検索を並行実行
     console.log(`🚀 ${allSearches.length}個の検索関数を並行実行開始...`);
@@ -790,7 +794,12 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合
     const videos = [];
-    const allSiteNames = ['Bilibili', 'Douga4', 'Javmix.TV', 'PPP.Porn', 'Mat6tube'];
+    const allSiteNames = ['Bilibili', 'Douga4', 'Javmix.TV', 'PPP.Porn'];
+    
+    // searchMat6tubeが定義されている場合のみ追加
+    if (typeof searchMat6tube === 'function') {
+      allSiteNames.push('Mat6tube');
+    }
     
     // 結果を追加（中国サイトの結果が先に来る）
     let totalFromSites = 0;
