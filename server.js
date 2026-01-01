@@ -302,39 +302,132 @@ function extractTitle($, $elem) {
 }
 
 function extractThumbnail($, $elem) {
-  // 複数の属性とセレクタを試す
+  // 複数の属性とセレクタを試す（より広範囲に検索）
   const imgSelectors = [
     'img',
     '.thumbnail img',
     '[class*="thumbnail"] img',
     '[class*="thumb"] img',
     '.poster img',
-    '[class*="poster"] img'
+    '[class*="poster"] img',
+    '.cover img',
+    '[class*="cover"] img',
+    '.image img',
+    '[class*="image"] img',
+    '.pic img',
+    '[class*="pic"] img',
+    'picture img',
+    'picture source',
+    '.video-thumbnail img',
+    '[class*="video-thumbnail"] img',
+    '.video-poster img',
+    '[class*="video-poster"] img'
+  ];
+  
+  // 試す属性のリスト（より多くの属性をチェック）
+  const thumbnailAttributes = [
+    'src',
+    'data-src',
+    'data-lazy-src',
+    'data-original',
+    'data-url',
+    'data-image',
+    'data-thumb',
+    'data-thumbnail',
+    'data-poster',
+    'data-cover',
+    'data-img',
+    'srcset',
+    'data-srcset',
+    'content',
+    'href'
   ];
   
   for (const selector of imgSelectors) {
     const $img = $elem.find(selector).first();
     if ($img.length > 0) {
-      const thumbnail = $img.attr('src') ||
-                       $img.attr('data-src') ||
-                       $img.attr('data-lazy-src') ||
-                       $img.attr('data-original') ||
-                       $img.attr('data-url') ||
-                       $img.attr('data-image') ||
-                       '';
-      
-      if (thumbnail) {
-        // サムネイルURLを正規化
+      // すべての属性を試す
+      for (const attr of thumbnailAttributes) {
+        let thumbnail = $img.attr(attr) || '';
+        
+        // srcsetの場合は最初のURLを取得
+        if (attr === 'srcset' && thumbnail) {
+          const srcsetMatch = thumbnail.match(/^([^\s,]+)/);
+          if (srcsetMatch) {
+            thumbnail = srcsetMatch[1];
+          }
+        }
+        
+        if (thumbnail && thumbnail.length > 0) {
+          // サムネイルURLを正規化
+          if (thumbnail.startsWith('//')) {
+            return 'https:' + thumbnail;
+          }
+          if (thumbnail.startsWith('/') && !thumbnail.startsWith('http')) {
+            // 相対パスの場合は、現在のサイトのドメインを推測
+            const baseUrl = $elem.closest('a').attr('href') || '';
+            if (baseUrl.includes('bilibili.com')) {
+              return `https://www.bilibili.com${thumbnail}`;
+            } else if (baseUrl.includes('douga4.top')) {
+              return `https://av.douga4.top${thumbnail}`;
+            } else if (baseUrl.includes('javmix.tv')) {
+              return `https://javmix.tv${thumbnail}`;
+            } else if (baseUrl.includes('ppp.porn')) {
+              return `https://ppp.porn${thumbnail}`;
+            }
+            return thumbnail;
+          }
+          if (thumbnail.startsWith('http://')) {
+            return thumbnail.replace('http://', 'https://');
+          }
+          if (thumbnail.startsWith('https://')) {
+            return thumbnail;
+          }
+          // 属性から取得できた場合は返す
+          if (thumbnail.length > 5) {
+            return thumbnail;
+          }
+        }
+      }
+    }
+  }
+  
+  // 要素自体が画像の場合
+  if ($elem.is('img')) {
+    for (const attr of thumbnailAttributes) {
+      let thumbnail = $elem.attr(attr) || '';
+      if (thumbnail && thumbnail.length > 5) {
         if (thumbnail.startsWith('//')) {
           return 'https:' + thumbnail;
-        }
-        if (thumbnail.startsWith('/') && !thumbnail.startsWith('http')) {
-          return thumbnail;
         }
         if (thumbnail.startsWith('http://')) {
           return thumbnail.replace('http://', 'https://');
         }
         if (thumbnail.startsWith('https://')) {
+          return thumbnail;
+        }
+        return thumbnail;
+      }
+    }
+  }
+  
+  // 親要素や兄弟要素から画像を探す
+  const $parent = $elem.parent();
+  if ($parent.length > 0) {
+    const parentImg = $parent.find('img').first();
+    if (parentImg.length > 0) {
+      for (const attr of thumbnailAttributes) {
+        let thumbnail = parentImg.attr(attr) || '';
+        if (thumbnail && thumbnail.length > 5) {
+          if (thumbnail.startsWith('//')) {
+            return 'https:' + thumbnail;
+          }
+          if (thumbnail.startsWith('http://')) {
+            return thumbnail.replace('http://', 'https://');
+          }
+          if (thumbnail.startsWith('https://')) {
+            return thumbnail;
+          }
           return thumbnail;
         }
       }
@@ -344,12 +437,20 @@ function extractThumbnail($, $elem) {
   // Google検索結果の場合
   const googleImg = $elem.closest('.g').find('img').first();
   if (googleImg.length > 0) {
-    const thumbnail = googleImg.attr('src') || googleImg.attr('data-src') || '';
-    if (thumbnail) {
-      if (thumbnail.startsWith('//')) {
-        return 'https:' + thumbnail;
+    for (const attr of thumbnailAttributes) {
+      let thumbnail = googleImg.attr(attr) || '';
+      if (thumbnail && thumbnail.length > 5) {
+        if (thumbnail.startsWith('//')) {
+          return 'https:' + thumbnail;
+        }
+        if (thumbnail.startsWith('http://')) {
+          return thumbnail.replace('http://', 'https://');
+        }
+        if (thumbnail.startsWith('https://')) {
+          return thumbnail;
+        }
+        return thumbnail;
       }
-      return thumbnail;
     }
   }
   
