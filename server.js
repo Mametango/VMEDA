@@ -451,23 +451,23 @@ app.post('/api/search', async (req, res) => {
     
     // 定義されている検索関数のみを使用
     const allSearches = [
-      searchBilibili(query),
-      searchYouku(query),
-      searchIQiyi(query),
-      searchTencentVideo(query),
-      searchXiguaVideo(query),
-      searchGoogle(query),
-      searchJPdmv(query),
-      searchDouga4(query),
-      searchSpankbang(query),
-      searchX1hub(query),
-      searchPorntube(query),
-      searchJavGuru(query),
-      searchFC2(query),
-      searchAkibaAbv(query),
-      search91Porn(query),
-      searchThisAV(query),
-      searchMadou(query)
+      searchBilibili(sanitizedQuery),
+      searchYouku(sanitizedQuery),
+      searchIQiyi(sanitizedQuery),
+      searchTencentVideo(sanitizedQuery),
+      searchXiguaVideo(sanitizedQuery),
+      searchGoogle(sanitizedQuery),
+      searchJPdmv(sanitizedQuery),
+      searchDouga4(sanitizedQuery),
+      searchSpankbang(sanitizedQuery),
+      searchX1hub(sanitizedQuery),
+      searchPorntube(sanitizedQuery),
+      searchJavGuru(sanitizedQuery),
+      searchFC2(sanitizedQuery),
+      searchAkibaAbv(sanitizedQuery),
+      search91Porn(sanitizedQuery),
+      searchThisAV(sanitizedQuery),
+      searchMadou(sanitizedQuery)
     ];
     
     // すべての検索を並行実行
