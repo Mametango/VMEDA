@@ -1490,48 +1490,110 @@ async function searchBilibili(query) {
 async function searchYouku(query) {
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://so.youku.com/search_video/q_${encodedQuery}`;
+    // 複数のURLパターンを試す
+    const urls = [
+      `https://so.youku.com/search_video/q_${encodedQuery}`,
+      `https://www.youku.com/search_video/q_${encodedQuery}`,
+      `https://so.youku.com/search?q=${encodedQuery}&type=video`
+    ];
     
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
-        'Referer': 'https://www.youku.com/'
-      },
-      timeout: 30000
-    });
+    let videos = [];
     
-    const $ = cheerio.load(response.data);
-    const videos = [];
-    
-    $('.yk-pack, .item, a[href*="/v_show/"]').each((index, elem) => {
-      
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/v_show/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://v.youku.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `youku-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'youku'
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://www.youku.com/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000
         });
+        
+        const $ = cheerio.load(response.data);
+        
+        // 複数のセレクタを試す
+        const selectors = [
+          '.yk-pack',
+          '.yk-pack-item',
+          '.item',
+          '.video-item',
+          'a[href*="/v_show/"]',
+          'a[href*="/v_play/"]',
+          '[class*="video"]',
+          '[class*="item"]',
+          '.result-item',
+          '.search-result-item'
+        ];
+        
+        const seenUrls = new Set();
+        
+        selectors.forEach(selector => {
+          $(selector).each((index, elem) => {
+            if (videos.length >= 50) return false;
+            
+            const $item = $(elem);
+            let href = $item.attr('href') || $item.find('a').attr('href') || '';
+            
+            // hrefが見つからない場合は親要素を探す
+            if (!href) {
+              const $parent = $item.parent();
+              href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+            }
+            
+            // Youkuの動画URLパターンを確認
+            if (!href || (!href.includes('/v_show/') && !href.includes('/v_play/'))) return;
+            
+            // 相対URLを絶対URLに変換
+            let fullUrl = href;
+            if (href.startsWith('//')) {
+              fullUrl = 'https:' + href;
+            } else if (href.startsWith('/')) {
+              fullUrl = `https://v.youku.com${href}`;
+            } else if (!href.startsWith('http')) {
+              fullUrl = `https://v.youku.com/${href}`;
+            }
+            
+            // 重複チェック
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            const title = extractTitle($, $item);
+            const thumbnail = extractThumbnail($, $item);
+            const duration = extractDurationFromHtml($, $item);
+            
+            if (title && title.length > 3) {
+              videos.push({
+                id: `youku-${Date.now()}-${index}`,
+                title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'youku'
+              });
+            }
+          });
+        });
+        
+        // 結果が見つかったらループを抜ける
+        if (videos.length > 0) break;
+      } catch (urlError) {
+        console.warn(`⚠️ Youku URL試行エラー (${url}):`, urlError.message);
+        continue;
       }
-    });
+    }
     
     console.log(`✅ Youku: ${videos.length}件の動画を取得`);
     return videos;
   } catch (error) {
-    console.error('Youku検索エラー:', error.message);
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ Youku検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ Youku検索エラー:', error.message);
+    }
     return [];
   }
 }
