@@ -520,6 +520,7 @@ app.post('/api/search', async (req, res) => {
     });
     
     console.log(`✅ 検索完了: ${uniqueVideos.length}件の結果を取得（重複除去後）`);
+    console.log(`📊 詳細: 統合前${videos.length}件 → 重複除去後${uniqueVideos.length}件`);
     
     // テスト用: 結果が0件の場合はテストデータを返す
     if (uniqueVideos.length === 0) {
@@ -535,6 +536,7 @@ app.post('/api/search', async (req, res) => {
       });
     }
     
+    // 制限なしで全件返す
     res.json({ results: uniqueVideos });
   } catch (error) {
     console.error('❌ 検索エラー:', error.message);
@@ -566,7 +568,7 @@ async function searchGoogle(query) {
         'DNT': '1',
         'Connection': 'keep-alive'
       },
-      timeout: 20000,
+      timeout: 30000,
       maxRedirects: 5,
       validateStatus: function (status) {
         return status >= 200 && status < 400;
@@ -690,7 +692,7 @@ async function searchJPdmv(query) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept-Language': 'ja,en-US;q=0.9'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -739,7 +741,7 @@ async function searchDouga4(query) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept-Language': 'ja,en-US;q=0.9'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -791,7 +793,7 @@ async function searchSpankbang(query) {
         'Referer': 'https://spankbang.com/',
         'Cookie': 'age_verified=1; sb_csrf_session=1'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -842,7 +844,7 @@ async function searchX1hub(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://x1hub.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -917,7 +919,7 @@ async function searchPorntube(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://porntube.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -992,7 +994,7 @@ async function searchJavGuru(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://jav.guru/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1068,7 +1070,7 @@ async function searchJapanhub(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://japanhub.net/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1144,7 +1146,7 @@ async function searchTktube(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://tktube.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1220,7 +1222,7 @@ async function searchFC2(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://fc2.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1299,7 +1301,7 @@ async function searchAkibaAbv(query) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept-Language': 'ja,en-US;q=0.9'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1360,7 +1362,7 @@ async function searchBilibili(query) {
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1'
       },
-      timeout: 20000,
+      timeout: 30000,
       maxRedirects: 5
     });
     
@@ -1431,7 +1433,7 @@ async function searchYouku(query) {
         'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
         'Referer': 'https://www.youku.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1481,7 +1483,7 @@ async function searchIQiyi(query) {
         'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
         'Referer': 'https://www.iqiyi.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1531,7 +1533,7 @@ async function searchTencentVideo(query) {
         'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
         'Referer': 'https://v.qq.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1581,7 +1583,7 @@ async function searchXiguaVideo(query) {
         'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
         'Referer': 'https://www.ixigua.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1642,7 +1644,7 @@ async function searchSohu(query) {
             'Referer': 'https://tv.sohu.com/',
             'Accept-Encoding': 'gzip, deflate, br'
           },
-          timeout: 20000,
+          timeout: 30000,
           maxRedirects: 5
         });
         
@@ -1760,7 +1762,7 @@ async function searchMissAV(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Referer': 'https://missav.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1837,7 +1839,7 @@ async function search91Porn(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Referer': 'https://91porn.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1914,7 +1916,7 @@ async function searchThisAV(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://thisav.com/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
@@ -1990,7 +1992,7 @@ async function searchMadou(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://madou.club/'
       },
-      timeout: 15000
+      timeout: 30000
     });
     
     const $ = cheerio.load(response.data);
