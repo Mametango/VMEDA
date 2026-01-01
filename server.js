@@ -258,12 +258,17 @@ app.use(express.static(publicPath, {
 
 // 広告設定を提供するAPI（環境変数から）
 app.get('/api/ad-config', (req, res) => {
-  res.json({
-    adClientId: process.env.AD_CLIENT_ID || '',
-    adSlotHeader: process.env.AD_SLOT_HEADER || '',
-    adSlotFooter: process.env.AD_SLOT_FOOTER || '',
-    adSlotInContent: process.env.AD_SLOT_IN_CONTENT || ''
-  });
+  try {
+    res.json({
+      adClientId: process.env.AD_CLIENT_ID || '',
+      adSlotHeader: process.env.AD_SLOT_HEADER || '',
+      adSlotFooter: process.env.AD_SLOT_FOOTER || '',
+      adSlotInContent: process.env.AD_SLOT_IN_CONTENT || ''
+    });
+  } catch (error) {
+    console.error('❌ 広告設定取得エラー:', error.message);
+    res.status(500).json({ error: '広告設定の取得に失敗しました' });
+  }
 });
 
 // 静的ファイルの明示的なルーティング（Vercel用）
