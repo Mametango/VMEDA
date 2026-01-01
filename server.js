@@ -550,17 +550,42 @@ app.post('/api/search', async (req, res) => {
           return { site: siteName, count: result.value.length, status: 'success' };
         } else {
           const error = result.reason;
+          // エラー情報を安全にシリアライズ可能な形式に変換
+          let errorMessage = 'Unknown error';
+          if (error) {
+            if (typeof error === 'string') {
+              errorMessage = error;
+            } else if (error.message) {
+              errorMessage = error.message;
+            } else if (error.response?.status) {
+              errorMessage = `HTTP ${error.response.status}`;
+            } else if (error.code) {
+              errorMessage = `Error code: ${error.code}`;
+            }
+          }
           return { 
             site: siteName, 
             count: 0, 
             status: 'error', 
-            error: error?.message || error?.response?.status || 'Unknown error' 
+            error: errorMessage
           };
         }
       })
     };
     
-    console.log(`🔍 デバッグ情報作成完了: ${JSON.stringify(debugInfo).substring(0, 200)}...`);
+    try {
+      const debugInfoStr = JSON.stringify(debugInfo);
+      console.log(`🔍 デバッグ情報作成完了: ${debugInfoStr.substring(0, 200)}...`);
+    } catch (jsonError) {
+      console.error('❌ デバッグ情報のシリアライズエラー:', jsonError.message);
+      // シリアライズできない場合は、簡易版を作成
+      debugInfo.siteResults = debugInfo.siteResults.map(site => ({
+        site: site.site,
+        count: site.count,
+        status: site.status,
+        error: typeof site.error === 'string' ? site.error : 'Serialization error'
+      }));
+    }
     
     // テスト用: 結果が0件の場合はテストデータを返す
     if (uniqueVideos.length === 0) {
