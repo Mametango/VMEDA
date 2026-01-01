@@ -632,18 +632,18 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
   
   // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
-  // ただし、Bilibiliの場合はプロキシ経由では動作しないため、直接埋め込みURLを使用
+  // ただし、Bilibiliとdouga4の場合はプロキシ経由では動作しない可能性があるため、直接埋め込みURLを使用
   const isIOSDevice = isIPhone();
-  if (isIOSDevice && source !== 'bilibili') {
+  if (isIOSDevice && source !== 'bilibili' && source !== 'douga4') {
     // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
     const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(normalizedUrl)}`;
     normalizedUrl = proxyUrl;
   }
   
-  // Bilibiliの場合は、iPhone/Braveブラウザで特別な設定
-  if (source === 'bilibili' && isIPhone()) {
+  // Bilibiliとdouga4の場合は、iPhone/Braveブラウザで特別な設定
+  if ((source === 'bilibili' || source === 'douga4') && isIPhone()) {
     // iPhone/Braveブラウザの場合、より寛容な設定を適用
-    // sandbox属性は設定しない（Bilibiliのプレイヤーが動作しなくなる可能性があるため）
+    // sandbox属性は設定しない（プレイヤーが動作しなくなる可能性があるため）
     iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline; accelerometer; gyroscope; clipboard-write; clipboard-read');
     iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
   } else {
