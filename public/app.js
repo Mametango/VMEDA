@@ -199,11 +199,41 @@ function displayResults(videos, searchQuery, isInitial = false) {
   `;
   }).join('');
 
-  resultsDiv.innerHTML = html;
+  // 既存のHTMLに追加（初期表示の場合は上書き）
+  if (isInitial) {
+    resultsDiv.innerHTML = html;
+  } else {
+    // ローディングインジケーターを削除
+    const loadingIndicator = resultsDiv.querySelector('.loading-more');
+    if (loadingIndicator) {
+      loadingIndicator.remove();
+    }
+    // 新しい動画を追加
+    resultsDiv.insertAdjacentHTML('beforeend', html);
+  }
+  
+  // 表示済み数を更新
+  displayedCount += videosToShow.length;
+  
+  // まだ表示していない動画がある場合は、ローディングインジケーターを追加
+  if (displayedCount < videos.length) {
+    resultsDiv.insertAdjacentHTML('beforeend', `
+      <div class="loading-more" style="text-align: center; padding: 20px; color: #666;">
+        <div class="loading-spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p style="margin-top: 10px;">読み込み中...</p>
+      </div>
+    `);
+  }
   
   // iPhoneでのタッチイベントをクリックイベントとして処理
-  // 動画プレイヤーコンテナにタッチイベントリスナーを追加
-  document.querySelectorAll('.video-thumbnail-wrapper, .play-btn').forEach(element => {
+  // 動画プレイヤーコンテナにタッチイベントリスナーを追加（新しく追加された動画のみ）
+  videosToShow.forEach(video => {
+    const videoElement = document.getElementById(`player-${video.id}`);
+    if (videoElement) {
+      const thumbnailWrapper = videoElement.querySelector('.video-thumbnail-wrapper');
+      const playBtn = videoElement.querySelector('.play-btn');
+      
+      [thumbnailWrapper, playBtn].filter(Boolean).forEach(element => {
     // タッチイベントを検出してクリックイベントとして処理
     element.addEventListener('touchend', function(e) {
       // タッチイベントをクリックイベントとして扱う（ユーザーの直接的な操作として）
