@@ -261,19 +261,23 @@ try {
 
 try {
   app.use(express.static(publicPath, {
-  maxAge: '1d', // キャッシュ1日
-  etag: true,
-  setHeaders: (res, filePath) => {
-    // 静的ファイルのMIMEタイプを明示的に設定
-    if (filePath.endsWith('.js')) {
-      res.setHeader('Content-Type', 'application/javascript');
-    } else if (filePath.endsWith('.css')) {
-      res.setHeader('Content-Type', 'text/css');
-    } else if (filePath.endsWith('.html')) {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    maxAge: '1d', // キャッシュ1日
+    etag: true,
+    setHeaders: (res, filePath) => {
+      // 静的ファイルのMIMEタイプを明示的に設定
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      } else if (filePath.endsWith('.html')) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      }
     }
-  }
-}));
+  }));
+} catch (staticError) {
+  console.error('❌ 静的ファイル配信設定エラー:', staticError.message);
+  // エラーが発生しても続行（Vercelが自動的に配信する可能性があるため）
+}
 
 // 広告設定を提供するAPI（環境変数から）
 app.get('/api/ad-config', (req, res) => {
