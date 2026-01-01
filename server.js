@@ -345,6 +345,9 @@ function extractTitle($, $elem) {
 }
 
 function extractThumbnail($, $elem) {
+  // 親要素を最初に取得（関数全体で使用するため）
+  const $parent = $elem.parent();
+  
   // 複数の属性とセレクタを試す（より広範囲に検索）
   const imgSelectors = [
     'img',
@@ -454,9 +457,8 @@ function extractThumbnail($, $elem) {
     }
   }
   
-  // 親要素や兄弟要素から画像を探す
-  const $parent = $elem.parent();
-  if ($parent.length > 0) {
+  // 親要素や兄弟要素から画像を探す（$parentは既に宣言済み）
+  if ($parent && $parent.length > 0) {
     const parentImg = $parent.find('img').first();
     if (parentImg.length > 0) {
       for (const attr of thumbnailAttributes) {
