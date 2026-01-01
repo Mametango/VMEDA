@@ -676,68 +676,90 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // douga4の場合は、動画ページから実際の動画URLを取得する（非同期）
   if (source === 'douga4' && normalizedUrl.includes('douga4.top')) {
-    // デバッグ情報を表示（douga4専用）
+    // デバッグ情報を表示（douga4専用、iPhone/Braveブラウザで常に表示）
     const isIOSDevice = isIPhone();
     const isBrave = navigator.userAgent.includes('Brave');
-    if (isIOSDevice || isBrave) {
-      const debugInfo = document.createElement('div');
-      debugInfo.className = 'debug-info-douga4';
-      debugInfo.style.cssText = 'position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-size: 12px; z-index: 10000; max-width: 90%; word-break: break-all;';
+    const ua = navigator.userAgent;
+    
+    // デバッグ情報用のIDを生成
+    const debugId = `douga4-debug-${videoId}`;
+    
+    // デバッグ情報を表示（条件なしで常に表示）
+    const debugInfo = document.createElement('div');
+    debugInfo.id = debugId;
+    debugInfo.className = 'debug-info-douga4';
+    debugInfo.style.cssText = 'position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.9); color: white; padding: 15px; border-radius: 8px; font-size: 11px; z-index: 10000; max-width: 95%; word-break: break-all; line-height: 1.4; box-shadow: 0 2px 10px rgba(0,0,0,0.5);';
+    
+    let statusText = 'URL取得中...';
+    
+    const updateDebugInfo = () => {
+      if (!debugInfo.parentNode) return;
+      
+      const iframeSize = `${iframe.offsetWidth}×${iframe.offsetHeight}`;
+      const containerSize = `${container.offsetWidth}×${container.offsetHeight}`;
+      const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0 ? '表示中' : '非表示';
+      const currentSrc = iframe.src || '未設定';
+      
       debugInfo.innerHTML = `
-        <div><strong>douga4デバッグ情報</strong></div>
-        <div>ブラウザ: ${navigator.userAgent.includes('Brave') ? 'Brave' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'}</div>
+        <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">📺 douga4デバッグ情報</div>
+        <div>ブラウザ: ${isBrave ? 'Brave' : ua.includes('Safari') ? 'Safari' : 'Other'}</div>
         <div>デバイス: ${isIOSDevice ? 'iPhone/iOS' : 'Other'}</div>
-        <div>元のURL: ${normalizedUrl}</div>
-        <div>iframeサイズ: 読み込み中...</div>
-        <div>コンテナサイズ: 読み込み中...</div>
-        <div>状態: URL取得中...</div>
+        <div>User-Agent: ${ua.substring(0, 40)}...</div>
+        <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">元のURL:</div>
+        <div style="font-size: 10px; word-break: break-all;">${normalizedUrl}</div>
+        <div style="margin-top: 8px;">現在のiframe.src:</div>
+        <div style="font-size: 10px; word-break: break-all;">${currentSrc.substring(0, 80)}${currentSrc.length > 80 ? '...' : ''}</div>
+        <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">iframeサイズ: ${iframeSize}</div>
+        <div>コンテナサイズ: ${containerSize}</div>
+        <div>iframe表示: ${iframeVisible}</div>
+        <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">状態: <span id="douga4-status-${videoId}">${statusText}</span></div>
       `;
-      container.appendChild(debugInfo);
-      
-      // 定期的にサイズ情報を更新
-      const updateDebugInfo = () => {
-        if (debugInfo.parentNode) {
-          const iframeSize = `${iframe.offsetWidth}×${iframe.offsetHeight}`;
-          const containerSize = `${container.offsetWidth}×${container.offsetHeight}`;
-          const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0 ? '表示中' : '非表示';
-          debugInfo.innerHTML = `
-            <div><strong>douga4デバッグ情報</strong></div>
-            <div>ブラウザ: ${navigator.userAgent.includes('Brave') ? 'Brave' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'}</div>
-            <div>デバイス: ${isIOSDevice ? 'iPhone/iOS' : 'Other'}</div>
-            <div>元のURL: ${normalizedUrl.substring(0, 50)}...</div>
-            <div>iframeサイズ: ${iframeSize}</div>
-            <div>コンテナサイズ: ${containerSize}</div>
-            <div>iframe表示: ${iframeVisible}</div>
-            <div>状態: <span id="douga4-status">更新中...</span></div>
-          `;
-        }
-      };
-      
-      setInterval(updateDebugInfo, 1000);
-    }
+    };
+    
+    // 初回表示
+    updateDebugInfo();
+    
+    // コンテナに追加（iframeを追加する前に追加）
+    container.appendChild(debugInfo);
+    
+    // 定期的にサイズ情報を更新
+    const debugInterval = setInterval(() => {
+      if (!debugInfo.parentNode) {
+        clearInterval(debugInterval);
+        return;
+      }
+      updateDebugInfo();
+    }, 1000);
     
     // サーバー側で動画URLを取得するエンドポイントを呼び出す
-    const statusEl = document.getElementById('douga4-status');
-    if (statusEl) statusEl.textContent = 'サーバーからURL取得中...';
+    const statusElId = `douga4-status-${videoId}`;
+    statusText = 'サーバーからURL取得中...';
+    updateDebugInfo();
     
     fetch(`/api/douga4-video?url=${encodeURIComponent(normalizedUrl)}`)
       .then(response => {
-        if (statusEl) statusEl.textContent = 'レスポンス受信...';
+        statusText = 'レスポンス受信...';
+        updateDebugInfo();
         return response.json();
       })
       .then(data => {
-        if (statusEl) statusEl.textContent = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
+        statusText = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
+        updateDebugInfo();
         if (data.embedUrl && data.embedUrl !== normalizedUrl) {
           // 取得した動画URLを使用
-          if (statusEl) statusEl.textContent = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
+          statusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
+          updateDebugInfo();
           iframe.src = data.embedUrl;
+          setTimeout(updateDebugInfo, 500);
         } else {
-          if (statusEl) statusEl.textContent = '元のURLを使用';
+          statusText = '元のURLを使用';
+          updateDebugInfo();
         }
       })
       .catch(error => {
         // エラーが発生しても元のURLを使用
-        if (statusEl) statusEl.textContent = `エラー: ${error.message}`;
+        statusText = `エラー: ${error.message}`;
+        updateDebugInfo();
       });
   }
   
