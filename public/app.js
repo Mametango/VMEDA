@@ -824,6 +824,57 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   container.appendChild(iframe);
   
+  // douga4の場合は、デバッグ情報をコンテナクリア後に追加
+  if (source === 'douga4' && normalizedUrl.includes('douga4.top') && douga4UpdateDebugInfo) {
+    douga4DebugInfo = document.createElement('div');
+    douga4DebugInfo.id = `douga4-debug-${videoId}`;
+    douga4DebugInfo.className = 'debug-info-douga4';
+    douga4DebugInfo.style.cssText = 'position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.9); color: white; padding: 15px; border-radius: 8px; font-size: 11px; z-index: 10000; max-width: 95%; word-break: break-all; line-height: 1.4; box-shadow: 0 2px 10px rgba(0,0,0,0.5); pointer-events: none;';
+    
+    // 初回表示
+    douga4UpdateDebugInfo();
+    container.appendChild(douga4DebugInfo);
+    
+    // 定期的にサイズ情報を更新
+    const debugInterval = setInterval(() => {
+      if (!douga4DebugInfo || !douga4DebugInfo.parentNode) {
+        clearInterval(debugInterval);
+        return;
+      }
+      douga4UpdateDebugInfo();
+    }, 1000);
+    
+    // サーバー側で動画URLを取得するエンドポイントを呼び出す
+    douga4StatusText = 'サーバーからURL取得中...';
+    douga4UpdateDebugInfo();
+    
+    fetch(`/api/douga4-video?url=${encodeURIComponent(normalizedUrl)}`)
+      .then(response => {
+        douga4StatusText = 'レスポンス受信...';
+        douga4UpdateDebugInfo();
+        return response.json();
+      })
+      .then(data => {
+        douga4StatusText = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
+        douga4UpdateDebugInfo();
+        if (data.embedUrl && data.embedUrl !== normalizedUrl) {
+          // 取得した動画URLを使用
+          douga4StatusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
+          douga4UpdateDebugInfo();
+          iframe.src = data.embedUrl;
+          setTimeout(douga4UpdateDebugInfo, 500);
+        } else {
+          douga4StatusText = '元のURLを使用';
+          douga4UpdateDebugInfo();
+        }
+      })
+      .catch(error => {
+        // エラーが発生しても元のURLを使用
+        douga4StatusText = `エラー: ${error.message}`;
+        douga4UpdateDebugInfo();
+      });
+  }
+  
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
   // タイムアウトでエラー検出（Bilibiliとdouga4の場合は15秒、その他は10秒）
   const timeoutDuration = (source === 'bilibili' || source === 'douga4') ? 15000 : 10000;
