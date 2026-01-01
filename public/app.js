@@ -1129,6 +1129,9 @@ function getSourceName(source) {
     't66y': 'T66y',
     'javbus': 'Javbus',
     'javdb': 'Javdb',
+    'ppp': 'PPP.Porn',
+    'javmix': 'Javmix.TV',
+    'ivfree': 'IVFree',
     'test': 'テスト'
   };
   return names[source] || source;

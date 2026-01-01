@@ -822,7 +822,34 @@ app.post('/api/search', async (req, res) => {
     
     // 定義されている検索関数のみを使用（0件のサイトは削除）
     const allSearches = [];
+    
+    // 関数が定義されているか確認
+    console.log(`🔍 検索関数の定義確認:`);
+    const ivfreeType = typeof searchIVFree;
+    const jpdmvType = typeof searchJPdmv;
+    const bilibiliType = typeof searchBilibili;
+    const douga4Type = typeof searchDouga4;
+    const javmixType = typeof searchJavmix;
+    const pppType = typeof searchPPP;
+    
+    console.log(`  - searchIVFree: ${ivfreeType} ${ivfreeType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
+    console.log(`  - searchJPdmv: ${jpdmvType} ${jpdmvType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
+    console.log(`  - searchBilibili: ${bilibiliType} ${bilibiliType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
+    console.log(`  - searchDouga4: ${douga4Type} ${douga4Type === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
+    console.log(`  - searchJavmix: ${javmixType} ${javmixType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
+    console.log(`  - searchPPP: ${pppType} ${pppType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
+    
+    // 関数が未定義の場合の詳細情報
+    if (ivfreeType !== 'function') {
+      console.error(`❌ searchIVFreeが未定義です。型: ${ivfreeType}, 値: ${searchIVFree}`);
+    }
+    if (jpdmvType !== 'function') {
+      console.error(`❌ searchJPdmvが未定義です。型: ${jpdmvType}, 値: ${searchJPdmv}`);
+    }
+    
     const searchFunctions = [
+      { fn: searchIVFree, name: 'IVFree' }, // 優先順位: 最高
+      { fn: searchJPdmv, name: 'JPdmv' }, // 優先順位: 高
       { fn: searchBilibili, name: 'Bilibili' },
       { fn: searchDouga4, name: 'Douga4' },
       { fn: searchJavmix, name: 'Javmix.TV' },
@@ -832,25 +859,61 @@ app.post('/api/search', async (req, res) => {
     // searchMat6tubeが定義されている場合のみ追加
     if (typeof searchMat6tube === 'function') {
       searchFunctions.push({ fn: searchMat6tube, name: 'Mat6tube' });
+      console.log(`  - searchMat6tube: ✅ 定義済み`);
+    } else {
+      console.log(`  - searchMat6tube: ❌ 未定義`);
     }
     
+    console.log(`📋 検索関数リスト: ${searchFunctions.map(sf => sf.name).join(', ')} (全${searchFunctions.length}件)`);
+    
     // 各検索関数を安全に呼び出す
-    searchFunctions.forEach(({ fn, name }) => {
+    searchFunctions.forEach(({ fn, name }, index) => {
       try {
         if (typeof fn === 'function') {
+          console.log(`🚀 [${index + 1}/${searchFunctions.length}] ${name}検索関数を呼び出し:`, fn.name);
           allSearches.push(fn(sanitizedQuery));
         } else {
-          console.warn(`⚠️ ${name}関数が定義されていません`);
+          console.warn(`⚠️ [${index + 1}/${searchFunctions.length}] ${name}関数が定義されていません (typeof: ${typeof fn})`);
+          // 関数が定義されていない場合も空の配列を返すPromiseを追加
+          allSearches.push(Promise.resolve([]));
         }
       } catch (err) {
-        console.error(`❌ ${name}関数の呼び出しエラー:`, err.message);
+        console.error(`❌ [${index + 1}/${searchFunctions.length}] ${name}関数の呼び出しエラー:`, err.message);
+        console.error(`❌ ${name}スタックトレース:`, err.stack);
+        // エラーが発生しても空の配列を返すPromiseを追加
+        allSearches.push(Promise.resolve([]));
       }
     });
     
+    console.log(`📋 検索関数呼び出し完了: ${allSearches.length}個のPromiseを作成`);
+    
     // すべての検索を並行実行
     console.log(`🚀 ${allSearches.length}個の検索関数を並行実行開始...`);
+    const searchStartTime = Date.now();
     const allResults = await Promise.allSettled(allSearches);
-    console.log(`✅ すべての検索関数の実行が完了しました（${allResults.length}件）`);
+    const searchEndTime = Date.now();
+    const searchDuration = searchEndTime - searchStartTime;
+    console.log(`✅ すべての検索関数の実行が完了しました（${allResults.length}件、実行時間: ${searchDuration}ms）`);
+    
+    // 各検索関数の実行結果を確認
+    console.log(`📊 各検索関数の実行結果を確認中...`);
+    allResults.forEach((result, index) => {
+      const siteName = allSiteNames[index] || `Unknown[${index}]`;
+      if (result.status === 'fulfilled') {
+        const resultValue = result.value;
+        const isArray = Array.isArray(resultValue);
+        const count = isArray ? resultValue.length : '非配列';
+        console.log(`✅ ${siteName}: Promise fulfilled, 結果: ${count}件`);
+        if (!isArray) {
+          console.error(`❌ ${siteName}: 結果が配列ではありません:`, typeof resultValue, resultValue);
+        }
+      } else {
+        console.error(`❌ ${siteName}: Promise rejected, エラー:`, result.reason?.message || result.reason);
+        if (result.reason?.stack) {
+          console.error(`❌ ${siteName} スタックトレース:`, result.reason.stack.substring(0, 300));
+        }
+      }
+    });
     
     // 結果を統合
     const videos = [];
@@ -862,9 +925,11 @@ app.post('/api/search', async (req, res) => {
     let errorCount = 0;
     let zeroCount = 0;
     
-    console.log(`📊 各サイトの検索結果を確認中...`);
+    console.log(`📊 各サイトの検索結果を確認中... (全${allResults.length}件、サイト数: ${allSiteNames.length})`);
     allResults.forEach((result, index) => {
       const siteName = allSiteNames[index] || `Unknown[${index}]`;
+      console.log(`🔍 ${siteName}の結果を確認中... (status: ${result.status})`);
+      
       if (result.status === 'fulfilled' && Array.isArray(result.value)) {
         if (result.value.length > 0) {
           console.log(`✅ ${siteName}: ${result.value.length}件の動画を取得`);
@@ -883,6 +948,9 @@ app.post('/api/search', async (req, res) => {
           console.warn(`⚠️ ${siteName}検索: ページが見つかりません（404）`);
         } else {
           console.error(`❌ ${siteName}検索エラー:`, error?.message || error?.stack || error);
+          if (error?.code) {
+            console.error(`❌ ${siteName}エラーコード:`, error.code);
+          }
         }
       }
     });
@@ -1143,48 +1211,164 @@ async function searchGoogle(query) {
 // JPdmv検索
 async function searchJPdmv(query) {
   try {
+    console.log(`🔍 JPdmv検索開始: "${query}"`);
+    const startTime = Date.now();
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://jpdmv.com/search/${encodedQuery}`;
+    // 複数のURLパターンを試す
+    const urls = [
+      `https://jpdmv.com/search/${encodedQuery}`,
+      `https://jpdmv.com/search?q=${encodedQuery}`,
+      `https://jpdmv.com/?q=${encodedQuery}`,
+      `https://jpdmv.com/?search=${encodedQuery}`
+    ];
     
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9'
-      },
-      timeout: 30000
-    });
+    let videos = [];
+    let triedUrls = 0;
+    let foundElements = 0;
+    let matchedElements = 0;
+    let selectorCount = 0;
     
-    const $ = cheerio.load(response.data);
-    const videos = [];
-    
-    $('.video-item, .item, a[href*="/video/"]').each((index, elem) => {
-      
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/video/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://jpdmv.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `jpdmv-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'jpdmv'
+    for (const url of urls) {
+      triedUrls++;
+      try {
+        console.log(`🔍 JPdmv: URL試行 ${triedUrls}/${urls.length}: ${url}`);
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'ja,en-US;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://jpdmv.com/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000
         });
+        
+        console.log(`🔍 JPdmv: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
+        
+        const $ = cheerio.load(response.data);
+        
+        // 複数のセレクタを試す
+        const selectors = [
+          '.video-item',
+          '.item',
+          'a[href*="/video/"]',
+          'a[href*="/watch/"]',
+          'a[href*="/v/"]',
+          '[class*="video"]',
+          '[class*="item"]',
+          '.result-item',
+          '.search-result-item',
+          'article'
+        ];
+        
+        const seenUrls = new Set();
+        let urlSelectorCount = 0;
+        
+        selectors.forEach(selector => {
+          const elements = $(selector);
+          urlSelectorCount += elements.length;
+          
+          elements.each((index, elem) => {
+            if (videos.length >= 50) return false;
+            
+            foundElements++;
+            
+            const $item = $(elem);
+            let href = $item.attr('href') || $item.find('a').attr('href') || '';
+            
+            // hrefが見つからない場合は親要素を探す
+            if (!href) {
+              const $parent = $item.parent();
+              href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+            }
+            
+            // JPdmvの動画URLパターンを確認
+            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+            
+            matchedElements++;
+            
+            // 相対URLを絶対URLに変換
+            let fullUrl = href;
+            if (href.startsWith('//')) {
+              fullUrl = 'https:' + href;
+            } else if (href.startsWith('/')) {
+              fullUrl = `https://jpdmv.com${href}`;
+            } else if (!href.startsWith('http')) {
+              fullUrl = `https://jpdmv.com/${href}`;
+            }
+            
+            // 重複チェック
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            const title = extractTitle($, $item);
+            const thumbnail = extractThumbnail($, $item);
+            const duration = extractDurationFromHtml($, $item);
+            
+            if (title && title.length > 3) {
+              // 検索クエリとタイトルの関連性をチェック
+              if (!isTitleRelevant(title, query)) {
+                return; // 関連性がない場合はスキップ
+              }
+              
+              videos.push({
+                id: `jpdmv-${Date.now()}-${index}`,
+                title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'jpdmv'
+              });
+            }
+          });
+        });
+        
+        selectorCount += urlSelectorCount;
+        console.log(`🔍 JPdmv: このURLで見つかった要素: ${urlSelectorCount}件, 処理した要素: ${foundElements}件, マッチした要素: ${matchedElements}件`);
+        
+        // 結果が見つかったらループを抜ける
+        if (videos.length > 0) {
+          console.log(`✅ JPdmv: ${videos.length}件の動画を取得（URL: ${url}）`);
+          break;
+        } else {
+          console.log(`ℹ️ JPdmv: このURLでは結果が見つかりませんでした（URL: ${url}）`);
+        }
+      } catch (urlError) {
+        console.warn(`⚠️ JPdmv URL試行エラー (${url}):`, urlError.message);
+        if (urlError.response) {
+          console.warn(`⚠️ JPdmv HTTPエラー: ${urlError.response.status} ${urlError.response.statusText}`);
+        }
+        continue;
       }
-    });
+    }
     
-    console.log(`✅ JPdmv: ${videos.length}件の動画を取得`);
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    console.log(`✅ JPdmv: ${videos.length}件の動画を取得（実行時間: ${duration}ms, 試行URL数: ${triedUrls}/${urls.length}）`);
+    console.log(`🔍 JPdmv デバッグ: セレクタで見つかった要素: ${selectorCount}件, 処理した要素: ${foundElements}件, マッチした要素: ${matchedElements}件`);
+    
+    // デバッグ情報: 最初の3件のタイトルを表示
+    if (videos.length > 0) {
+      console.log(`🔍 JPdmv デバッグ: 取得した動画のサンプル:`);
+      videos.slice(0, 3).forEach((video, idx) => {
+        console.log(`  ${idx + 1}. ${video.title.substring(0, 50)}... (URL: ${video.url.substring(0, 60)}...)`);
+      });
+    } else {
+      console.log(`⚠️ JPdmv: 動画が見つかりませんでした（検索クエリ: "${query}"）`);
+    }
+    
     return videos;
   } catch (error) {
-    console.error('JPdmv検索エラー:', error.message);
+    console.error('❌ JPdmv検索エラー:', error.message);
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ JPdmv検索: ページが見つかりません（404）');
+    } else if (error.code) {
+      console.error(`❌ JPdmv エラーコード: ${error.code}`);
+    }
+    if (error.stack) {
+      console.error('❌ JPdmv スタックトレース:', error.stack.substring(0, 500));
+    }
     return [];
   }
 }
@@ -2824,6 +3008,204 @@ async function searchPPP(query) {
     } else {
       console.error('❌ PPP.Porn検索エラー:', error.message);
     }
+    return [];
+  }
+}
+
+// IVFree検索（ivfree.asia）
+async function searchIVFree(query) {
+  try {
+    console.log(`🔍 IVFree検索開始: "${query}"`);
+    const startTime = Date.now();
+    const queryLower = query.toLowerCase().trim();
+    
+    // トップページから全件取得してフィルタリング（検索機能があるか不明なため）
+    const url = `http://ivfree.asia/`;
+    
+    console.log(`🔍 IVFree: URL取得開始: ${url}`);
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Referer': 'http://ivfree.asia/',
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000,
+      validateStatus: function (status) {
+        return status >= 200 && status < 400;
+      }
+    });
+    
+    console.log(`🔍 IVFree: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
+    
+    const $ = cheerio.load(response.data);
+    const videos = [];
+    const seenUrls = new Set();
+    
+    console.log(`🔍 IVFree: HTML取得完了、パース開始`);
+    
+    // 複数のセレクタを試す（実際のHTML構造に合わせて調整）
+    const selectors = [
+      'h2 a',
+      'h3 a',
+      'h2',
+      'h3',
+      'article h2 a',
+      'article h3 a',
+      'a[href*="ivfree.asia"]'
+    ];
+    
+    let foundCount = 0;
+    let matchedCount = 0;
+    
+    for (const selector of selectors) {
+      $(selector).each((index, elem) => {
+        if (videos.length >= 50) return false;
+        
+        const $item = $(elem);
+        let titleText = '';
+        let href = '';
+        
+        // aタグの場合は直接hrefを取得
+        if ($item.is('a')) {
+          href = $item.attr('href') || '';
+          titleText = $item.text().trim() || $item.attr('title') || '';
+        } else if ($item.is('h2') || $item.is('h3')) {
+          // h2/h3タグの場合は、テキストとリンクを取得
+          titleText = $item.text().trim();
+          const $link = $item.find('a').first();
+          if ($link.length > 0) {
+            href = $link.attr('href') || '';
+            if (!titleText) {
+              titleText = $link.text().trim() || $link.attr('title') || '';
+            }
+          }
+        }
+        
+        // タイトルにIDパターン [XXX-XXX] が含まれているか確認
+        if (!titleText || !titleText.match(/\[[A-Z]+-\d+\]/)) {
+          return;
+        }
+        
+        foundCount++;
+        
+        // 検索クエリとタイトルの関連性をチェック
+        const titleLower = titleText.toLowerCase();
+        // クエリがIDパターンに含まれているか、タイトルに含まれているか
+        const idMatch = titleText.match(/\[([A-Z]+)-\d+\]/);
+        const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
+        const queryInTitle = titleLower.includes(queryLower);
+        
+        if (!queryInId && !queryInTitle) {
+          return; // 検索語が含まれていない場合はスキップ
+        }
+        
+        matchedCount++;
+        
+        // リンクが見つからない場合は、親要素から探す
+        if (!href) {
+          const $parent = $item.parent();
+          if ($parent.is('a')) {
+            href = $parent.attr('href') || '';
+          } else {
+            const $parentLink = $parent.find('a').first();
+            if ($parentLink.length > 0) {
+              href = $parentLink.attr('href') || '';
+            }
+          }
+        }
+        
+        // さらに上の親要素から探す
+        if (!href) {
+          const $grandParent = $item.parent().parent();
+          if ($grandParent.is('a')) {
+            href = $grandParent.attr('href') || '';
+          } else {
+            const $grandParentLink = $grandParent.find('a').first();
+            if ($grandParentLink.length > 0) {
+              href = $grandParentLink.attr('href') || '';
+            }
+          }
+        }
+        
+        // 相対URLを絶対URLに変換
+        let fullUrl = href;
+        if (href) {
+          if (href.startsWith('//')) {
+            fullUrl = 'http:' + href;
+          } else if (href.startsWith('/')) {
+            fullUrl = `http://ivfree.asia${href}`;
+          } else if (href.startsWith('./')) {
+            fullUrl = `http://ivfree.asia/${href.substring(2)}`;
+          } else if (!href.startsWith('http')) {
+            fullUrl = `http://ivfree.asia/${href}`;
+          }
+        } else {
+          // リンクが見つからない場合は、IDパターンからURLを生成
+          const idMatch = titleText.match(/\[([A-Z]+-\d+)\]/);
+          if (idMatch) {
+            // 複数のURLパターンを試す
+            const id = idMatch[1];
+            fullUrl = `http://ivfree.asia/video/${id}`;
+          } else {
+            return;
+          }
+        }
+        
+        // ivfree.asiaのドメイン内のリンクのみを対象
+        if (!fullUrl.includes('ivfree.asia')) return;
+        
+        // 重複チェック
+        if (seenUrls.has(fullUrl)) return;
+        seenUrls.add(fullUrl);
+        
+        const thumbnail = extractThumbnail($, $item);
+        const duration = extractDurationFromHtml($, $item);
+        
+        videos.push({
+          id: `ivfree-${Date.now()}-${index}`,
+          title: titleText.substring(0, 200),
+          thumbnail: thumbnail || '',
+          duration: duration || '',
+          url: fullUrl,
+          embedUrl: fullUrl,
+          source: 'ivfree'
+        });
+      });
+      
+      // 結果が見つかったらループを抜ける
+      if (videos.length > 0) break;
+    }
+    
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    console.log(`🔍 IVFree: 見つかった動画: ${foundCount}件、マッチした動画: ${matchedCount}件、最終結果: ${videos.length}件`);
+    console.log(`✅ IVFree: ${videos.length}件の動画を取得（実行時間: ${duration}ms）`);
+    
+    // デバッグ情報: 最初の3件のタイトルを表示
+    if (videos.length > 0) {
+      console.log(`🔍 IVFree デバッグ: 取得した動画のサンプル:`);
+      videos.slice(0, 3).forEach((video, idx) => {
+        console.log(`  ${idx + 1}. ${video.title.substring(0, 50)}... (URL: ${video.url.substring(0, 60)}...)`);
+      });
+    } else {
+      console.log(`⚠️ IVFree: 動画が見つかりませんでした（検索クエリ: "${query}"）`);
+    }
+    
+    return videos;
+  } catch (error) {
+    console.error('❌ IVFree検索エラー:', error.message);
+    if (error.response) {
+      console.error(`❌ IVFree HTTPエラー: ${error.response.status} ${error.response.statusText}`);
+    }
+    if (error.code) {
+      console.error(`❌ IVFree エラーコード: ${error.code}`);
+    }
+    if (error.stack) {
+      console.error('❌ IVFree スタックトレース:', error.stack.substring(0, 500));
+    }
+    // エラーが発生しても空の配列を返す（他の検索に影響を与えない）
     return [];
   }
 }
