@@ -549,7 +549,8 @@ function displayRecentSearches(searches) {
   }
 }
 
-// ページ読み込み時に他のユーザーの検索ワードを取得
+// ページ読み込み時に他のユーザーの検索ワードを取得（検索は実行しない）
+// 注意: loadRecentSearches()は検索履歴を表示するだけで、検索は実行しない
 loadRecentSearches();
 
 // ページ読み込み時の自動検索は完全に無効化
