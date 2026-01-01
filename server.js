@@ -466,7 +466,8 @@ app.post('/api/search', async (req, res) => {
       searchThisAV(sanitizedQuery),
       searchMadou(sanitizedQuery),
       searchJavmix(sanitizedQuery),
-      searchPPP(sanitizedQuery)
+      searchPPP(sanitizedQuery),
+      searchJable(sanitizedQuery)
     ];
     
     // すべての検索を並行実行
@@ -476,7 +477,7 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合
     const videos = [];
-    const allSiteNames = ['Bilibili', 'Tencent Video', 'Xigua Video', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'FC2', 'AkibaAbv', '91Porn', 'ThisAV', 'Madou', 'Javmix.TV', 'PPP.Porn'];
+    const allSiteNames = ['Bilibili', 'Tencent Video', 'Xigua Video', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'FC2', 'AkibaAbv', '91Porn', 'ThisAV', 'Madou', 'Javmix.TV', 'PPP.Porn', 'Jable.TV'];
     
     // 結果を追加（中国サイトの結果が先に来る）
     let totalFromSites = 0;
@@ -2409,6 +2410,122 @@ async function searchPPP(query) {
       console.warn('⚠️ PPP.Porn検索: ページが見つかりません（404）');
     } else {
       console.error('❌ PPP.Porn検索エラー:', error.message);
+    }
+    return [];
+  }
+}
+
+// Jable.TV検索
+async function searchJable(query) {
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    // 複数のURLパターンを試す
+    const urls = [
+      `https://jable.tv/search/${encodedQuery}`,
+      `https://jable.tv/search?q=${encodedQuery}`,
+      `https://jable.tv/?s=${encodedQuery}`,
+      `https://jable.tv/videos/search/${encodedQuery}`
+    ];
+    
+    let videos = [];
+    
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'ja,en-US;q=0.9,zh-TW;q=0.8,zh-CN;q=0.7',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://jable.tv/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000
+        });
+        
+        const $ = cheerio.load(response.data);
+        
+        // 複数のセレクタを試す
+        const selectors = [
+          '.video-item',
+          '.item',
+          'a[href*="/videos/"]',
+          'a[href*="/video/"]',
+          'a[href*="/watch/"]',
+          'a[href*="/v/"]',
+          '[class*="video"]',
+          '[class*="item"]',
+          '.result-item',
+          '.search-result-item',
+          'article',
+          '[class*="card"]',
+          '.post-item'
+        ];
+        
+        const seenUrls = new Set();
+        
+        selectors.forEach(selector => {
+          $(selector).each((index, elem) => {
+            if (videos.length >= 50) return false;
+            
+            const $item = $(elem);
+            let href = $item.attr('href') || $item.find('a').attr('href') || '';
+            
+            // hrefが見つからない場合は親要素を探す
+            if (!href) {
+              const $parent = $item.parent();
+              href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+            }
+            
+            // Jable.TVの動画URLパターンを確認
+            if (!href || (!href.includes('/videos/') && !href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+            
+            // 相対URLを絶対URLに変換
+            let fullUrl = href;
+            if (href.startsWith('//')) {
+              fullUrl = 'https:' + href;
+            } else if (href.startsWith('/')) {
+              fullUrl = `https://jable.tv${href}`;
+            } else if (!href.startsWith('http')) {
+              fullUrl = `https://jable.tv/${href}`;
+            }
+            
+            // 重複チェック
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            const title = extractTitle($, $item);
+            const thumbnail = extractThumbnail($, $item);
+            const duration = extractDurationFromHtml($, $item);
+            
+            if (title && title.length > 3) {
+              videos.push({
+                id: `jable-${Date.now()}-${index}`,
+                title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'jable'
+              });
+            }
+          });
+        });
+        
+        // 結果が見つかったらループを抜ける
+        if (videos.length > 0) break;
+      } catch (urlError) {
+        console.warn(`⚠️ Jable.TV URL試行エラー (${url}):`, urlError.message);
+        continue;
+      }
+    }
+    
+    console.log(`✅ Jable.TV: ${videos.length}件の動画を取得`);
+    return videos;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ Jable.TV検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ Jable.TV検索エラー:', error.message);
     }
     return [];
   }
