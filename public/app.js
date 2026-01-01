@@ -1243,7 +1243,8 @@ if (sortSelect) {
     
     const sortedVideos = sortVideos(currentVideos, sortType);
     console.log('✅ ソート完了:', sortedVideos.length, '件');
-    displayResults(sortedVideos, '');
+    displayedCount = 0; // ソート時はリセット
+    displayResults(sortedVideos, '', true); // ソート時は初期表示として扱う
   });
 } else {
   console.error('❌ sortSelect要素が見つかりません');
