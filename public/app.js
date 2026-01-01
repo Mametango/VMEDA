@@ -822,9 +822,13 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       normalizedUrl = 'http://' + normalizedUrl;
     }
     
-    // IVFreeの場合は、プロキシ経由で広告を除去して表示
+    // IVFreeの場合は、まず動画URLを取得してからプロキシ経由で表示
     // ポップアップ広告を抑制するため、プロキシエンドポイントを使用
-    normalizedUrl = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
+    // ただし、既にプロキシ経由の場合はそのまま使用
+    if (!normalizedUrl.includes('/api/ivfree-proxy')) {
+      // 動画URL取得処理は後で実行される（ivfree-video API呼び出し時）
+      // ここでは元のURLを保持
+    }
   }
   
   // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
@@ -1071,7 +1075,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
   
   // IVFreeの動画URLを取得（douga4と同様の処理）
-  if (source === 'ivfree' && normalizedUrl.includes('ivfree.asia')) {
+  // ただし、プロキシ経由で表示する場合は、動画URL取得は不要
+  if (source === 'ivfree' && normalizedUrl.includes('ivfree.asia') && !normalizedUrl.includes('/api/ivfree-proxy')) {
     let ivfreeStatusText = 'IVFree動画URL取得中...';
     const ivfreeUpdateDebugInfo = () => {
       if (container.querySelector('.debug-info')) {
@@ -1085,26 +1090,35 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       .then(response => {
         ivfreeStatusText = 'レスポンス受信...';
         ivfreeUpdateDebugInfo();
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
         return response.json();
       })
       .then(data => {
         ivfreeStatusText = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
         ivfreeUpdateDebugInfo();
         if (data.embedUrl && data.embedUrl !== normalizedUrl) {
-          // 取得した動画URLを使用
+          // 取得した動画URLを使用（プロキシ経由）
           ivfreeStatusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
           ivfreeUpdateDebugInfo();
-          iframe.src = data.embedUrl;
+          // プロキシ経由で表示
+          iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
           setTimeout(ivfreeUpdateDebugInfo, 500);
         } else {
-          ivfreeStatusText = '元のURLを使用';
+          ivfreeStatusText = '元のURLを使用（プロキシ経由）';
           ivfreeUpdateDebugInfo();
+          // プロキシ経由で表示
+          iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
         }
       })
       .catch(error => {
-        // エラーが発生しても元のURLを使用
-        ivfreeStatusText = `エラー: ${error.message}`;
+        // エラーが発生してもプロキシ経由で元のURLを使用
+        console.error('❌ IVFree動画URL取得エラー:', error);
+        ivfreeStatusText = `エラー: ${error.message}（プロキシ経由で表示）`;
         ivfreeUpdateDebugInfo();
+        // プロキシ経由で表示
+        iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
       });
   }
   

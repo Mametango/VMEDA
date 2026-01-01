@@ -3711,27 +3711,104 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       maxRedirects: 5
     });
     
-    let html = response.data;
+    const $ = cheerio.load(response.data);
+    const baseUrl = new URL(videoUrl);
     
-    // ポップアップ広告を生成するJavaScriptを除去
-    html = html.replace(/<script[^>]*>[\s\S]*?window\.open[\s\S]*?<\/script>/gi, '');
-    html = html.replace(/<script[^>]*>[\s\S]*?popup[\s\S]*?<\/script>/gi, '');
-    html = html.replace(/<script[^>]*>[\s\S]*?popunder[\s\S]*?<\/script>/gi, '');
-    html = html.replace(/<script[^>]*>[\s\S]*?adsbygoogle[\s\S]*?<\/script>/gi, '');
-    html = html.replace(/<script[^>]*>[\s\S]*?googlesyndication[\s\S]*?<\/script>/gi, '');
-    html = html.replace(/<script[^>]*>[\s\S]*?doubleclick[\s\S]*?<\/script>/gi, '');
+    // 相対URLを絶対URLに変換する関数
+    const toAbsoluteUrl = (url) => {
+      if (!url) return url;
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      if (url.startsWith('//')) return `http:${url}`;
+      if (url.startsWith('/')) return `${baseUrl.protocol}//${baseUrl.host}${url}`;
+      return `${baseUrl.protocol}//${baseUrl.host}/${url}`;
+    };
+    
+    // 相対URLを絶対URLに変換
+    $('a[href]').each((index, elem) => {
+      const href = $(elem).attr('href');
+      if (href && !href.startsWith('http') && !href.startsWith('//') && !href.startsWith('#')) {
+        $(elem).attr('href', toAbsoluteUrl(href));
+      }
+    });
+    
+    $('img[src]').each((index, elem) => {
+      const src = $(elem).attr('src');
+      if (src && !src.startsWith('http') && !src.startsWith('//') && !src.startsWith('data:')) {
+        $(elem).attr('src', toAbsoluteUrl(src));
+      }
+    });
+    
+    $('link[href]').each((index, elem) => {
+      const href = $(elem).attr('href');
+      if (href && !href.startsWith('http') && !href.startsWith('//')) {
+        $(elem).attr('href', toAbsoluteUrl(href));
+      }
+    });
+    
+    $('script[src]').each((index, elem) => {
+      const src = $(elem).attr('src');
+      if (src && !src.startsWith('http') && !src.startsWith('//')) {
+        $(elem).attr('src', toAbsoluteUrl(src));
+      }
+    });
+    
+    // ポップアップ広告を生成するJavaScriptを除去（ただし、動画プレイヤーに必要なスクリプトは保持）
+    $('script').each((index, elem) => {
+      const scriptContent = $(elem).html() || '';
+      // ポップアップ広告関連のスクリプトのみ除去
+      if (
+        (scriptContent.includes('window.open') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
+        (scriptContent.includes('popup') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
+        (scriptContent.includes('popunder')) ||
+        (scriptContent.includes('adsbygoogle')) ||
+        (scriptContent.includes('googlesyndication')) ||
+        (scriptContent.includes('doubleclick')) ||
+        (scriptContent.includes('advertising') && !scriptContent.includes('video'))
+      ) {
+        $(elem).remove();
+      }
+    });
     
     // ポップアップ広告を生成するaタグのonclick属性を除去
-    html = html.replace(/onclick\s*=\s*["'][^"']*window\.open[^"']*["']/gi, '');
-    html = html.replace(/onclick\s*=\s*["'][^"']*popup[^"']*["']/gi, '');
+    $('a[onclick]').each((index, elem) => {
+      const onclick = $(elem).attr('onclick') || '';
+      if (onclick.includes('window.open') || onclick.includes('popup')) {
+        $(elem).removeAttr('onclick');
+      }
+    });
     
     // 広告関連のiframeを除去
-    html = html.replace(/<iframe[^>]*adsbygoogle[^>]*>[\s\S]*?<\/iframe>/gi, '');
-    html = html.replace(/<iframe[^>]*googlesyndication[^>]*>[\s\S]*?<\/iframe>/gi, '');
-    html = html.replace(/<iframe[^>]*doubleclick[^>]*>[\s\S]*?<\/iframe>/gi, '');
+    $('iframe').each((index, elem) => {
+      const src = $(elem).attr('src') || '';
+      if (src.includes('adsbygoogle') || src.includes('googlesyndication') || src.includes('doubleclick')) {
+        $(elem).remove();
+      }
+    });
     
-    // Content Security Policyを追加してポップアップを制限
-    html = html.replace(/<head>/i, '<head><meta http-equiv="Content-Security-Policy" content="default-src \'self\' http://ivfree.asia https://ivfree.asia; script-src \'self\' http://ivfree.asia https://ivfree.asia \'unsafe-inline\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' http://ivfree.asia https://ivfree.asia data:; media-src \'self\' http://ivfree.asia https://ivfree.asia; frame-src \'self\' http://ivfree.asia https://ivfree.asia; object-src \'none\'; base-uri \'self\'; form-action \'self\'; frame-ancestors \'self\'; upgrade-insecure-requests;">');
+    // baseタグを追加して相対URLを正しく解決
+    if ($('head base').length === 0) {
+      $('head').prepend(`<base href="${baseUrl.protocol}//${baseUrl.host}${baseUrl.pathname}">`);
+    }
+    
+    // Content Security Policyを追加してポップアップを制限（ただし、動画再生に必要なリソースは許可）
+    if ($('head meta[http-equiv="Content-Security-Policy"]').length === 0) {
+      $('head').prepend('<meta http-equiv="Content-Security-Policy" content="default-src \'self\' http://ivfree.asia https://ivfree.asia; script-src \'self\' http://ivfree.asia https://ivfree.asia \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' http://ivfree.asia https://ivfree.asia data:; media-src \'self\' http://ivfree.asia https://ivfree.asia *; frame-src \'self\' http://ivfree.asia https://ivfree.asia *; object-src \'none\'; base-uri \'self\'; form-action \'self\'; frame-ancestors \'self\'; upgrade-insecure-requests;">');
+    }
+    
+    // window.openを無効化するスクリプトを追加
+    $('head').append(`
+      <script>
+        (function() {
+          const originalOpen = window.open;
+          window.open = function() {
+            console.log('🚫 ポップアップがブロックされました');
+            return null;
+          };
+        })();
+      </script>
+    `);
+    
+    let html = $.html();
     
     // Content-Typeを設定
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -3742,7 +3819,10 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     res.send(html);
   } catch (error) {
     console.error('❌ IVFreeプロキシエラー:', error.message);
-    res.status(500).send(`<html><body><h1>エラー</h1><p>ページの読み込みに失敗しました: ${error.message}</p></body></html>`);
+    if (error.stack) {
+      console.error('❌ スタックトレース:', error.stack.substring(0, 500));
+    }
+    res.status(500).send(`<html><head><meta charset="utf-8"></head><body><h1>エラー</h1><p>ページの読み込みに失敗しました: ${error.message}</p><p><a href="${req.query.url}" target="_blank">元のページを開く</a></p></body></html>`);
   }
 });
 
