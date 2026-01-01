@@ -538,6 +538,114 @@ function extractDurationFromHtml($, $elem) {
   return durationText;
 }
 
+// URLを正規化して重複チェック用のキーを生成
+function normalizeUrlForDedup(url) {
+  if (!url) return '';
+  
+  try {
+    // httpをhttpsに統一
+    let normalized = url.replace(/^http:\/\//, 'https://');
+    
+    // 末尾のスラッシュを削除
+    normalized = normalized.replace(/\/+$/, '');
+    
+    // URLオブジェクトに変換してパスとクエリを正規化
+    const urlObj = new URL(normalized);
+    
+    // クエリパラメータをソート（順序の違いを無視）
+    const params = new URLSearchParams(urlObj.search);
+    const sortedParams = Array.from(params.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    urlObj.search = new URLSearchParams(sortedParams).toString();
+    
+    // フラグメント（#以降）を削除
+    urlObj.hash = '';
+    
+    // 正規化されたURLを返す
+    return urlObj.toString().replace(/\/+$/, '');
+  } catch (e) {
+    // URL解析に失敗した場合は元のURLを返す
+    return url.replace(/^http:\/\//, 'https://').replace(/\/+$/, '');
+  }
+}
+
+// タイトルを正規化して比較用のキーを生成
+function normalizeTitleForDedup(title) {
+  if (!title) return '';
+  
+  // 小文字に変換、空白を削除、特殊文字を正規化
+  return title.toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 100); // 最初の100文字のみ
+}
+
+// 動画が重複しているかチェック（URLとタイトルの両方を考慮）
+function isVideoDuplicate(video, existingVideos) {
+  const normalizedUrl = normalizeUrlForDedup(video.url);
+  const normalizedTitle = normalizeTitleForDedup(video.title);
+  
+  return existingVideos.some(existing => {
+    const existingNormalizedUrl = normalizeUrlForDedup(existing.url);
+    const existingNormalizedTitle = normalizeTitleForDedup(existing.title);
+    
+    // URLが完全に一致する場合は重複
+    if (normalizedUrl && existingNormalizedUrl && normalizedUrl === existingNormalizedUrl) {
+      return true;
+    }
+    
+    // URLのベース部分（ドメイン+パス）が一致し、タイトルも似ている場合は重複
+    if (normalizedUrl && existingNormalizedUrl) {
+      const url1Base = normalizedUrl.split('?')[0].split('#')[0];
+      const url2Base = existingNormalizedUrl.split('?')[0].split('#')[0];
+      
+      if (url1Base === url2Base && normalizedTitle && existingNormalizedTitle) {
+        // タイトルの類似度をチェック（80%以上一致）
+        const similarity = calculateTitleSimilarity(normalizedTitle, existingNormalizedTitle);
+        if (similarity > 0.8) {
+          return true;
+        }
+      }
+    }
+    
+    // タイトルが非常に似ている場合（90%以上一致）も重複とみなす
+    if (normalizedTitle && existingNormalizedTitle) {
+      const similarity = calculateTitleSimilarity(normalizedTitle, existingNormalizedTitle);
+      if (similarity > 0.9) {
+        return true;
+      }
+    }
+    
+    return false;
+  });
+}
+
+// タイトルの類似度を計算（簡易版レーベンシュタイン距離ベース）
+function calculateTitleSimilarity(title1, title2) {
+  if (!title1 || !title2) return 0;
+  if (title1 === title2) return 1;
+  
+  // 完全一致
+  if (title1 === title2) return 1;
+  
+  // 一方が他方に含まれている場合
+  if (title1.includes(title2) || title2.includes(title1)) {
+    const longer = title1.length > title2.length ? title1 : title2;
+    const shorter = title1.length > title2.length ? title2 : title1;
+    return shorter.length / longer.length;
+  }
+  
+  // 共通部分を計算
+  const words1 = title1.split(/\s+/).filter(w => w.length > 0);
+  const words2 = title2.split(/\s+/).filter(w => w.length > 0);
+  
+  if (words1.length === 0 || words2.length === 0) return 0;
+  
+  const commonWords = words1.filter(w => words2.includes(w));
+  const totalWords = Math.max(words1.length, words2.length);
+  
+  return commonWords.length / totalWords;
+}
+
 // 検索クエリとタイトルの関連性をチェック
 function isTitleRelevant(title, query) {
   if (!title || !query) return true; // タイトルやクエリがない場合はスキップ
