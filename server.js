@@ -142,7 +142,12 @@ function saveRecentSearchesToFile(searches) {
 // サーバー起動時に検索履歴を読み込む（MongoDB優先）
 let recentSearches = [];
 (async () => {
-  recentSearches = await loadRecentSearchesFromMongoDB();
+  try {
+    recentSearches = await loadRecentSearchesFromMongoDB();
+  } catch (error) {
+    console.error('❌ 初期化時の検索履歴読み込みエラー:', error.message);
+    recentSearches = [];
+  }
 })();
 
 // 検索履歴のキャッシュ（高速化のため）
