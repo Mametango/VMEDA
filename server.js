@@ -536,6 +536,29 @@ app.post('/api/search', async (req, res) => {
     console.log(`✅ 検索完了: ${uniqueVideos.length}件の結果を取得（重複除去後）`);
     console.log(`📊 詳細: 統合前${videos.length}件 → 重複除去後${uniqueVideos.length}件`);
     
+    // デバッグ情報をクライアントにも返す（開発用）
+    const debugInfo = {
+      totalBeforeDedup: videos.length,
+      totalAfterDedup: uniqueVideos.length,
+      successSites: successCount,
+      errorSites: errorCount,
+      zeroResultSites: zeroCount,
+      siteResults: allResults.map((result, index) => {
+        const siteName = allSiteNames[index] || `Unknown[${index}]`;
+        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+          return { site: siteName, count: result.value.length, status: 'success' };
+        } else {
+          const error = result.reason;
+          return { 
+            site: siteName, 
+            count: 0, 
+            status: 'error', 
+            error: error?.message || error?.response?.status || 'Unknown error' 
+          };
+        }
+      })
+    };
+    
     // テスト用: 結果が0件の場合はテストデータを返す
     if (uniqueVideos.length === 0) {
       console.warn('⚠️ 検索結果が0件のため、テストデータを返します');
@@ -550,8 +573,8 @@ app.post('/api/search', async (req, res) => {
       });
     }
     
-    // 制限なしで全件返す
-    res.json({ results: uniqueVideos });
+    // 制限なしで全件返す（デバッグ情報も含む）
+    res.json({ results: uniqueVideos, debug: debugInfo });
   } catch (error) {
     console.error('❌ 検索エラー:', error.message);
     console.error('❌ スタックトレース:', error.stack);

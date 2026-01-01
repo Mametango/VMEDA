@@ -100,7 +100,23 @@ async function searchVideos(query) {
 
     const data = await response.json();
     console.log('📊 検索結果:', data.results?.length || 0, '件');
-    console.log('📊 データ内容:', JSON.stringify(data).substring(0, 500));
+    
+    // デバッグ情報を表示
+    if (data.debug) {
+      console.log('🔍 デバッグ情報:', data.debug);
+      console.log(`📊 各サイトの検索結果:`);
+      data.debug.siteResults.forEach(site => {
+        if (site.status === 'success' && site.count > 0) {
+          console.log(`  ✅ ${site.site}: ${site.count}件`);
+        } else if (site.status === 'success' && site.count === 0) {
+          console.log(`  ℹ️ ${site.site}: 0件`);
+        } else {
+          console.log(`  ❌ ${site.site}: エラー (${site.error})`);
+        }
+      });
+      console.log(`📊 サマリー: 成功${data.debug.successSites}サイト、エラー${data.debug.errorSites}サイト、0件${data.debug.zeroResultSites}サイト`);
+      console.log(`📊 統合前: ${data.debug.totalBeforeDedup}件 → 重複除去後: ${data.debug.totalAfterDedup}件`);
+    }
     
     if (!data.results || data.results.length === 0) {
       console.warn('⚠️ 検索結果が空です。テストデータが返されているか確認してください。');
