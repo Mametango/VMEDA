@@ -449,26 +449,12 @@ app.post('/api/search', async (req, res) => {
     
     console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${currentSearches.length}件)`);
     
-    // 定義されている検索関数のみを使用
+    // 定義されている検索関数のみを使用（0件のサイトは削除）
     const allSearches = [
       searchBilibili(sanitizedQuery),
-      searchTencentVideo(sanitizedQuery),
-      searchXiguaVideo(sanitizedQuery),
-      searchJPdmv(sanitizedQuery),
       searchDouga4(sanitizedQuery),
-      searchSpankbang(sanitizedQuery),
-      searchX1hub(sanitizedQuery),
-      searchPorntube(sanitizedQuery),
-      searchJavGuru(sanitizedQuery),
-      searchFC2(sanitizedQuery),
-      searchAkibaAbv(sanitizedQuery),
-      search91Porn(sanitizedQuery),
-      searchThisAV(sanitizedQuery),
-      searchMadou(sanitizedQuery),
       searchJavmix(sanitizedQuery),
-      searchPPP(sanitizedQuery),
-      searchJable(sanitizedQuery),
-      searchRou(sanitizedQuery)
+      searchPPP(sanitizedQuery)
     ];
     
     // すべての検索を並行実行
@@ -478,7 +464,7 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合
     const videos = [];
-    const allSiteNames = ['Bilibili', 'Tencent Video', 'Xigua Video', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'FC2', 'AkibaAbv', '91Porn', 'ThisAV', 'Madou', 'Javmix.TV', 'PPP.Porn', 'Jable.TV', 'Rou.Video'];
+    const allSiteNames = ['Bilibili', 'Douga4', 'Javmix.TV', 'PPP.Porn'];
     
     // 結果を追加（中国サイトの結果が先に来る）
     let totalFromSites = 0;
