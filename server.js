@@ -730,6 +730,13 @@ function validateQuery(query) {
 app.post('/api/search', async (req, res) => {
   try {
     console.log('=== /api/search リクエスト受信 ===');
+    
+    // リクエストボディの検証
+    if (!req.body || typeof req.body !== 'object') {
+      console.error('❌ リクエストボディが無効です');
+      return res.status(400).json({ error: 'リクエストボディが無効です' });
+    }
+    
     const { query } = req.body;
     
     // 入力検証
