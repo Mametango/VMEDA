@@ -581,42 +581,57 @@ function normalizeTitleForDedup(title) {
 
 // 動画が重複しているかチェック（URLとタイトルの両方を考慮）
 function isVideoDuplicate(video, existingVideos) {
-  const normalizedUrl = normalizeUrlForDedup(video.url);
-  const normalizedTitle = normalizeTitleForDedup(video.title);
-  
-  return existingVideos.some(existing => {
-    const existingNormalizedUrl = normalizeUrlForDedup(existing.url);
-    const existingNormalizedTitle = normalizeTitleForDedup(existing.title);
+  try {
+    if (!video || !video.url) return false;
+    if (!existingVideos || !Array.isArray(existingVideos) || existingVideos.length === 0) return false;
     
-    // URLが完全に一致する場合は重複
-    if (normalizedUrl && existingNormalizedUrl && normalizedUrl === existingNormalizedUrl) {
-      return true;
-    }
+    const normalizedUrl = normalizeUrlForDedup(video.url);
+    const normalizedTitle = normalizeTitleForDedup(video.title);
     
-    // URLのベース部分（ドメイン+パス）が一致し、タイトルも似ている場合は重複
-    if (normalizedUrl && existingNormalizedUrl) {
-      const url1Base = normalizedUrl.split('?')[0].split('#')[0];
-      const url2Base = existingNormalizedUrl.split('?')[0].split('#')[0];
-      
-      if (url1Base === url2Base && normalizedTitle && existingNormalizedTitle) {
-        // タイトルの類似度をチェック（80%以上一致）
-        const similarity = calculateTitleSimilarity(normalizedTitle, existingNormalizedTitle);
-        if (similarity > 0.8) {
+    return existingVideos.some(existing => {
+      try {
+        if (!existing || !existing.url) return false;
+        
+        const existingNormalizedUrl = normalizeUrlForDedup(existing.url);
+        const existingNormalizedTitle = normalizeTitleForDedup(existing.title);
+        
+        // URLが完全に一致する場合は重複
+        if (normalizedUrl && existingNormalizedUrl && normalizedUrl === existingNormalizedUrl) {
           return true;
         }
+        
+        // URLのベース部分（ドメイン+パス）が一致し、タイトルも似ている場合は重複
+        if (normalizedUrl && existingNormalizedUrl) {
+          const url1Base = normalizedUrl.split('?')[0].split('#')[0];
+          const url2Base = existingNormalizedUrl.split('?')[0].split('#')[0];
+          
+          if (url1Base === url2Base && normalizedTitle && existingNormalizedTitle) {
+            // タイトルの類似度をチェック（80%以上一致）
+            const similarity = calculateTitleSimilarity(normalizedTitle, existingNormalizedTitle);
+            if (similarity > 0.8) {
+              return true;
+            }
+          }
+        }
+        
+        // タイトルが非常に似ている場合（90%以上一致）も重複とみなす
+        if (normalizedTitle && existingNormalizedTitle) {
+          const similarity = calculateTitleSimilarity(normalizedTitle, existingNormalizedTitle);
+          if (similarity > 0.9) {
+            return true;
+          }
+        }
+        
+        return false;
+      } catch (e) {
+        console.error('❌ 重複チェック中にエラー:', e.message);
+        return false; // エラーが発生した場合は重複ではないとみなす
       }
-    }
-    
-    // タイトルが非常に似ている場合（90%以上一致）も重複とみなす
-    if (normalizedTitle && existingNormalizedTitle) {
-      const similarity = calculateTitleSimilarity(normalizedTitle, existingNormalizedTitle);
-      if (similarity > 0.9) {
-        return true;
-      }
-    }
-    
-    return false;
-  });
+    });
+  } catch (e) {
+    console.error('❌ 重複チェック関数でエラー:', e.message);
+    return false; // エラーが発生した場合は重複ではないとみなす
+  }
 }
 
 // タイトルの類似度を計算（簡易版レーベンシュタイン距離ベース）
