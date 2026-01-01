@@ -2305,6 +2305,8 @@ async function searchPPP(query) {
     const urls = [
       `https://ppp.porn/pp1/search?q=${encodedQuery}`,
       `https://ppp.porn/pp1/search/${encodedQuery}`,
+      `https://ppp.porn/pp1/?q=${encodedQuery}`,
+      `https://ppp.porn/pp1/?search=${encodedQuery}`,
       `https://ppp.porn/search?q=${encodedQuery}`,
       `https://ppp.porn/search/${encodedQuery}`
     ];
