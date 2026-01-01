@@ -674,33 +674,26 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   iframe.setAttribute('mozallowfullscreen', 'true');
   iframe.setAttribute('playsinline', 'false'); // iPhoneで全画面表示
   
-  // douga4の場合は、動画ページから実際の動画URLを取得する（非同期）
+  // douga4の場合は、動画ページから実際の動画URLを取得する準備（後でデバッグ情報を追加）
+  let douga4DebugInfo = null;
+  let douga4StatusText = '初期化中...';
+  let douga4UpdateDebugInfo = null;
+  
   if (source === 'douga4' && normalizedUrl.includes('douga4.top')) {
-    // デバッグ情報を表示（douga4専用、iPhone/Braveブラウザで常に表示）
+    // デバッグ情報の更新関数を準備（後でコンテナに追加された後に使用）
     const isIOSDevice = isIPhone();
     const isBrave = navigator.userAgent.includes('Brave');
     const ua = navigator.userAgent;
     
-    // デバッグ情報用のIDを生成
-    const debugId = `douga4-debug-${videoId}`;
-    
-    // デバッグ情報を表示（条件なしで常に表示）
-    const debugInfo = document.createElement('div');
-    debugInfo.id = debugId;
-    debugInfo.className = 'debug-info-douga4';
-    debugInfo.style.cssText = 'position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.9); color: white; padding: 15px; border-radius: 8px; font-size: 11px; z-index: 10000; max-width: 95%; word-break: break-all; line-height: 1.4; box-shadow: 0 2px 10px rgba(0,0,0,0.5);';
-    
-    let statusText = 'URL取得中...';
-    
-    const updateDebugInfo = () => {
-      if (!debugInfo.parentNode) return;
+    douga4UpdateDebugInfo = function() {
+      if (!douga4DebugInfo || !douga4DebugInfo.parentNode) return;
       
       const iframeSize = `${iframe.offsetWidth}×${iframe.offsetHeight}`;
       const containerSize = `${container.offsetWidth}×${container.offsetHeight}`;
       const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0 ? '表示中' : '非表示';
       const currentSrc = iframe.src || '未設定';
       
-      debugInfo.innerHTML = `
+      douga4DebugInfo.innerHTML = `
         <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">📺 douga4デバッグ情報</div>
         <div>ブラウザ: ${isBrave ? 'Brave' : ua.includes('Safari') ? 'Safari' : 'Other'}</div>
         <div>デバイス: ${isIOSDevice ? 'iPhone/iOS' : 'Other'}</div>
@@ -712,55 +705,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
         <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">iframeサイズ: ${iframeSize}</div>
         <div>コンテナサイズ: ${containerSize}</div>
         <div>iframe表示: ${iframeVisible}</div>
-        <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">状態: <span id="douga4-status-${videoId}">${statusText}</span></div>
+        <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">状態: ${douga4StatusText}</div>
       `;
     };
-    
-    // 初回表示
-    updateDebugInfo();
-    
-    // コンテナに追加（iframeを追加する前に追加）
-    container.appendChild(debugInfo);
-    
-    // 定期的にサイズ情報を更新
-    const debugInterval = setInterval(() => {
-      if (!debugInfo.parentNode) {
-        clearInterval(debugInterval);
-        return;
-      }
-      updateDebugInfo();
-    }, 1000);
-    
-    // サーバー側で動画URLを取得するエンドポイントを呼び出す
-    const statusElId = `douga4-status-${videoId}`;
-    statusText = 'サーバーからURL取得中...';
-    updateDebugInfo();
-    
-    fetch(`/api/douga4-video?url=${encodeURIComponent(normalizedUrl)}`)
-      .then(response => {
-        statusText = 'レスポンス受信...';
-        updateDebugInfo();
-        return response.json();
-      })
-      .then(data => {
-        statusText = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
-        updateDebugInfo();
-        if (data.embedUrl && data.embedUrl !== normalizedUrl) {
-          // 取得した動画URLを使用
-          statusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
-          updateDebugInfo();
-          iframe.src = data.embedUrl;
-          setTimeout(updateDebugInfo, 500);
-        } else {
-          statusText = '元のURLを使用';
-          updateDebugInfo();
-        }
-      })
-      .catch(error => {
-        // エラーが発生しても元のURLを使用
-        statusText = `エラー: ${error.message}`;
-        updateDebugInfo();
-      });
   }
   
   iframe.style.width = '100%';
