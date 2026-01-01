@@ -1087,7 +1087,6 @@ function getSourceName(source) {
     'javtube': 'JAVTube',
     'javx': 'JAVX',
     'javzoo': 'JAVZoo',
-    'missav': 'MissAV',
     'jav': 'JAV',
     '91porn': '91Porn',
     '91porn2': '91Porn2',
