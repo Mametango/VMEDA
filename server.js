@@ -696,7 +696,7 @@ async function searchJPdmv(query) {
     const videos = [];
     
     $('.video-item, .item, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+      if (videos.length >= 100) return false;
       
       const $item = $(elem);
       const href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -746,7 +746,7 @@ async function searchDouga4(query) {
     const videos = [];
     
     $('.item, .video-item, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+      if (videos.length >= 100) return false;
       
       const $item = $(elem);
       const href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -799,7 +799,7 @@ async function searchSpankbang(query) {
     const videos = [];
     
     $('.video-item, .item, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+      if (videos.length >= 100) return false;
       
       const $item = $(elem);
       const href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -861,10 +861,10 @@ async function searchX1hub(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -938,10 +938,10 @@ async function searchPorntube(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1016,10 +1016,10 @@ async function searchJavGuru(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1094,10 +1094,10 @@ async function searchJapanhub(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1172,10 +1172,10 @@ async function searchTktube(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1250,10 +1250,10 @@ async function searchFC2(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1320,7 +1320,7 @@ async function searchAkibaAbv(query) {
     const videos = [];
     
     $('.video-item, .item, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+      if (videos.length >= 100) return false;
       
       const $item = $(elem);
       const href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1396,7 +1396,7 @@ async function searchBilibili(query) {
       if (videos.length >= 50) break;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         const href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1455,7 +1455,7 @@ async function searchYouku(query) {
     const videos = [];
     
     $('.yk-pack, .item, a[href*="/v_show/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+      if (videos.length >= 100) return false;
       
       const $item = $(elem);
       const href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1506,7 +1506,7 @@ async function searchIQiyi(query) {
     const videos = [];
     
     $('.qy-search-result-item, .item, a[href*="/v_"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+      if (videos.length >= 100) return false;
       
       const $item = $(elem);
       const href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1557,7 +1557,7 @@ async function searchTencentVideo(query) {
     const videos = [];
     
     $('.result_item, .item, a[href*="/x/cover/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+      if (videos.length >= 100) return false;
       
       const $item = $(elem);
       const href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1608,7 +1608,7 @@ async function searchXiguaVideo(query) {
     const videos = [];
     
     $('.feed-card, .item, a[href*="/i"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+      if (videos.length >= 100) return false;
       
       const $item = $(elem);
       const href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1690,7 +1690,7 @@ async function searchSohu(query) {
           
           const beforeCount = videos.length;
           $(selector).each((index, elem) => {
-            if (videos.length >= 50) return false;
+            if (videos.length >= 100) return false;
             
             const $item = $(elem);
             let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1802,10 +1802,10 @@ async function searchMissAV(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1881,10 +1881,10 @@ async function search91Porn(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -1959,10 +1959,10 @@ async function searchThisAV(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -2038,10 +2038,10 @@ async function searchMadou(query) {
     ];
     
     selectors.forEach(selector => {
-      if (videos.length >= 50) return;
+      if (videos.length >= 100) return;
       
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        if (videos.length >= 100) return false;
         
         const $item = $(elem);
         let href = $item.attr('href') || $item.find('a').attr('href') || '';
