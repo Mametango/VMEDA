@@ -61,21 +61,23 @@ async function connectToMongoDB() {
 async function loadRecentSearchesFromMongoDB() {
   try {
     const db = await connectToMongoDB();
-  if (!db) {
-    return [];
-  }
+    if (!db) {
+      console.log('⚠️ MongoDBに接続できません。空の配列を返します。');
+      return [];
+    }
 
-  try {
     const collection = db.collection(COLLECTION_NAME);
     const result = await collection.findOne({ _id: 'searches' });
     if (result && Array.isArray(result.searches)) {
       console.log(`📂 MongoDBから検索履歴を読み込み: ${result.searches.length}件`);
       return result.searches;
     }
+    
+    return [];
   } catch (error) {
     console.error('❌ MongoDBからの読み込みエラー:', error.message);
+    return [];
   }
-  return [];
 }
 
 // 検索履歴をMongoDBに保存
