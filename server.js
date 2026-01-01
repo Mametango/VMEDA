@@ -535,6 +535,7 @@ app.post('/api/search', async (req, res) => {
     
     console.log(`✅ 検索完了: ${uniqueVideos.length}件の結果を取得（重複除去後）`);
     console.log(`📊 詳細: 統合前${videos.length}件 → 重複除去後${uniqueVideos.length}件`);
+    console.log(`📊 カウント確認: 成功${successCount}、エラー${errorCount}、0件${zeroCount}`);
     
     // デバッグ情報をクライアントにも返す（開発用）
     const debugInfo = {
@@ -559,6 +560,8 @@ app.post('/api/search', async (req, res) => {
       })
     };
     
+    console.log(`🔍 デバッグ情報作成完了: ${JSON.stringify(debugInfo).substring(0, 200)}...`);
+    
     // テスト用: 結果が0件の場合はテストデータを返す
     if (uniqueVideos.length === 0) {
       console.warn('⚠️ 検索結果が0件のため、テストデータを返します');
@@ -574,7 +577,9 @@ app.post('/api/search', async (req, res) => {
     }
     
     // 制限なしで全件返す（デバッグ情報も含む）
-    res.json({ results: uniqueVideos, debug: debugInfo });
+    const responseData = { results: uniqueVideos, debug: debugInfo };
+    console.log(`📤 レスポンス送信: results=${uniqueVideos.length}件, debug=${debugInfo ? 'あり' : 'なし'}`);
+    res.json(responseData);
   } catch (error) {
     console.error('❌ 検索エラー:', error.message);
     console.error('❌ スタックトレース:', error.stack);

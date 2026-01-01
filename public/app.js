@@ -100,6 +100,8 @@ async function searchVideos(query) {
 
     const data = await response.json();
     console.log('📊 検索結果:', data.results?.length || 0, '件');
+    console.log('🔍 データ構造確認:', Object.keys(data));
+    console.log('🔍 デバッグ情報の有無:', data.debug ? 'あり' : 'なし');
     
     // デバッグ情報を表示
     if (data.debug) {
