@@ -244,11 +244,23 @@ app.use((req, res, next) => {
 
 // 静的ファイル配信（Vercel対応）
 // Vercel環境では、静的ファイルは自動的に配信されるが、明示的に設定することも可能
-const publicPath = process.env.VERCEL === '1' 
-  ? path.join(process.cwd(), 'public')
-  : path.join(__dirname, 'public');
+let publicPath;
+try {
+  publicPath = process.env.VERCEL === '1' 
+    ? path.join(process.cwd(), 'public')
+    : path.join(__dirname, 'public');
+} catch (error) {
+  console.error('❌ 静的ファイルパス設定エラー:', error.message);
+  try {
+    publicPath = path.join(__dirname, 'public');
+  } catch (fallbackError) {
+    console.error('❌ フォールバックパス設定エラー:', fallbackError.message);
+    publicPath = './public'; // 最後の手段
+  }
+}
 
-app.use(express.static(publicPath, {
+try {
+  app.use(express.static(publicPath, {
   maxAge: '1d', // キャッシュ1日
   etag: true,
   setHeaders: (res, filePath) => {
