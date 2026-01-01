@@ -631,6 +631,17 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     }
   }
   
+  // douga4の埋め込みURLを完全なURLに変換（iPhone Safari対応）
+  if (source === 'douga4' && normalizedUrl.includes('douga4.top')) {
+    // 既にhttps://で始まっている場合はそのまま、//で始まっている場合はhttps:を追加
+    if (normalizedUrl.startsWith('//')) {
+      normalizedUrl = 'https:' + normalizedUrl;
+    }
+    
+    // douga4の動画ページを直接iframeで表示
+    // 動画ページ自体が埋め込み可能な構造になっている可能性がある
+  }
+  
   // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
   // ただし、Bilibiliとdouga4の場合はプロキシ経由では動作しない可能性があるため、直接埋め込みURLを使用
   const isIOSDevice = isIPhone();
@@ -777,8 +788,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   container.appendChild(iframe);
   
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
-  // タイムアウトでエラー検出（Bilibiliの場合は15秒、その他は10秒）
-  const timeoutDuration = source === 'bilibili' ? 15000 : 10000;
+  // タイムアウトでエラー検出（Bilibiliとdouga4の場合は15秒、その他は10秒）
+  const timeoutDuration = (source === 'bilibili' || source === 'douga4') ? 15000 : 10000;
   errorTimeout = setTimeout(() => {
     if (hasError) return;
     
