@@ -426,6 +426,37 @@ function displayRecentSearches(searches) {
 // ページ読み込み時に他のユーザーの検索ワードを取得
 loadRecentSearches();
 
+// ページ読み込み時に自動的に検索を実行
+(function() {
+  // URLパラメータから検索キーワードを取得
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryParam = urlParams.get('q');
+  
+  // デフォルトの検索キーワード（URLパラメータがない場合）
+  const defaultQuery = '動画';
+  
+  // 検索キーワードを決定（URLパラメータがあればそれを使用、なければデフォルト）
+  const searchQuery = queryParam || defaultQuery;
+  
+  // ページ読み込み完了後に検索を実行
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      // 検索入力欄にキーワードを設定
+      if (searchInput) {
+        searchInput.value = searchQuery;
+      }
+      // 検索を実行
+      searchVideos(searchQuery);
+    });
+  } else {
+    // 既に読み込み完了している場合
+    if (searchInput) {
+      searchInput.value = searchQuery;
+    }
+    searchVideos(searchQuery);
+  }
+})();
+
 // 定期的に検索履歴を更新（30秒ごと、頻繁すぎると消える可能性があるため間隔を長く）
 // エラー時や空の場合は既存の表示を保持するため、検索履歴が消えることはありません
 setInterval(() => {
