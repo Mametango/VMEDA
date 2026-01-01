@@ -274,41 +274,86 @@ app.get('/styles.css', (req, res) => {
 
 // 共通ヘルパー関数
 function extractTitle($, $elem) {
-  return $elem.text().trim() || 
-         $elem.attr('title') || 
-         $elem.find('h3').text().trim() ||
-         $elem.find('a').text().trim() ||
-         $elem.closest('.g').find('h3').text().trim() || '';
-}
-
-function extractThumbnail($, $elem) {
-  // 複数の属性を試す（lazy loading対応）
-  const thumbnail = $elem.find('img').attr('src') || 
-                    $elem.find('img').attr('data-src') ||
-                    $elem.find('img').attr('data-lazy-src') ||
-                    $elem.find('img').attr('data-original') ||
-                    $elem.find('img').attr('data-thumbnail') ||
-                    $elem.closest('.g').find('img').attr('src') ||
-                    $elem.closest('.g').find('img').attr('data-src') ||
-                    '';
+  // 複数のセレクタを試す
+  const selectors = [
+    'h3', 'h2', 'h1', 
+    '.title', '[class*="title"]', 
+    'a', '.video-title', '[class*="video-title"]',
+    '[class*="name"]', '[class*="name"]',
+    'span', 'div'
+  ];
   
-  // サムネイルURLを正規化
-  if (thumbnail) {
-    // 相対パス（//で始まる）をhttps:に変換
-    if (thumbnail.startsWith('//')) {
-      return 'https:' + thumbnail;
-    }
-    // 相対パス（/で始まる）はそのまま返す（フロントエンドで処理）
-    if (thumbnail.startsWith('/') && !thumbnail.startsWith('http')) {
-      return thumbnail;
-    }
-    // http://で始まる場合はhttps://に変換
-    if (thumbnail.startsWith('http://')) {
-      return thumbnail.replace('http://', 'https://');
+  for (const selector of selectors) {
+    const text = $elem.find(selector).first().text().trim();
+    if (text && text.length > 3) {
+      return text;
     }
   }
   
-  return thumbnail;
+  // セレクタで見つからない場合は、要素のテキスト全体から取得
+  const fullText = $elem.text().trim();
+  if (fullText && fullText.length > 3) {
+    // 最初の100文字を取得
+    return fullText.substring(0, 100);
+  }
+  
+  // 属性から取得
+  return $elem.attr('title') || $elem.attr('alt') || $elem.attr('data-title') || '';
+}
+
+function extractThumbnail($, $elem) {
+  // 複数の属性とセレクタを試す
+  const imgSelectors = [
+    'img',
+    '.thumbnail img',
+    '[class*="thumbnail"] img',
+    '[class*="thumb"] img',
+    '.poster img',
+    '[class*="poster"] img'
+  ];
+  
+  for (const selector of imgSelectors) {
+    const $img = $elem.find(selector).first();
+    if ($img.length > 0) {
+      const thumbnail = $img.attr('src') ||
+                       $img.attr('data-src') ||
+                       $img.attr('data-lazy-src') ||
+                       $img.attr('data-original') ||
+                       $img.attr('data-url') ||
+                       $img.attr('data-image') ||
+                       '';
+      
+      if (thumbnail) {
+        // サムネイルURLを正規化
+        if (thumbnail.startsWith('//')) {
+          return 'https:' + thumbnail;
+        }
+        if (thumbnail.startsWith('/') && !thumbnail.startsWith('http')) {
+          return thumbnail;
+        }
+        if (thumbnail.startsWith('http://')) {
+          return thumbnail.replace('http://', 'https://');
+        }
+        if (thumbnail.startsWith('https://')) {
+          return thumbnail;
+        }
+      }
+    }
+  }
+  
+  // Google検索結果の場合
+  const googleImg = $elem.closest('.g').find('img').first();
+  if (googleImg.length > 0) {
+    const thumbnail = googleImg.attr('src') || googleImg.attr('data-src') || '';
+    if (thumbnail) {
+      if (thumbnail.startsWith('//')) {
+        return 'https:' + thumbnail;
+      }
+      return thumbnail;
+    }
+  }
+  
+  return '';
 }
 
 function extractDurationFromHtml($, $elem) {
@@ -920,8 +965,10 @@ async function searchJavGuru(query) {
     
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Referer': 'https://jav.guru/'
       },
       timeout: 15000
     });
@@ -929,29 +976,55 @@ async function searchJavGuru(query) {
     const $ = cheerio.load(response.data);
     const videos = [];
     
-    $('.video-item, .item, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+    // 複数のセレクタを試す
+    const selectors = [
+      '.video-item',
+      '.item',
+      'a[href*="/video/"]',
+      'a[href*="/watch/"]',
+      'a[href*="/v/"]',
+      '[class*="video"]',
+      '[class*="item"]'
+    ];
+    
+    selectors.forEach(selector => {
+      if (videos.length >= 50) return;
       
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/video/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://jav.guru${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `javguru-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'javguru'
-        });
-      }
+      $(selector).each((index, elem) => {
+        if (videos.length >= 50) return false;
+        
+        const $item = $(elem);
+        let href = $item.attr('href') || $item.find('a').attr('href') || '';
+        
+        // hrefが見つからない場合は親要素を探す
+        if (!href) {
+          const $parent = $item.parent();
+          href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+        }
+        
+        if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+        
+        const fullUrl = href.startsWith('http') ? href : `https://jav.guru${href}`;
+        const title = extractTitle($, $item);
+        const thumbnail = extractThumbnail($, $item);
+        const duration = extractDurationFromHtml($, $item);
+        
+        if (title && title.length > 3) {
+          // 重複チェック
+          const isDuplicate = videos.some(v => v.url === fullUrl);
+          if (!isDuplicate) {
+            videos.push({
+              id: `javguru-${Date.now()}-${index}`,
+              title: title.substring(0, 200),
+              thumbnail: thumbnail || '',
+              duration: duration || '',
+              url: fullUrl,
+              embedUrl: fullUrl,
+              source: 'javguru'
+            });
+          }
+        }
+      });
     });
     
     console.log(`✅ JavGuru: ${videos.length}件の動画を取得`);
