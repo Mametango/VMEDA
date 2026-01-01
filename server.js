@@ -775,17 +775,31 @@ app.post('/api/search', async (req, res) => {
     console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${currentSearches.length}件)`);
     
     // 定義されている検索関数のみを使用（0件のサイトは削除）
-    const allSearches = [
-      searchBilibili(sanitizedQuery),
-      searchDouga4(sanitizedQuery),
-      searchJavmix(sanitizedQuery),
-      searchPPP(sanitizedQuery)
+    const allSearches = [];
+    const searchFunctions = [
+      { fn: searchBilibili, name: 'Bilibili' },
+      { fn: searchDouga4, name: 'Douga4' },
+      { fn: searchJavmix, name: 'Javmix.TV' },
+      { fn: searchPPP, name: 'PPP.Porn' }
     ];
     
     // searchMat6tubeが定義されている場合のみ追加
     if (typeof searchMat6tube === 'function') {
-      allSearches.push(searchMat6tube(sanitizedQuery));
+      searchFunctions.push({ fn: searchMat6tube, name: 'Mat6tube' });
     }
+    
+    // 各検索関数を安全に呼び出す
+    searchFunctions.forEach(({ fn, name }) => {
+      try {
+        if (typeof fn === 'function') {
+          allSearches.push(fn(sanitizedQuery));
+        } else {
+          console.warn(`⚠️ ${name}関数が定義されていません`);
+        }
+      } catch (err) {
+        console.error(`❌ ${name}関数の呼び出しエラー:`, err.message);
+      }
+    });
     
     // すべての検索を並行実行
     console.log(`🚀 ${allSearches.length}個の検索関数を並行実行開始...`);
@@ -794,12 +808,7 @@ app.post('/api/search', async (req, res) => {
     
     // 結果を統合
     const videos = [];
-    const allSiteNames = ['Bilibili', 'Douga4', 'Javmix.TV', 'PPP.Porn'];
-    
-    // searchMat6tubeが定義されている場合のみ追加
-    if (typeof searchMat6tube === 'function') {
-      allSiteNames.push('Mat6tube');
-    }
+    const allSiteNames = searchFunctions.map(sf => sf.name);
     
     // 結果を追加（中国サイトの結果が先に来る）
     let totalFromSites = 0;
