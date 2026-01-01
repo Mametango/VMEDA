@@ -678,8 +678,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   let douga4DebugInfo = null;
   let douga4StatusText = '初期化中...';
   let douga4UpdateDebugInfo = null;
+  const isDouga4 = source === 'douga4' || normalizedUrl.includes('douga4.top');
   
-  if (source === 'douga4' && normalizedUrl.includes('douga4.top')) {
+  if (isDouga4) {
     // デバッグ情報の更新関数を準備（後でコンテナに追加された後に使用）
     const isIOSDevice = isIPhone();
     const isBrave = navigator.userAgent.includes('Brave');
@@ -695,6 +696,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       
       douga4DebugInfo.innerHTML = `
         <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">📺 douga4デバッグ情報</div>
+        <div>source: ${source || '未設定'}</div>
         <div>ブラウザ: ${isBrave ? 'Brave' : ua.includes('Safari') ? 'Safari' : 'Other'}</div>
         <div>デバイス: ${isIOSDevice ? 'iPhone/iOS' : 'Other'}</div>
         <div>User-Agent: ${ua.substring(0, 40)}...</div>
@@ -756,8 +758,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // タイムアウトを短縮（読み込み完了したので）
     if (errorTimeout) clearTimeout(errorTimeout);
     
-    // 既存のデバッグ情報を削除
-    container.querySelectorAll('.debug-info').forEach(el => el.remove());
+    // 既存のデバッグ情報を削除（douga4のデバッグ情報は除外）
+    container.querySelectorAll('.debug-info:not(.debug-info-douga4)').forEach(el => el.remove());
     
     // Bilibiliの場合は、特別な処理を行う
     if (source === 'bilibili') {
@@ -824,8 +826,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   container.appendChild(iframe);
   
-  // douga4の場合は、デバッグ情報をコンテナクリア後に追加
-  if (source === 'douga4' && normalizedUrl.includes('douga4.top') && douga4UpdateDebugInfo) {
+  // douga4の場合は、デバッグ情報をコンテナクリア後に追加（常に表示）
+  if (isDouga4 && douga4UpdateDebugInfo) {
     douga4DebugInfo = document.createElement('div');
     douga4DebugInfo.id = `douga4-debug-${videoId}`;
     douga4DebugInfo.className = 'debug-info-douga4';
