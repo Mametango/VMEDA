@@ -546,8 +546,9 @@ function displayRecentSearches(searches) {
     }
     // 検索ワードを短縮（長すぎる場合は省略）
     const displayQuery = search.query.length > 20 ? search.query.substring(0, 20) + '...' : search.query;
+    const query = escapeHtml(search.query);
     return `
-      <div class="recent-search-item" onclick="searchInput.value='${escapeHtml(search.query)}'; searchVideos('${escapeHtml(search.query)}')" title="${escapeHtml(search.query)}">
+      <div class="recent-search-item" onclick="const q='${query}'; if(document.getElementById('search-input')) { document.getElementById('search-input').value=q; if(q && q.trim()!=='動画') { searchVideos(q); } }" title="${query}">
         <span class="recent-search-icon">🔍</span>
         <span class="recent-search-query">${escapeHtml(displayQuery)}</span>
       </div>
