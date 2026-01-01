@@ -134,6 +134,8 @@ function displayResults(videos, searchQuery, isInitial = false) {
   if (isInitial) {
     displayedCount = 0;
     resultsDiv.innerHTML = '';
+    // 初期表示時はcurrentVideosも更新（ソート時にも使用されるため）
+    currentVideos = videos;
   }
 
   // 表示する動画を取得（現在表示済みの数から追加分を取得）
