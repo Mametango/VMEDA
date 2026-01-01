@@ -55,10 +55,10 @@ const sortSelect = document.getElementById('sort-select');
 
 // 現在の検索結果を保持
 let currentVideos = [];
-// 無限スクロール用の変数
-let displayedCount = 0; // 現在表示されている動画数
-const VIDEOS_PER_PAGE = 10; // 1回に表示する動画数
-let isLoadingMore = false; // 追加読み込み中かどうか
+// ページネーション用の変数
+let currentPage = 1; // 現在のページ番号
+const VIDEOS_PER_PAGE = 10; // 1ページに表示する動画数
+let totalPages = 1; // 総ページ数
 
 // 検索実行
 async function searchVideos(query) {
@@ -98,8 +98,9 @@ async function searchVideos(query) {
     
     const videos = data.results || [];
     currentVideos = videos;
-    displayedCount = 0; // 検索時にリセット
-    displayResults(videos, query.trim(), true); // 最初の表示なのでtrue
+    currentPage = 1; // 検索時にリセット
+    totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE); // 総ページ数を計算
+    displayResults(videos, query.trim());
     
     // ソートUIを表示
     if (videos.length > 0) {
@@ -201,31 +202,8 @@ function displayResults(videos, searchQuery, isInitial = false) {
   `;
   }).join('');
 
-  // 既存のHTMLに追加（初期表示の場合は上書き）
-  if (isInitial) {
-    resultsDiv.innerHTML = html;
-  } else {
-    // ローディングインジケーターを削除
-    const loadingIndicator = resultsDiv.querySelector('.loading-more');
-    if (loadingIndicator) {
-      loadingIndicator.remove();
-    }
-    // 新しい動画を追加
-    resultsDiv.insertAdjacentHTML('beforeend', html);
-  }
-  
-  // 表示済み数を更新
-  displayedCount += videosToShow.length;
-  
-  // まだ表示していない動画がある場合は、ローディングインジケーターを追加
-  if (displayedCount < videos.length) {
-    resultsDiv.insertAdjacentHTML('beforeend', `
-      <div class="loading-more" style="text-align: center; padding: 20px; color: #666;">
-        <div class="loading-spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        <p style="margin-top: 10px;">読み込み中...</p>
-      </div>
-    `);
-  }
+  // HTMLを表示
+  resultsDiv.innerHTML = html;
   
   // iPhoneでのタッチイベントをクリックイベントとして処理
   // 動画プレイヤーコンテナにタッチイベントリスナーを追加（新しく追加された動画のみ）
@@ -257,47 +235,87 @@ function displayResults(videos, searchQuery, isInitial = false) {
   // 検索結果表示後、広告を検索結果の間に挿入
   insertAdsInResults();
   
-  // 無限スクロールのイベントリスナーを設定（初期表示時のみ）
-  if (isInitial) {
-    setupInfiniteScroll();
+  // ページネーションを表示
+  displayPagination();
+}
+
+// ページネーション表示
+function displayPagination() {
+  let paginationDiv = document.getElementById('pagination');
+  if (!paginationDiv) {
+    // ページネーション用のdivを作成
+    paginationDiv = document.createElement('div');
+    paginationDiv.id = 'pagination';
+    paginationDiv.className = 'pagination';
+    resultsDiv.parentNode.insertBefore(paginationDiv, resultsDiv.nextSibling);
   }
-}
-
-// 無限スクロールの設定
-function setupInfiniteScroll() {
-  // 既存のスクロールイベントリスナーを削除（重複を防ぐ）
-  window.removeEventListener('scroll', handleInfiniteScroll);
   
-  // 新しいスクロールイベントリスナーを追加
-  window.addEventListener('scroll', handleInfiniteScroll, { passive: true });
-}
-
-// 無限スクロールのハンドラー
-function handleInfiniteScroll() {
-  // 既に読み込み中なら何もしない
-  if (isLoadingMore) return;
-  
-  // 全て表示済みなら何もしない
-  if (displayedCount >= currentVideos.length) {
-    window.removeEventListener('scroll', handleInfiniteScroll);
+  if (totalPages <= 1) {
+    // 1ページ以下の場合はページネーションを非表示
+    paginationDiv.innerHTML = '';
     return;
   }
   
-  // ページ下部に近づいたかチェック（画面の高さの80%スクロールしたら）
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const windowHeight = window.innerHeight;
-  const documentHeight = document.documentElement.scrollHeight;
+  let paginationHTML = '<div class="pagination-container">';
   
-  // 下部100px以内に到達したら次のページを読み込む
-  if (scrollTop + windowHeight >= documentHeight - 100) {
-    isLoadingMore = true;
-    
-    // 少し待ってから次のページを読み込む（UX向上）
-    setTimeout(() => {
-      displayResults(currentVideos, '', false);
-      isLoadingMore = false;
-    }, 300);
+  // 前へボタン
+  if (currentPage > 1) {
+    paginationHTML += `<button class="pagination-btn" onclick="goToPage(${currentPage - 1})">‹ 前へ</button>`;
+  } else {
+    paginationHTML += `<button class="pagination-btn disabled" disabled>‹ 前へ</button>`;
   }
+  
+  // ページ番号ボタン
+  const maxVisiblePages = 5; // 表示する最大ページ数
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  
+  if (endPage - startPage < maxVisiblePages - 1) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+  
+  if (startPage > 1) {
+    paginationHTML += `<button class="pagination-btn" onclick="goToPage(1)">1</button>`;
+    if (startPage > 2) {
+      paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+    }
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    if (i === currentPage) {
+      paginationHTML += `<button class="pagination-btn active">${i}</button>`;
+    } else {
+      paginationHTML += `<button class="pagination-btn" onclick="goToPage(${i})">${i}</button>`;
+    }
+  }
+  
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      paginationHTML += `<span class="pagination-ellipsis">...</span>`;
+    }
+    paginationHTML += `<button class="pagination-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+  }
+  
+  // 次へボタン
+  if (currentPage < totalPages) {
+    paginationHTML += `<button class="pagination-btn" onclick="goToPage(${currentPage + 1})">次へ ›</button>`;
+  } else {
+    paginationHTML += `<button class="pagination-btn disabled" disabled>次へ ›</button>`;
+  }
+  
+  paginationHTML += '</div>';
+  paginationHTML += `<div class="pagination-info">ページ ${currentPage} / ${totalPages} (全 ${currentVideos.length} 件)</div>`;
+  
+  paginationDiv.innerHTML = paginationHTML;
+}
+
+// ページ移動関数（グローバルスコープに公開）
+window.goToPage = function(page) {
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  displayResults(currentVideos, '');
+  // ページトップにスクロール
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // 再生時間を秒に変換する関数
@@ -1247,8 +1265,9 @@ if (sortSelect) {
     
     const sortedVideos = sortVideos(currentVideos, sortType);
     console.log('✅ ソート完了:', sortedVideos.length, '件');
-    displayedCount = 0; // ソート時はリセット
-    displayResults(sortedVideos, '', true); // ソート時は初期表示として扱う
+    currentVideos = sortedVideos; // ソート結果をcurrentVideosに保存
+    currentPage = 1; // ソート時は1ページ目に戻す
+    displayResults(sortedVideos, '');
   });
 } else {
   console.error('❌ sortSelect要素が見つかりません');
