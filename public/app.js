@@ -42,6 +42,18 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
+// ページ読み込み時に既存のデバッグ情報を削除
+window.addEventListener('DOMContentLoaded', () => {
+  // すべての.debug-info要素を削除
+  document.querySelectorAll('.debug-info').forEach(el => el.remove());
+  // デバッグ情報を含む可能性のある要素を削除
+  document.querySelectorAll('[class*="debug"], [id*="debug"]').forEach(el => {
+    if (el.textContent.includes('デバッグ') || el.textContent.includes('ブラウザ') || el.textContent.includes('デバイス') || el.textContent.includes('iframeサイズ') || el.textContent.includes('コンテナサイズ')) {
+      el.remove();
+    }
+  });
+});
+
 // 検索機能
 const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
@@ -527,20 +539,20 @@ function initVideoObserver() {
 // iPhoneかどうかを判定する関数
 function isIPhone() {
   // iPhone/iPodを検出（Braveブラウザなども含む）
-  const ua = navigator.userAgent;
-  const isIOS = /iPhone|iPod|iPad/.test(ua) && !window.MSStream;
-  return isIOS;
+  return /iPhone|iPod|iPad/.test(navigator.userAgent) && !window.MSStream;
 }
 
 // プレイヤー表示（グローバルスコープに公開）
 window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
-  console.log('▶ プレイヤー表示:', videoId, embedUrl, 'source:', source);
   const container = document.getElementById(`player-${videoId}`);
   
   if (!container) {
     console.error('❌ プレイヤーコンテナが見つかりません:', `player-${videoId}`);
     return;
   }
+  
+  // 既存のデバッグ情報を削除
+  container.querySelectorAll('.debug-info').forEach(el => el.remove());
   
   // iPhone Safariで動画を再生するため、ユーザーの直接的な操作として扱う
   // イベントが存在する場合（タッチ/クリックイベント）、そのコンテキスト内で処理
@@ -549,9 +561,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     event.preventDefault();
     event.stopPropagation();
   }
-  
-  // iPhoneでもデスクトップと同じ埋め込み動画プレイヤーを使用
-  // レスポンシブデザインを削除したため、iPhoneでも同じ仕様で動作
   
   // 他の動画が再生中の場合、停止する
   if (currentPlayingVideoId && currentPlayingVideoId !== videoId) {
@@ -563,10 +572,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // 埋め込み可能かどうかを判定（基本的には試してみる）
   const canEmbed = isEmbeddable(embedUrl, source);
-  console.log('🔍 埋め込み判定:', canEmbed, 'URL:', embedUrl, 'Source:', source);
-  
-  // 埋め込みが明らかに不可能な場合のみ、元のURLに直接リンク
-  // それ以外は埋め込みを試み、エラーが発生した場合にフォールバック
   
   // 既に表示されている場合は閉じる
   if (container.querySelector('iframe')) {
@@ -601,15 +606,11 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
         // モバイルデバイス向けの追加パラメータ
         urlObj.searchParams.set('page', '1'); // ページ番号
         urlObj.searchParams.set('as_wide', '1'); // ワイド表示
-        urlObj.searchParams.set('high_quality', '1'); // 高画質
-        urlObj.searchParams.set('danmaku', '0'); // コメントオフ
         normalizedUrl = urlObj.toString();
       } catch (e) {
-        console.warn('⚠️ URLパラメータ追加エラー:', e);
+        // URLパラメータ追加エラーは無視
       }
     }
-    
-    console.log('📺 Bilibili埋め込みURL:', normalizedUrl);
   }
   
   // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
@@ -619,9 +620,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
     const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(normalizedUrl)}`;
     normalizedUrl = proxyUrl;
-    console.log('📱 iPhone/iOS: プロキシ経由で動画を読み込み:', proxyUrl);
-  } else if (isIOSDevice && source === 'bilibili') {
-    // Bilibiliの場合は直接埋め込みURLを使用（プロキシ経由では動作しない）
   }
   
   // Bilibiliの場合は、iPhone/Braveブラウザで特別な設定
@@ -630,7 +628,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // sandbox属性は設定しない（Bilibiliのプレイヤーが動作しなくなる可能性があるため）
     iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline; accelerometer; gyroscope; clipboard-write; clipboard-read');
     iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
-    console.log('📱 iPhone/Brave: Bilibili用の特別な設定を適用');
   } else {
     // その他の場合は通常の設定
     iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline');
@@ -646,11 +643,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   iframe.setAttribute('webkitallowfullscreen', 'true');
   iframe.setAttribute('mozallowfullscreen', 'true');
   iframe.setAttribute('playsinline', 'false'); // iPhoneで全画面表示
-  
-  // Bilibiliの場合は追加の属性を設定
-  if (source === 'bilibili') {
-    // 属性は既に設定済み
-  }
   
   iframe.style.width = '100%';
   iframe.style.height = '100%';
@@ -690,7 +682,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // iframeのエラーイベント
   iframe.onerror = (error) => {
-    console.error('❌ iframeエラー:', error);
     showError();
   };
   
@@ -699,11 +690,16 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // タイムアウトを短縮（読み込み完了したので）
     if (errorTimeout) clearTimeout(errorTimeout);
     
+    // 既存のデバッグ情報を削除
+    container.querySelectorAll('.debug-info').forEach(el => el.remove());
+    
     // Bilibiliの場合は、特別な処理を行う
     if (source === 'bilibili') {
       // BilibiliのプレイヤーはJavaScriptで動的に読み込まれるため、
       // 少し待ってからエラーチェックを行う
       setTimeout(() => {
+        // 既存のデバッグ情報を削除
+        container.querySelectorAll('.debug-info').forEach(el => el.remove());
         try {
           const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
           if (iframeDoc) {
@@ -727,6 +723,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     } else {
       // その他の動画サイトの場合
       setTimeout(() => {
+        // 既存のデバッグ情報を削除
+        container.querySelectorAll('.debug-info').forEach(el => el.remove());
         try {
           const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
           if (iframeDoc) {
@@ -740,10 +738,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
                 bodyHTML.includes('could not be loaded') ||
                 bodyHTML.includes('not supported')) {
               showError();
-            } else {
             }
-          } else {
-            // iOS SafariではCORSでアクセスできない場合が多いが、正常に動作している可能性がある
           }
         } catch (e) {
           // CORSエラーは無視（iOS Safariでは正常な場合が多い）
@@ -763,18 +758,19 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   container.appendChild(iframe);
   
-  
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
   // タイムアウトでエラー検出（Bilibiliの場合は15秒、その他は10秒）
   const timeoutDuration = source === 'bilibili' ? 15000 : 10000;
   errorTimeout = setTimeout(() => {
     if (hasError) return;
     
+    // 既存のデバッグ情報を削除
+    container.querySelectorAll('.debug-info').forEach(el => el.remove());
+    
     // iOS Safariではiframeにアクセスできない場合が多いため、
     // iframeが表示されているかどうかで判断
     const iframeVisible = iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
     const containerVisible = container.offsetWidth > 0 && container.offsetHeight > 0;
-    
     
     // iframeが表示されていない場合はエラー
     if (!iframeVisible || !containerVisible) {
