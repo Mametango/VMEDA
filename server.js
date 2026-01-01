@@ -793,8 +793,10 @@ async function searchX1hub(query) {
     
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Referer': 'https://x1hub.com/'
       },
       timeout: 15000
     });
@@ -802,29 +804,54 @@ async function searchX1hub(query) {
     const $ = cheerio.load(response.data);
     const videos = [];
     
-    $('.video-item, .item, a[href*="/video/"]').each((index, elem) => {
-      if (videos.length >= 50) return false;
+    // 複数のセレクタを試す
+    const selectors = [
+      '.video-item',
+      '.item',
+      'a[href*="/video/"]',
+      'a[href*="/watch/"]',
+      '[class*="video"]',
+      '[class*="item"]'
+    ];
+    
+    selectors.forEach(selector => {
+      if (videos.length >= 50) return;
       
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/video/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://x1hub.com${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        videos.push({
-          id: `x1hub-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'x1hub'
-        });
-      }
+      $(selector).each((index, elem) => {
+        if (videos.length >= 50) return false;
+        
+        const $item = $(elem);
+        let href = $item.attr('href') || $item.find('a').attr('href') || '';
+        
+        // hrefが見つからない場合は親要素を探す
+        if (!href) {
+          const $parent = $item.parent();
+          href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+        }
+        
+        if (!href || (!href.includes('/video/') && !href.includes('/watch/'))) return;
+        
+        const fullUrl = href.startsWith('http') ? href : `https://x1hub.com${href}`;
+        const title = extractTitle($, $item);
+        const thumbnail = extractThumbnail($, $item);
+        const duration = extractDurationFromHtml($, $item);
+        
+        if (title && title.length > 3) {
+          // 重複チェック
+          const isDuplicate = videos.some(v => v.url === fullUrl);
+          if (!isDuplicate) {
+            videos.push({
+              id: `x1hub-${Date.now()}-${index}`,
+              title: title.substring(0, 200),
+              thumbnail: thumbnail || '',
+              duration: duration || '',
+              url: fullUrl,
+              embedUrl: fullUrl,
+              source: 'x1hub'
+            });
+          }
+        }
+      });
     });
     
     console.log(`✅ X1hub: ${videos.length}件の動画を取得`);
