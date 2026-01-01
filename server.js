@@ -478,11 +478,13 @@ app.post('/api/search', async (req, res) => {
     const allSiteNames = ['Bilibili', 'Youku', 'iQiyi', 'Tencent Video', 'Xigua Video', 'Google', 'JPdmv', 'Douga4', 'Spankbang', 'X1hub', 'Porntube', 'JavGuru', 'FC2', 'AkibaAbv', '91Porn', 'ThisAV', 'Madou'];
     
     // 結果を追加（中国サイトの結果が先に来る）
+    let totalFromSites = 0;
     allResults.forEach((result, index) => {
       if (result.status === 'fulfilled' && Array.isArray(result.value)) {
         if (result.value.length > 0) {
           console.log(`✅ ${allSiteNames[index] || 'Unknown'}: ${result.value.length}件の動画を取得`);
           videos.push(...result.value);
+          totalFromSites += result.value.length;
         } else {
           console.log(`ℹ️ ${allSiteNames[index] || 'Unknown'}: 検索結果なし（0件）`);
         }
@@ -497,7 +499,7 @@ app.post('/api/search', async (req, res) => {
       }
     });
     
-    console.log(`📊 検索結果サマリー: 全${videos.length}件の動画を取得（${allSiteNames.length}サイトから検索）`);
+    console.log(`📊 検索結果サマリー: 全${videos.length}件の動画を取得（${allSiteNames.length}サイトから検索、合計${totalFromSites}件）`);
     
     // 重複を除去（URLベース）& YouTubeを除外
     const uniqueVideos = [];
