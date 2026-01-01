@@ -42,57 +42,6 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// デバッグ情報を削除する関数
-function removeDebugInfo() {
-  // すべての.debug-info要素を削除
-  document.querySelectorAll('.debug-info').forEach(el => el.remove());
-  
-  // デバッグ情報を含む可能性のある要素を削除（より広範囲に）
-  document.querySelectorAll('*').forEach(el => {
-    const text = el.textContent || '';
-    const className = el.className || '';
-    const id = el.id || '';
-    
-    // デバッグ情報を含む要素を検出
-    if (
-      className.includes('debug') || 
-      id.includes('debug') ||
-      text.includes('デバッグ情報') ||
-      text.includes('ブラウザ：') ||
-      text.includes('デバイス：') ||
-      text.includes('iframeサイズ') ||
-      text.includes('コンテナサイズ') ||
-      text.includes('読み込み完了') ||
-      text.includes('5秒後') ||
-      text.includes('15秒後')
-    ) {
-      // ただし、重要な要素は削除しない
-      if (!el.closest('.video-player-container') && 
-          !el.closest('.player-error') &&
-          !el.closest('.video-item') &&
-          !el.closest('.container') &&
-          el.tagName !== 'BODY' &&
-          el.tagName !== 'HTML') {
-        el.remove();
-      }
-    }
-  });
-}
-
-// 即座に実行（DOMContentLoadedの前）
-(function() {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', removeDebugInfo);
-  } else {
-    removeDebugInfo();
-  }
-  
-  // 定期的に削除（1秒ごと）
-  setInterval(removeDebugInfo, 1000);
-  
-  // ページ読み込み後も削除
-  window.addEventListener('load', removeDebugInfo);
-})();
 
 // 検索機能
 const searchInput = document.getElementById('search-input');
@@ -591,8 +540,6 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     return;
   }
   
-  // 既存のデバッグ情報を削除
-  container.querySelectorAll('.debug-info').forEach(el => el.remove());
   
   // iPhone Safariで動画を再生するため、ユーザーの直接的な操作として扱う
   // イベントが存在する場合（タッチ/クリックイベント）、そのコンテキスト内で処理
