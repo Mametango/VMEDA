@@ -23,6 +23,18 @@ window.addEventListener('error', (event) => {
       return false;
     }
   }
+  
+  // iframeの警告メッセージを抑制（playsinline、allowfullscreenなど）
+  if (event.message && (
+    event.message.includes('Unrecognized feature') ||
+    event.message.includes('Allow attribute will take precedence') ||
+    event.message.includes('playsinline') ||
+    event.message.includes('allowfullscreen')
+  )) {
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }
 }, true);
 
 // 未処理のPromise拒否を抑制
