@@ -3165,41 +3165,74 @@ app.get('/', (req, res) => {
     // __dirnameが正しく動作しない場合に備えて、複数のパスを試す
     let indexPath;
     
-    if (process.env.VERCEL === '1') {
-      // Vercel環境: 相対パスを使用
-      indexPath = path.join(process.cwd(), 'public', 'index.html');
-    } else {
-      // ローカル環境: __dirnameを使用
-      indexPath = path.join(__dirname, 'public', 'index.html');
+    // パス解決の優先順位: process.cwd() > __dirname
+    const possiblePaths = [
+      path.join(process.cwd(), 'public', 'index.html'),
+      path.join(__dirname, 'public', 'index.html'),
+      path.join(process.cwd(), 'index.html'),
+      path.join(__dirname, 'index.html')
+    ];
+    
+    // 最初に見つかったパスを使用
+    indexPath = possiblePaths.find(p => {
+      try {
+        return fs.existsSync && fs.existsSync(p);
+      } catch {
+        return false;
+      }
+    });
+    
+    if (!indexPath) {
+      // パスが見つからない場合は、最初のパスを使用（エラーハンドリングで処理）
+      indexPath = possiblePaths[0];
     }
     
-    // ファイルの存在確認（Vercelではスキップ可能）
-    try {
-      if (fs.existsSync && fs.existsSync(indexPath)) {
-        res.sendFile(indexPath, {
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'no-cache'
-          }
-        }, (err) => {
-          if (err) {
-            console.error('❌ index.html送信エラー:', err.message);
-            // 静的ファイル配信にフォールバック
-            res.status(404).send('File not found');
-          } else {
-            console.log('✅ index.html送信成功');
-          }
-        });
-      } else {
-        // ファイルが見つからない場合は、静的ファイル配信に任せる
-        console.log('⚠️ index.htmlが見つかりません。静的ファイル配信に任せます');
-        res.status(404).send('File not found');
+    console.log('📄 index.htmlパス:', indexPath);
+    
+    // ファイルの送信を試みる
+    res.sendFile(indexPath, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache'
       }
-    } catch (fsError) {
-      console.error('❌ ファイルシステムエラー:', fsError.message);
-      // 静的ファイル配信にフォールバック
-      res.status(404).send('File not found');
-    }
+    }, (err) => {
+      if (err) {
+        console.error('❌ index.html送信エラー:', err.message);
+        console.error('❌ 試したパス:', indexPath);
+        // エラーが発生した場合は、HTMLコンテンツを直接返す
+        if (!res.headersSent) {
+          res.status(200).type('text/html').send(`
+            <!DOCTYPE html>
+            <html lang="ja">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>VMEDA - 動画検索サイト</title>
+              <link rel="stylesheet" href="/styles.css">
+            </head>
+            <body>
+              <div class="container">
+                <header class="header">
+                  <h1 class="site-title">VMEDA</h1>
+                </header>
+                <section class="search-section">
+                  <div class="search-container">
+                    <input type="text" id="search-input" class="search-input" placeholder="動画を検索..." autocomplete="off">
+                    <button id="search-button" class="search-button">検索</button>
+                  </div>
+                </section>
+                <div id="results-container"></div>
+                <div id="video-player-container"></div>
+              </div>
+              <script src="/app.js"></script>
+            </body>
+            </html>
+          `);
+        }
+      } else {
+        console.log('✅ index.html送信成功:', indexPath);
+      }
+    });
   } catch (error) {
     console.error('❌ ルートパス処理エラー:', error.message);
     if (!res.headersSent) {
