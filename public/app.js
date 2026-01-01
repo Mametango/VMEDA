@@ -55,6 +55,10 @@ const sortSelect = document.getElementById('sort-select');
 
 // 現在の検索結果を保持
 let currentVideos = [];
+// 無限スクロール用の変数
+let displayedCount = 0; // 現在表示されている動画数
+const VIDEOS_PER_PAGE = 10; // 1回に表示する動画数
+let isLoadingMore = false; // 追加読み込み中かどうか
 
 // 検索実行
 async function searchVideos(query) {
@@ -94,7 +98,8 @@ async function searchVideos(query) {
     
     const videos = data.results || [];
     currentVideos = videos;
-    displayResults(videos, query.trim());
+    displayedCount = 0; // 検索時にリセット
+    displayResults(videos, query.trim(), true); // 最初の表示なのでtrue
     
     // ソートUIを表示
     if (videos.length > 0) {
@@ -115,16 +120,31 @@ async function searchVideos(query) {
   }
 }
 
-// 結果表示
-function displayResults(videos, searchQuery) {
+// 結果表示（無限スクロール対応）
+function displayResults(videos, searchQuery, isInitial = false) {
   if (videos.length === 0) {
     resultsDiv.innerHTML = `
       <div class="no-results">検索結果が見つかりませんでした</div>
     `;
+    displayedCount = 0;
     return;
   }
 
-  const html = videos.map(video => {
+  // 初期表示の場合はリセット
+  if (isInitial) {
+    displayedCount = 0;
+    resultsDiv.innerHTML = '';
+  }
+
+  // 表示する動画を取得（現在表示済みの数から追加分を取得）
+  const videosToShow = videos.slice(displayedCount, displayedCount + VIDEOS_PER_PAGE);
+  
+  if (videosToShow.length === 0) {
+    // 全て表示済み
+    return;
+  }
+
+  const html = videosToShow.map(video => {
     // サムネイルURLを正規化（相対パスを絶対URLに変換）
     let thumbnail = video.thumbnail || '';
     if (thumbnail) {
@@ -202,6 +222,48 @@ function displayResults(videos, searchQuery) {
   
   // 検索結果表示後、広告を検索結果の間に挿入
   insertAdsInResults();
+  
+  // 無限スクロールのイベントリスナーを設定（初期表示時のみ）
+  if (isInitial) {
+    setupInfiniteScroll();
+  }
+}
+
+// 無限スクロールの設定
+function setupInfiniteScroll() {
+  // 既存のスクロールイベントリスナーを削除（重複を防ぐ）
+  window.removeEventListener('scroll', handleInfiniteScroll);
+  
+  // 新しいスクロールイベントリスナーを追加
+  window.addEventListener('scroll', handleInfiniteScroll, { passive: true });
+}
+
+// 無限スクロールのハンドラー
+function handleInfiniteScroll() {
+  // 既に読み込み中なら何もしない
+  if (isLoadingMore) return;
+  
+  // 全て表示済みなら何もしない
+  if (displayedCount >= currentVideos.length) {
+    window.removeEventListener('scroll', handleInfiniteScroll);
+    return;
+  }
+  
+  // ページ下部に近づいたかチェック（画面の高さの80%スクロールしたら）
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  const windowHeight = window.innerHeight;
+  const documentHeight = document.documentElement.scrollHeight;
+  
+  // 下部100px以内に到達したら次のページを読み込む
+  if (scrollTop + windowHeight >= documentHeight - 100) {
+    isLoadingMore = true;
+    
+    // 少し待ってから次のページを読み込む（UX向上）
+    setTimeout(() => {
+      displayResults(currentVideos, '', false);
+      isLoadingMore = false;
+    }, 300);
+  }
 }
 
 // 再生時間を秒に変換する関数
