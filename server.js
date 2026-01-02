@@ -3810,9 +3810,12 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     const isExternalVideoUrl = videoUrl.includes('cdn.loadvid.com') || 
                                 videoUrl.includes('loadvid.com') ||
                                 videoUrl.includes('vidnest.io') ||
+                                videoUrl.includes('luluvid.com') ||
                                 videoUrl.includes('embed') ||
                                 videoUrl.includes('video') ||
-                                videoUrl.includes('player');
+                                videoUrl.includes('player') ||
+                                videoUrl.includes('stream') ||
+                                videoUrl.includes('play');
     
     if (!isIVFreeUrl && !isExternalVideoUrl) {
       return res.status(400).json({ error: 'IVFreeまたは動画サイトのURLが必要です' });

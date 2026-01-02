@@ -832,6 +832,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     const isExternalVideoUrl = normalizedUrl.includes('vidnest.io') || 
                                 normalizedUrl.includes('cdn.loadvid.com') || 
                                 normalizedUrl.includes('loadvid.com') ||
+                                normalizedUrl.includes('luluvid.com') ||
                                 normalizedUrl.includes('embed');
     
     if (isExternalVideoUrl) {
@@ -876,6 +877,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     normalizedUrl.includes('vidnest.io') || 
     normalizedUrl.includes('cdn.loadvid.com') || 
     normalizedUrl.includes('loadvid.com') ||
+    normalizedUrl.includes('luluvid.com') ||
     normalizedUrl.includes('embed')
   );
   
@@ -1108,6 +1110,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     normalizedUrl.includes('vidnest.io') || 
     normalizedUrl.includes('cdn.loadvid.com') || 
     normalizedUrl.includes('loadvid.com') ||
+    normalizedUrl.includes('luluvid.com') ||
     normalizedUrl.includes('embed')
   );
   
