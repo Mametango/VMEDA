@@ -879,6 +879,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
                                 normalizedUrl.includes('cdn.loadvid.com') || 
                                 normalizedUrl.includes('loadvid.com') ||
                                 normalizedUrl.includes('luluvid.com') ||
+                                normalizedUrl.includes('luluvdoo.com') ||
                                 normalizedUrl.includes('embed');
     
     if (isExternalVideoUrl) {
@@ -925,6 +926,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     normalizedUrl.includes('cdn.loadvid.com') || 
     normalizedUrl.includes('loadvid.com') ||
     normalizedUrl.includes('luluvid.com') ||
+    normalizedUrl.includes('luluvdoo.com') ||
     normalizedUrl.includes('embed') ||
     normalizedUrl.includes('/api/ivfree-proxy')
   );
@@ -1163,6 +1165,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     normalizedUrl.includes('cdn.loadvid.com') || 
     normalizedUrl.includes('loadvid.com') ||
     normalizedUrl.includes('luluvid.com') ||
+    normalizedUrl.includes('luluvdoo.com') ||
     normalizedUrl.includes('embed')
   );
   

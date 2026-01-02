@@ -3821,6 +3821,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                                 videoUrl.includes('loadvid.com') ||
                                 videoUrl.includes('vidnest.io') ||
                                 videoUrl.includes('luluvid.com') ||
+                                videoUrl.includes('luluvdoo.com') ||
                                 videoUrl.includes('embed') ||
                                 videoUrl.includes('video') ||
                                 videoUrl.includes('player') ||
