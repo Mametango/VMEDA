@@ -1175,8 +1175,12 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     // 外部動画サイトの場合は、サンドボックス属性を設定しない（動画が再生できなくなる可能性があるため）
     const isExternalVideo = isIVFreeExternalVideo;
     if (isExternalVideo) {
-      // 外部動画サイトの場合は、サンドボックス属性を削除
+      // 外部動画サイトの場合は、サンドボックス属性を確実に削除
       iframe.removeAttribute('sandbox');
+      // サンドボックス属性が設定されていないことを確認
+      if (iframe.hasAttribute('sandbox')) {
+        iframe.removeAttribute('sandbox');
+      }
     }
     iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
     console.log('📺 IVFree動画をプロキシ経由で表示開始:', normalizedUrl);

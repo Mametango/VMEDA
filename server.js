@@ -3874,6 +3874,14 @@ app.get('/api/ivfree-proxy', async (req, res) => {
               get: function() { return null; },
               configurable: true
             });
+            // document.domainの検出を無効化（サンドボックス検出を回避）
+            try {
+              Object.defineProperty(document, 'domain', {
+                get: function() { return window.location.hostname; },
+                set: function(value) {},
+                configurable: true
+              });
+            } catch(e) {}
             // サンドボックス属性の検出を無効化
             if (typeof document.createElement === 'function') {
               const originalCreateElement = document.createElement;
@@ -3889,6 +3897,18 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                 return element;
               };
             }
+            // サンドボックス検出スクリプトを無効化
+            const originalEval = window.eval;
+            window.eval = function(code) {
+              if (typeof code === 'string' && (
+                code.includes('sandbox') ||
+                code.includes('Sandbox detected') ||
+                code.includes('document.domain')
+              )) {
+                return;
+              }
+              return originalEval.call(window, code);
+            };
             // 広告ブロッカー検出の一般的な関数を無効化
             const originalQuerySelector = document.querySelector;
             document.querySelector = function(selector) {
@@ -3907,7 +3927,9 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                         const text = node.textContent || node.innerText || '';
                         if (text.includes('Streaming Blocked') || 
                             text.includes('sandboxed environment') ||
-                            text.includes('AdBlock is enabled')) {
+                            text.includes('AdBlock is enabled') ||
+                            text.includes('Sandbox detected') ||
+                            text.includes('document.domain restriction')) {
                           node.remove();
                         }
                       }
