@@ -3887,24 +3887,36 @@ app.get('/api/ivfree-proxy', async (req, res) => {
               return originalQuerySelector.call(document, selector);
             };
             // サンドボックス検出メッセージを除去
-            const observer = new MutationObserver(function(mutations) {
-              mutations.forEach(function(mutation) {
-                mutation.addedNodes.forEach(function(node) {
-                  if (node.nodeType === 1) {
-                    const text = node.textContent || node.innerText || '';
-                    if (text.includes('Streaming Blocked') || 
-                        text.includes('sandboxed environment') ||
-                        text.includes('AdBlock is enabled')) {
-                      node.remove();
-                    }
-                  }
+            function initObserver() {
+              if (document.body) {
+                const observer = new MutationObserver(function(mutations) {
+                  mutations.forEach(function(mutation) {
+                    mutation.addedNodes.forEach(function(node) {
+                      if (node && node.nodeType === 1) {
+                        const text = node.textContent || node.innerText || '';
+                        if (text.includes('Streaming Blocked') || 
+                            text.includes('sandboxed environment') ||
+                            text.includes('AdBlock is enabled')) {
+                          node.remove();
+                        }
+                      }
+                    });
+                  });
                 });
-              });
-            });
-            observer.observe(document.body, {
-              childList: true,
-              subtree: true
-            });
+                observer.observe(document.body, {
+                  childList: true,
+                  subtree: true
+                });
+              } else {
+                // document.bodyがまだ存在しない場合は、DOMContentLoadedイベントを待つ
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', initObserver);
+                } else {
+                  setTimeout(initObserver, 100);
+                }
+              }
+            }
+            initObserver();
           })();
         </script>
       `);

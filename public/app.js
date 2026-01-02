@@ -1169,6 +1169,12 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   if (source === 'ivfree' && !normalizedUrl.includes('/api/ivfree-proxy')) {
     // まずプロキシ経由で元のURLを表示（エラーが発生しても表示されるように）
     // 外部動画サイトのURLもプロキシ経由で表示（広告ブロッカー検出を回避）
+    // 外部動画サイトの場合は、サンドボックス属性を設定しない（動画が再生できなくなる可能性があるため）
+    const isExternalVideo = isIVFreeExternalVideo;
+    if (isExternalVideo) {
+      // 外部動画サイトの場合は、サンドボックス属性を削除
+      iframe.removeAttribute('sandbox');
+    }
     iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
     console.log('📺 IVFree動画をプロキシ経由で表示開始:', normalizedUrl);
     
