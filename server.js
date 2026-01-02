@@ -3799,6 +3799,16 @@ app.get('/api/ivfree-video', async (req, res) => {
 
 // IVFree動画ページプロキシエンドポイント（広告除去版）
 app.get('/api/ivfree-proxy', async (req, res) => {
+  // OPTIONSリクエスト（CORS preflight）を処理
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24時間
+    return res.status(200).end();
+  }
+  
   try {
     const videoUrl = req.query.url;
     if (!videoUrl) {
@@ -4001,6 +4011,11 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       
       let html = $.html();
       
+      // CORSヘッダーを設定
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('X-Frame-Options', 'SAMEORIGIN');
       res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -4127,7 +4142,11 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     
     let html = $.html();
     
-    // Content-Typeを設定
+    // CORSヘッダーを設定
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-Content-Type-Options', 'nosniff');
