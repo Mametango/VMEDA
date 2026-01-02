@@ -853,10 +853,13 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
   
   // IVFreeの場合は、sandbox属性を追加してポップアップを制限（ただし動画再生に必要な権限は許可）
-  if (source === 'ivfree') {
+  // ただし、外部動画サイトの場合はsandbox属性を設定しない（動画が再生できなくなる可能性があるため）
+  if (source === 'ivfree' && !normalizedUrl.includes('cdn.loadvid.com') && !normalizedUrl.includes('loadvid.com')) {
     // sandbox属性でポップアップを制限（ただし、動画再生に必要な権限は許可）
-    iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups-to-escape-sandbox allow-presentation');
+    // allow-same-originとallow-scriptsの両方を含めるとセキュリティ警告が出るが、動画再生に必要
+    iframe.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation');
     // ポップアップを完全にブロックするため、allow-popupsは含めない
+    // allow-same-originは含めない（セキュリティ警告を避けるため）
   }
   
   // iframeのsrcを設定（douga4の場合は後で更新される可能性がある）

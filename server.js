@@ -3767,8 +3767,45 @@ app.get('/api/ivfree-video', async (req, res) => {
 app.get('/api/ivfree-proxy', async (req, res) => {
   try {
     const videoUrl = req.query.url;
-    if (!videoUrl || !videoUrl.includes('ivfree.asia')) {
-      return res.status(400).json({ error: 'IVFreeのURLが必要です' });
+    if (!videoUrl) {
+      return res.status(400).json({ error: 'URLが必要です' });
+    }
+    
+    // IVFreeの動画ページまたは外部動画サイトのURLを許可
+    const isIVFreeUrl = videoUrl.includes('ivfree.asia');
+    const isExternalVideoUrl = videoUrl.includes('cdn.loadvid.com') || 
+                                videoUrl.includes('loadvid.com') ||
+                                videoUrl.includes('video') ||
+                                videoUrl.includes('player');
+    
+    if (!isIVFreeUrl && !isExternalVideoUrl) {
+      return res.status(400).json({ error: 'IVFreeまたは動画サイトのURLが必要です' });
+    }
+    
+    // 外部動画サイトのURLの場合は、直接iframeで表示できるようにする
+    if (isExternalVideoUrl && !isIVFreeUrl) {
+      // 外部動画サイトの場合は、そのまま返す（プロキシ処理は不要）
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('X-Frame-Options', 'ALLOWALL');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      // 外部動画サイトをiframeで表示するためのHTMLを返す
+      res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>動画プレイヤー</title>
+  <style>
+    body { margin: 0; padding: 0; background: #000; }
+    iframe { width: 100%; height: 100vh; border: none; }
+  </style>
+</head>
+<body>
+  <iframe src="${videoUrl}" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline"></iframe>
+</body>
+</html>`);
+      console.log('✅ IVFree外部動画URLをiframeで表示:', videoUrl);
+      return;
     }
     
     console.log('📺 IVFreeプロキシリクエスト:', videoUrl);
