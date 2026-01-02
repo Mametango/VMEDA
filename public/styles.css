@@ -693,6 +693,27 @@ body {
   font-style: italic;
 }
 
+.loading-searches {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  text-align: center;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.loading-searches::before {
+  content: '⏳';
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* モバイル対応 */
 @media (max-width: 768px) {
   .recent-searches {

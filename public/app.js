@@ -503,6 +503,14 @@ async function loadRecentSearches() {
     return;
   }
 
+  // 検索履歴エリアを確実に表示（即座に表示）
+  recentSearchesDiv.style.display = 'block';
+  
+  // データ取得中はローディング状態を表示（既存の表示がない場合のみ）
+  if (currentDisplayedSearches.length === 0) {
+    recentSearchesList.innerHTML = '<p class="loading-searches">検索履歴を読み込み中...</p>';
+  }
+
   try {
     // 検索履歴を最優先で取得（高速化のためキャッシュを活用）
     const response = await fetch('/api/recent-searches', {
@@ -521,7 +529,6 @@ async function loadRecentSearches() {
       }
       // 既存の表示がない場合のみ空を表示
       displayRecentSearches([]);
-      recentSearchesDiv.style.display = 'block';
       return;
     }
     
@@ -542,8 +549,6 @@ async function loadRecentSearches() {
       displayRecentSearches([]);
     }
     
-    // 検索履歴エリアを確実に表示
-    recentSearchesDiv.style.display = 'block';
     console.log('✅ 検索履歴エリアを表示しました');
   } catch (error) {
     console.error('❌ 検索履歴取得エラー:', error);
@@ -554,7 +559,6 @@ async function loadRecentSearches() {
     }
     // 既存の表示がない場合のみ空を表示
     displayRecentSearches([]);
-    recentSearchesDiv.style.display = 'block';
   }
 }
 
@@ -604,8 +608,10 @@ function displayRecentSearches(searches) {
 }
 
 // ページ読み込み時に検索履歴エリアを即座に表示（データ取得前に表示）
-if (recentSearchesDiv) {
+if (recentSearchesDiv && recentSearchesList) {
   recentSearchesDiv.style.display = 'block';
+  // 初期状態でローディング表示
+  recentSearchesList.innerHTML = '<p class="loading-searches">検索履歴を読み込み中...</p>';
 }
 
 // ページ読み込み時に他のユーザーの検索ワードを取得（検索は実行しない）
