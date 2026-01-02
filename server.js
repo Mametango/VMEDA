@@ -3930,15 +3930,17 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       }
       
       // 外部動画サイト用のCSPを設定（緩和版）
-      // 外部動画サイトのドメインを許可し、必要なリソースを読み込めるようにする
-      const externalVideoHost = baseUrl.host;
-      const externalVideoProtocol = baseUrl.protocol;
-      // CSPを緩和して外部動画サイトのリソースを許可
-      const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; media-src * blob:; frame-src *; object-src 'none'; base-uri *; form-action *; frame-ancestors 'self';`;
-      
-      // 既存のCSPを削除
+      // すべてのCSPメタタグを削除（既存のCSPを確実に削除）
       $('head meta[http-equiv="Content-Security-Policy"]').remove();
-      // 新しいCSPを追加
+      $('head meta[http-equiv="content-security-policy"]').remove();
+      $('head meta[http-equiv="CSP"]').remove();
+      $('head meta[http-equiv="csp"]').remove();
+      
+      // CSPを完全に無効化（外部動画サイトのリソースをすべて許可）
+      // metaタグのCSPはframe-ancestorsを無視するため、レスポンスヘッダーでも設定
+      const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; media-src * blob:; frame-src *; object-src 'none'; base-uri *; form-action *;`;
+      
+      // 新しいCSPを追加（metaタグ）
       $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${cspContent}">`);
       
       let html = $.html();
@@ -3946,6 +3948,8 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('X-Frame-Options', 'SAMEORIGIN');
       res.setHeader('X-Content-Type-Options', 'nosniff');
+      // レスポンスヘッダーでもCSPを設定（frame-ancestorsを含む）
+      res.setHeader('Content-Security-Policy', `${cspContent} frame-ancestors 'self';`);
       
       console.log('✅ 外部動画サイトをプロキシ経由で返送');
       res.send(html);
