@@ -3267,7 +3267,7 @@ async function searchIVFree(query) {
               }
             }
           });
-          if (sampleCount >= 10) return false;
+          if (sampleCount >= 10) break; // ループを中断（return falseではなくbreakを使用）
         }
       }
     }
