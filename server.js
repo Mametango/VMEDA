@@ -3120,24 +3120,35 @@ async function searchIVFree(query) {
         const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
         const halfCharsMatch = queryChars.length >= 2 && matchingChars >= Math.ceil(queryChars.length / 2);
         
+        // 検索語が3文字以上の場合、検索語の33%以上の文字がタイトルに含まれているかチェック（より緩い条件）
+        const thirdCharsMatch = queryChars.length >= 3 && matchingChars >= Math.ceil(queryChars.length / 3);
+        
+        // 検索語の一部が含まれているかチェック（検索語の最初の1文字以上がタイトルに含まれているか）
+        const firstCharMatch = queryChars.length > 0 && titleLower.includes(queryChars[0]);
+        const lastCharMatch = queryChars.length > 0 && titleLower.includes(queryChars[queryChars.length - 1]);
+        
         // IDパターンがある場合は、IDパターンにマッチするかタイトルにマッチするか
         // IDパターンがない場合は、タイトルにマッチするか
-        // 検索条件を緩和して、より多くの動画をマッチさせる
+        // 検索条件を大幅に緩和して、より多くの動画をマッチさせる
         let shouldMatch = false;
         
         if (hasIdPattern) {
           // IDパターンがある場合
-          // 完全一致、部分一致、文字単位の一致、または50%以上の文字一致のいずれかでマッチ
-          shouldMatch = queryInId || queryInTitle || allCharsInTitle || halfCharsMatch;
+          // 完全一致、部分一致、文字単位の一致、50%以上の文字一致、33%以上の文字一致、最初/最後の文字一致のいずれかでマッチ
+          // さらに緩和: 検索語が1文字以上含まれていればマッチ
+          const anyCharMatch = queryChars.length > 0 && queryChars.some(char => titleLower.includes(char));
+          shouldMatch = queryInId || queryInTitle || allCharsInTitle || halfCharsMatch || thirdCharsMatch || firstCharMatch || lastCharMatch || anyCharMatch;
         } else {
           // IDパターンがない場合でも、タイトルに検索語が含まれていれば表示
-          // ただし、タイトルが長い場合のみ（誤検出を防ぐ）
+          // タイトルが短い場合でも、緩い条件でマッチさせる
+          // さらに緩和: 検索語が1文字以上含まれていればマッチ
+          const anyCharMatch = queryChars.length > 0 && queryChars.some(char => titleLower.includes(char));
           if (titleText.trim().length < 10) {
-            // タイトルが短い場合は、完全一致または部分一致のみ
-            shouldMatch = queryInTitle;
+            // タイトルが短い場合は、完全一致、部分一致、最初/最後の文字一致、または任意の1文字一致
+            shouldMatch = queryInTitle || firstCharMatch || lastCharMatch || anyCharMatch;
           } else {
-            // タイトルが長い場合は、完全一致、部分一致、文字単位の一致、または50%以上の文字一致のいずれかでマッチ
-            shouldMatch = queryInTitle || allCharsInTitle || halfCharsMatch;
+            // タイトルが長い場合は、完全一致、部分一致、文字単位の一致、50%以上の文字一致、33%以上の文字一致、最初/最後の文字一致、または任意の1文字一致のいずれかでマッチ
+            shouldMatch = queryInTitle || allCharsInTitle || halfCharsMatch || thirdCharsMatch || firstCharMatch || lastCharMatch || anyCharMatch;
           }
         }
         
@@ -3287,9 +3298,24 @@ async function searchIVFree(query) {
               const allCharsInTitle = queryChars.length > 0 && queryChars.every(char => titleLower.includes(char));
               const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
               const halfCharsMatch = queryChars.length >= 2 && matchingChars >= Math.ceil(queryChars.length / 2);
+              const thirdCharsMatch = queryChars.length >= 3 && matchingChars >= Math.ceil(queryChars.length / 3);
+              const firstCharMatch = queryChars.length > 0 && titleLower.includes(queryChars[0]);
+              const lastCharMatch = queryChars.length > 0 && titleLower.includes(queryChars[queryChars.length - 1]);
               
-              if (!queryInId && !queryInTitle && !allCharsInTitle && !halfCharsMatch) {
-                console.log(`  - ${titleText.substring(0, 60)}... (マッチしなかった理由: 検索語が含まれていない, タイトル（小文字）: "${titleLower.substring(0, 40)}...")`);
+              const hasIdPattern = titleText.match(/\[[A-Z]+-\d+\]/);
+              let shouldMatch = false;
+              if (hasIdPattern) {
+                shouldMatch = queryInId || queryInTitle || allCharsInTitle || halfCharsMatch || thirdCharsMatch || firstCharMatch || lastCharMatch;
+              } else {
+                if (titleText.trim().length < 10) {
+                  shouldMatch = queryInTitle || firstCharMatch || lastCharMatch;
+                } else {
+                  shouldMatch = queryInTitle || allCharsInTitle || halfCharsMatch || thirdCharsMatch || firstCharMatch || lastCharMatch;
+                }
+              }
+              
+              if (!shouldMatch) {
+                console.log(`  - ${titleText.substring(0, 60)}... (マッチしなかった理由: 検索語が含まれていない, タイトル（小文字）: "${titleLower.substring(0, 40)}...", 検索語: "${queryLower}", マッチ文字数: ${matchingChars}/${queryChars.length})`);
                 sampleCount++;
               }
             }
