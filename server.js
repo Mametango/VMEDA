@@ -3102,28 +3102,47 @@ async function searchIVFree(query) {
         foundCount++;
         
         // 検索クエリとタイトルの関連性をチェック
+        // 日本語の文字列マッチングを改善（大文字小文字の区別なし、部分一致）
         const titleLower = titleText.toLowerCase();
+        const queryLower = query.toLowerCase().trim();
+        
         // クエリがIDパターンに含まれているか、タイトルに含まれているか
         const idMatch = titleText.match(/\[([A-Z]+)-\d+\]/);
         const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
         const queryInTitle = titleLower.includes(queryLower);
         
+        // 日本語の部分一致も試す（検索語の一部が含まれているか）
+        // 検索語を文字単位で分割して、すべての文字がタイトルに含まれているかチェック
+        const queryChars = queryLower.split('').filter(c => c.trim().length > 0 && c !== ' ');
+        const allCharsInTitle = queryChars.length > 0 && queryChars.every(char => titleLower.includes(char));
+        
+        // 検索語が2文字以上の場合、検索語の50%以上の文字がタイトルに含まれているかチェック
+        const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
+        const halfCharsMatch = queryChars.length >= 2 && matchingChars >= Math.ceil(queryChars.length / 2);
+        
         // IDパターンがある場合は、IDパターンにマッチするかタイトルにマッチするか
         // IDパターンがない場合は、タイトルにマッチするか
+        // 検索条件を緩和して、より多くの動画をマッチさせる
+        let shouldMatch = false;
+        
         if (hasIdPattern) {
-          // IDパターンがある場合（以前の動作を維持）
-          if (!queryInId && !queryInTitle) {
-            return; // 検索語が含まれていない場合はスキップ
-          }
+          // IDパターンがある場合
+          // 完全一致、部分一致、文字単位の一致、または50%以上の文字一致のいずれかでマッチ
+          shouldMatch = queryInId || queryInTitle || allCharsInTitle || halfCharsMatch;
         } else {
           // IDパターンがない場合でも、タイトルに検索語が含まれていれば表示
           // ただし、タイトルが長い場合のみ（誤検出を防ぐ）
           if (titleText.trim().length < 10) {
-            return; // タイトルが短すぎる場合はスキップ
+            // タイトルが短い場合は、完全一致または部分一致のみ
+            shouldMatch = queryInTitle;
+          } else {
+            // タイトルが長い場合は、完全一致、部分一致、文字単位の一致、または50%以上の文字一致のいずれかでマッチ
+            shouldMatch = queryInTitle || allCharsInTitle || halfCharsMatch;
           }
-          if (!queryInTitle) {
-            return; // 検索語が含まれていない場合はスキップ
-          }
+        }
+        
+        if (!shouldMatch) {
+          return; // 検索語が含まれていない場合はスキップ
         }
         
         matchedCount++;
@@ -3245,6 +3264,7 @@ async function searchIVFree(query) {
       // デバッグ: 最初の10件のタイトルを表示（マッチしなかったものも含む）
       if (foundCount > 0 && foundCount !== matchedCount) {
         console.log(`🔍 IVFree デバッグ: マッチしなかったタイトルのサンプル（検索クエリ: "${query}"）:`);
+        console.log(`🔍 IVFree デバッグ: 検索クエリ（小文字）: "${queryLower}"`);
         let sampleCount = 0;
         for (const selector of selectors) {
           $(selector).each((index, elem) => {
@@ -3261,8 +3281,15 @@ async function searchIVFree(query) {
               const queryInTitle = titleLower.includes(queryLower);
               const idMatch = titleText.match(/\[([A-Z]+)-\d+\]/);
               const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
-              if (!queryInId && !queryInTitle) {
-                console.log(`  - ${titleText.substring(0, 60)}... (マッチしなかった理由: 検索語が含まれていない)`);
+              
+              // 文字単位のチェック
+              const queryChars = queryLower.split('').filter(c => c.trim().length > 0 && c !== ' ');
+              const allCharsInTitle = queryChars.length > 0 && queryChars.every(char => titleLower.includes(char));
+              const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
+              const halfCharsMatch = queryChars.length >= 2 && matchingChars >= Math.ceil(queryChars.length / 2);
+              
+              if (!queryInId && !queryInTitle && !allCharsInTitle && !halfCharsMatch) {
+                console.log(`  - ${titleText.substring(0, 60)}... (マッチしなかった理由: 検索語が含まれていない, タイトル（小文字）: "${titleLower.substring(0, 40)}...")`);
                 sampleCount++;
               }
             }
