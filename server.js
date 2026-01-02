@@ -1342,9 +1342,9 @@ async function searchJPdmv(query) {
           console.log(`ℹ️ JPdmv: このURLでは結果が見つかりませんでした（URL: ${url}）`);
         }
       } catch (urlError) {
-        console.warn(`⚠️ JPdmv URL試行エラー (${url}):`, urlError.message);
-        if (urlError.response) {
-          console.warn(`⚠️ JPdmv HTTPエラー: ${urlError.response.status} ${urlError.response.statusText}`);
+        // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
+        if (triedUrls === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
+          console.log(`ℹ️ JPdmv: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
         }
         continue;
       }
@@ -2880,7 +2880,11 @@ async function searchJavmix(query) {
         // 結果が見つかったらループを抜ける
         if (videos.length > 0) break;
       } catch (urlError) {
-        console.warn(`⚠️ Javmix.TV URL試行エラー (${url}):`, urlError.message);
+        // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
+        const urlIndex = urls.indexOf(url) + 1;
+        if (urlIndex === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
+          console.log(`ℹ️ Javmix.TV: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
+        }
         continue;
       }
     }
@@ -3002,7 +3006,11 @@ async function searchPPP(query) {
         // 結果が見つかったらループを抜ける
         if (videos.length > 0) break;
       } catch (urlError) {
-        console.warn(`⚠️ PPP.Porn URL試行エラー (${url}):`, urlError.message);
+        // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
+        const urlIndex = urls.indexOf(url) + 1;
+        if (urlIndex === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
+          console.log(`ℹ️ PPP.Porn: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
+        }
         continue;
       }
     }
@@ -4212,7 +4220,11 @@ async function searchMat6tube(query) {
         // 結果が見つかったらループを抜ける
         if (videos.length > 0) break;
       } catch (urlError) {
-        console.warn(`⚠️ Mat6tube URL試行エラー (${url}):`, urlError.message);
+        // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
+        const urlIndex = urls.indexOf(url) + 1;
+        if (urlIndex === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
+          console.log(`ℹ️ Mat6tube: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
+        }
         continue;
       }
     }
