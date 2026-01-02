@@ -1117,6 +1117,11 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     console.log('📺 IVFree外部動画URLを直接表示:', normalizedUrl);
     // iframe.srcは既に設定されているので、そのまま使用
   } else if (source === 'ivfree' && normalizedUrl.includes('ivfree.asia') && !normalizedUrl.includes('/api/ivfree-proxy')) {
+    // まずプロキシ経由で元のURLを表示（エラーが発生しても表示されるように）
+    iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
+    console.log('📺 IVFree動画をプロキシ経由で表示開始:', normalizedUrl);
+    
+    // バックグラウンドで動画URLを取得（成功したら更新）
     let ivfreeStatusText = 'IVFree動画URL取得中...';
     const ivfreeUpdateDebugInfo = () => {
       if (container.querySelector('.debug-info')) {
@@ -1138,33 +1143,36 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       .then(data => {
         ivfreeStatusText = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
         ivfreeUpdateDebugInfo();
-        if (data.embedUrl && data.embedUrl !== normalizedUrl) {
-          // 取得した動画URLを使用（プロキシ経由）
+        if (data.embedUrl && data.embedUrl !== normalizedUrl && !data.embedUrl.includes('ivfree.asia')) {
+          // 外部動画サイトのURLが取得できた場合は、直接表示
           ivfreeStatusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
           ivfreeUpdateDebugInfo();
-          // プロキシ経由で表示
+          iframe.src = data.embedUrl;
+          setTimeout(ivfreeUpdateDebugInfo, 500);
+        } else if (data.embedUrl && data.embedUrl !== normalizedUrl) {
+          // IVFree内部のURLが取得できた場合は、プロキシ経由で表示
+          ivfreeStatusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
+          ivfreeUpdateDebugInfo();
           iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
           setTimeout(ivfreeUpdateDebugInfo, 500);
         } else {
+          // 元のURLを使用（既に設定済み）
           ivfreeStatusText = '元のURLを使用（プロキシ経由）';
           ivfreeUpdateDebugInfo();
-          // プロキシ経由で表示
-          iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
         }
       })
       .catch(error => {
-        // エラーが発生してもプロキシ経由で元のURLを使用
-        console.error('❌ IVFree動画URL取得エラー:', error);
-        ivfreeStatusText = `エラー: ${error.message}（プロキシ経由で表示）`;
+        // エラーが発生しても既にプロキシ経由で表示されているので、そのまま継続
+        console.log('ℹ️ IVFree動画URL取得エラー（既にプロキシ経由で表示中）:', error.message);
+        ivfreeStatusText = 'プロキシ経由で表示中';
         ivfreeUpdateDebugInfo();
-        // プロキシ経由で表示
-        iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
       });
   }
   
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
-  // タイムアウトでエラー検出（Bilibiliとdouga4の場合は15秒、その他は10秒）
-  const timeoutDuration = (source === 'bilibili' || source === 'douga4') ? 15000 : 10000;
+  // タイムアウトでエラー検出（Bilibiliとdouga4の場合は15秒、IVFreeは20秒、その他は10秒）
+  const timeoutDuration = (source === 'bilibili' || source === 'douga4') ? 15000 : 
+                          (source === 'ivfree') ? 20000 : 10000;
   errorTimeout = setTimeout(() => {
     if (hasError) return;
     
