@@ -3858,6 +3858,26 @@ app.get('/api/ivfree-proxy', async (req, res) => {
             if (typeof window.adblock === 'undefined') {
               window.adblock = false;
             }
+            // サンドボックス検出を無効化
+            Object.defineProperty(window, 'frameElement', {
+              get: function() { return null; },
+              configurable: true
+            });
+            // サンドボックス属性の検出を無効化
+            if (typeof document.createElement === 'function') {
+              const originalCreateElement = document.createElement;
+              document.createElement = function(tagName) {
+                const element = originalCreateElement.call(document, tagName);
+                if (tagName.toLowerCase() === 'iframe') {
+                  Object.defineProperty(element, 'sandbox', {
+                    get: function() { return null; },
+                    set: function() {},
+                    configurable: true
+                  });
+                }
+                return element;
+              };
+            }
             // 広告ブロッカー検出の一般的な関数を無効化
             const originalQuerySelector = document.querySelector;
             document.querySelector = function(selector) {
@@ -3866,6 +3886,25 @@ app.get('/api/ivfree-proxy', async (req, res) => {
               }
               return originalQuerySelector.call(document, selector);
             };
+            // サンドボックス検出メッセージを除去
+            const observer = new MutationObserver(function(mutations) {
+              mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                  if (node.nodeType === 1) {
+                    const text = node.textContent || node.innerText || '';
+                    if (text.includes('Streaming Blocked') || 
+                        text.includes('sandboxed environment') ||
+                        text.includes('AdBlock is enabled')) {
+                      node.remove();
+                    }
+                  }
+                });
+              });
+            });
+            observer.observe(document.body, {
+              childList: true,
+              subtree: true
+            });
           })();
         </script>
       `);
@@ -3881,7 +3920,12 @@ app.get('/api/ivfree-proxy', async (req, res) => {
           text.includes('disable AdGuard') ||
           text.includes('AdBlock') ||
           text.includes('UBlock') ||
-          text.includes('AdGuard')
+          text.includes('AdGuard') ||
+          text.includes('Streaming Blocked') ||
+          text.includes('sandboxed environment') ||
+          text.includes('sandboxed') ||
+          text.includes('AdBlock is enabled') ||
+          text.includes('page is running in a sandboxed')
         )) {
           $elem.remove();
         }

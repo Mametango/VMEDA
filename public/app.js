@@ -919,12 +919,14 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // IVFreeの場合は、sandbox属性を追加してポップアップを制限（ただし動画再生に必要な権限は許可）
   // ただし、外部動画サイトの場合はsandbox属性を設定しない（動画が再生できなくなる可能性があるため）
+  // プロキシ経由で表示される外部動画サイトもサンドボックス検出を回避する必要があるため、sandbox属性を設定しない
   const isIVFreeExternalVideoForSandbox = source === 'ivfree' && (
     normalizedUrl.includes('vidnest.io') || 
     normalizedUrl.includes('cdn.loadvid.com') || 
     normalizedUrl.includes('loadvid.com') ||
     normalizedUrl.includes('luluvid.com') ||
-    normalizedUrl.includes('embed')
+    normalizedUrl.includes('embed') ||
+    normalizedUrl.includes('/api/ivfree-proxy')
   );
   
   if (source === 'ivfree' && !isIVFreeExternalVideoForSandbox) {
@@ -933,6 +935,10 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     iframe.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation');
     // ポップアップを完全にブロックするため、allow-popupsは含めない
     // allow-same-originは含めない（セキュリティ警告を避けるため）
+  } else if (source === 'ivfree' && isIVFreeExternalVideoForSandbox) {
+    // 外部動画サイトの場合は、sandbox属性を設定しない（サンドボックス検出を回避）
+    // プロキシ経由で表示される外部動画サイトもサンドボックス検出を回避する必要がある
+    iframe.removeAttribute('sandbox');
   }
   
   // iframeのsrcを設定（douga4の場合は後で更新される可能性がある）
