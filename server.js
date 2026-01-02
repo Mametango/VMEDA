@@ -3090,8 +3090,8 @@ async function searchIVFree(query) {
           }
         }
         
-        // タイトルにIDパターン [XXX-XXX] が含まれているか確認
-        if (!titleText || !titleText.match(/\[[A-Z]+-\d+\]/)) {
+        // タイトルが空の場合はスキップ
+        if (!titleText || titleText.trim().length < 3) {
           return;
         }
         
@@ -3104,8 +3104,19 @@ async function searchIVFree(query) {
         const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
         const queryInTitle = titleLower.includes(queryLower);
         
-        if (!queryInId && !queryInTitle) {
-          return; // 検索語が含まれていない場合はスキップ
+        // IDパターンがある場合は、IDパターンにマッチするかタイトルにマッチするか
+        // IDパターンがない場合は、タイトルにマッチするか
+        const hasIdPattern = titleText.match(/\[[A-Z]+-\d+\]/);
+        if (hasIdPattern) {
+          // IDパターンがある場合
+          if (!queryInId && !queryInTitle) {
+            return; // 検索語が含まれていない場合はスキップ
+          }
+        } else {
+          // IDパターンがない場合でも、タイトルに検索語が含まれていれば表示
+          if (!queryInTitle) {
+            return; // 検索語が含まれていない場合はスキップ
+          }
         }
         
         matchedCount++;
@@ -3222,6 +3233,36 @@ async function searchIVFree(query) {
       });
     } else {
       console.log(`⚠️ IVFree: 動画が見つかりませんでした（検索クエリ: "${query}"）`);
+      console.log(`🔍 IVFree デバッグ: 見つかった要素数: ${foundCount}件、マッチした要素数: ${matchedCount}件`);
+      
+      // デバッグ: 最初の10件のタイトルを表示（マッチしなかったものも含む）
+      if (foundCount > 0 && foundCount !== matchedCount) {
+        console.log(`🔍 IVFree デバッグ: マッチしなかったタイトルのサンプル（検索クエリ: "${query}"）:`);
+        let sampleCount = 0;
+        for (const selector of selectors) {
+          $(selector).each((index, elem) => {
+            if (sampleCount >= 10) return false;
+            const $item = $(elem);
+            let titleText = '';
+            if ($item.is('a')) {
+              titleText = $item.text().trim() || $item.attr('title') || '';
+            } else if ($item.is('h2') || $item.is('h3')) {
+              titleText = $item.text().trim();
+            }
+            if (titleText && titleText.length > 3) {
+              const titleLower = titleText.toLowerCase();
+              const queryInTitle = titleLower.includes(queryLower);
+              const idMatch = titleText.match(/\[([A-Z]+)-\d+\]/);
+              const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
+              if (!queryInId && !queryInTitle) {
+                console.log(`  - ${titleText.substring(0, 60)}... (マッチしなかった理由: 検索語が含まれていない)`);
+                sampleCount++;
+              }
+            }
+          });
+          if (sampleCount >= 10) return false;
+        }
+      }
     }
     
     return videos;
