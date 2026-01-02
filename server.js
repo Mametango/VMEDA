@@ -3095,6 +3095,10 @@ async function searchIVFree(query) {
           return;
         }
         
+        // タイトルにIDパターン [XXX-XXX] が含まれているか確認
+        // 以前は必須でしたが、より柔軟にするため、IDパターンがない場合も許可
+        const hasIdPattern = titleText.match(/\[[A-Z]+-\d+\]/);
+        
         foundCount++;
         
         // 検索クエリとタイトルの関連性をチェック
@@ -3106,14 +3110,17 @@ async function searchIVFree(query) {
         
         // IDパターンがある場合は、IDパターンにマッチするかタイトルにマッチするか
         // IDパターンがない場合は、タイトルにマッチするか
-        const hasIdPattern = titleText.match(/\[[A-Z]+-\d+\]/);
         if (hasIdPattern) {
-          // IDパターンがある場合
+          // IDパターンがある場合（以前の動作を維持）
           if (!queryInId && !queryInTitle) {
             return; // 検索語が含まれていない場合はスキップ
           }
         } else {
           // IDパターンがない場合でも、タイトルに検索語が含まれていれば表示
+          // ただし、タイトルが長い場合のみ（誤検出を防ぐ）
+          if (titleText.trim().length < 10) {
+            return; // タイトルが短すぎる場合はスキップ
+          }
           if (!queryInTitle) {
             return; // 検索語が含まれていない場合はスキップ
           }
