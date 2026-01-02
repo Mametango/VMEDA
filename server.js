@@ -3926,6 +3926,18 @@ app.get('/api/ivfree-proxy', async (req, res) => {
         $('head').prepend(`<base href="${baseUrl.protocol}//${baseUrl.host}${baseUrl.pathname}">`);
       }
       
+      // 外部動画サイト用のCSPを設定（緩和版）
+      // 外部動画サイトのドメインを許可し、必要なリソースを読み込めるようにする
+      const externalVideoHost = baseUrl.host;
+      const externalVideoProtocol = baseUrl.protocol;
+      // CSPを緩和して外部動画サイトのリソースを許可
+      const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; media-src * blob:; frame-src *; object-src 'none'; base-uri *; form-action *; frame-ancestors 'self';`;
+      
+      // 既存のCSPを削除
+      $('head meta[http-equiv="Content-Security-Policy"]').remove();
+      // 新しいCSPを追加
+      $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${cspContent}">`);
+      
       let html = $.html();
       
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -4032,8 +4044,9 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     }
     
     // Content Security Policyを追加してポップアップを制限（ただし、動画再生に必要なリソースは許可）
+    // base-uriも許可（baseタグを使用するため）
     if ($('head meta[http-equiv="Content-Security-Policy"]').length === 0) {
-      $('head').prepend('<meta http-equiv="Content-Security-Policy" content="default-src \'self\' http://ivfree.asia https://ivfree.asia; script-src \'self\' http://ivfree.asia https://ivfree.asia \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' http://ivfree.asia https://ivfree.asia data:; media-src \'self\' http://ivfree.asia https://ivfree.asia *; frame-src \'self\' http://ivfree.asia https://ivfree.asia *; object-src \'none\'; base-uri \'self\'; form-action \'self\'; frame-ancestors \'self\'; upgrade-insecure-requests;">');
+      $('head').prepend('<meta http-equiv="Content-Security-Policy" content="default-src \'self\' http://ivfree.asia https://ivfree.asia; script-src \'self\' http://ivfree.asia https://ivfree.asia \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' http://ivfree.asia https://ivfree.asia data:; media-src \'self\' http://ivfree.asia https://ivfree.asia *; frame-src \'self\' http://ivfree.asia https://ivfree.asia *; object-src \'none\'; base-uri \'self\' http://ivfree.asia https://ivfree.asia; form-action \'self\'; frame-ancestors \'self\'; upgrade-insecure-requests;">');
     }
     
     // window.openを無効化するスクリプトを追加
