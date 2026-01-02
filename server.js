@@ -3775,6 +3775,8 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     const isIVFreeUrl = videoUrl.includes('ivfree.asia');
     const isExternalVideoUrl = videoUrl.includes('cdn.loadvid.com') || 
                                 videoUrl.includes('loadvid.com') ||
+                                videoUrl.includes('vidnest.io') ||
+                                videoUrl.includes('embed') ||
                                 videoUrl.includes('video') ||
                                 videoUrl.includes('player');
     

@@ -814,7 +814,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
   
   // IVFreeの埋め込みURLを完全なURLに変換（iPhone Safari対応）
-  if (source === 'ivfree' && normalizedUrl.includes('ivfree.asia')) {
+  if (source === 'ivfree') {
     // 既にhttps://で始まっている場合はそのまま、//で始まっている場合はhttps:を追加
     if (normalizedUrl.startsWith('//')) {
       normalizedUrl = 'https:' + normalizedUrl;
@@ -822,12 +822,24 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       normalizedUrl = 'http://' + normalizedUrl;
     }
     
-    // IVFreeの場合は、まず動画URLを取得してからプロキシ経由で表示
-    // ポップアップ広告を抑制するため、プロキシエンドポイントを使用
-    // ただし、既にプロキシ経由の場合はそのまま使用
-    if (!normalizedUrl.includes('/api/ivfree-proxy')) {
-      // 動画URL取得処理は後で実行される（ivfree-video API呼び出し時）
-      // ここでは元のURLを保持
+    // 外部動画サイトのURL（vidnest.io、loadvid.comなど）の場合は、直接iframeで表示
+    const isExternalVideoUrl = normalizedUrl.includes('vidnest.io') || 
+                                normalizedUrl.includes('cdn.loadvid.com') || 
+                                normalizedUrl.includes('loadvid.com') ||
+                                normalizedUrl.includes('embed');
+    
+    if (isExternalVideoUrl) {
+      // 外部動画サイトの場合は、直接iframeで表示（プロキシ不要）
+      // プロキシ経由の処理をスキップ
+      console.log('📺 IVFree外部動画URLを直接表示:', normalizedUrl);
+    } else if (normalizedUrl.includes('ivfree.asia')) {
+      // IVFreeの動画ページの場合は、まず動画URLを取得してからプロキシ経由で表示
+      // ポップアップ広告を抑制するため、プロキシエンドポイントを使用
+      // ただし、既にプロキシ経由の場合はそのまま使用
+      if (!normalizedUrl.includes('/api/ivfree-proxy')) {
+        // 動画URL取得処理は後で実行される（ivfree-video API呼び出し時）
+        // ここでは元のURLを保持
+      }
     }
   }
   
@@ -854,7 +866,14 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // IVFreeの場合は、sandbox属性を追加してポップアップを制限（ただし動画再生に必要な権限は許可）
   // ただし、外部動画サイトの場合はsandbox属性を設定しない（動画が再生できなくなる可能性があるため）
-  if (source === 'ivfree' && !normalizedUrl.includes('cdn.loadvid.com') && !normalizedUrl.includes('loadvid.com')) {
+  const isIVFreeExternalVideoForSandbox = source === 'ivfree' && (
+    normalizedUrl.includes('vidnest.io') || 
+    normalizedUrl.includes('cdn.loadvid.com') || 
+    normalizedUrl.includes('loadvid.com') ||
+    normalizedUrl.includes('embed')
+  );
+  
+  if (source === 'ivfree' && !isIVFreeExternalVideoForSandbox) {
     // sandbox属性でポップアップを制限（ただし、動画再生に必要な権限は許可）
     // allow-same-originとallow-scriptsの両方を含めるとセキュリティ警告が出るが、動画再生に必要
     iframe.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation');
@@ -1078,8 +1097,20 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
   
   // IVFreeの動画URLを取得（douga4と同様の処理）
-  // ただし、プロキシ経由で表示する場合は、動画URL取得は不要
-  if (source === 'ivfree' && normalizedUrl.includes('ivfree.asia') && !normalizedUrl.includes('/api/ivfree-proxy')) {
+  // ただし、外部動画サイトのURLの場合は、直接iframeで表示するため処理不要
+  // プロキシ経由で表示する場合は、動画URL取得は不要
+  const isIVFreeExternalVideo = source === 'ivfree' && (
+    normalizedUrl.includes('vidnest.io') || 
+    normalizedUrl.includes('cdn.loadvid.com') || 
+    normalizedUrl.includes('loadvid.com') ||
+    normalizedUrl.includes('embed')
+  );
+  
+  if (isIVFreeExternalVideo) {
+    // 外部動画サイトの場合は、直接iframeで表示（プロキシ不要）
+    console.log('📺 IVFree外部動画URLを直接表示:', normalizedUrl);
+    // iframe.srcは既に設定されているので、そのまま使用
+  } else if (source === 'ivfree' && normalizedUrl.includes('ivfree.asia') && !normalizedUrl.includes('/api/ivfree-proxy')) {
     let ivfreeStatusText = 'IVFree動画URL取得中...';
     const ivfreeUpdateDebugInfo = () => {
       if (container.querySelector('.debug-info')) {
