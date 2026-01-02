@@ -1103,8 +1103,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
   
   // IVFreeの動画URLを取得（douga4と同様の処理）
-  // ただし、外部動画サイトのURLの場合は、直接iframeで表示するため処理不要
-  // プロキシ経由で表示する場合は、動画URL取得は不要
+  // 外部動画サイトのURLもプロキシ経由で表示（広告ブロッカー検出を回避）
   const isIVFreeExternalVideo = source === 'ivfree' && (
     normalizedUrl.includes('vidnest.io') || 
     normalizedUrl.includes('cdn.loadvid.com') || 
@@ -1112,12 +1111,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     normalizedUrl.includes('embed')
   );
   
-  if (isIVFreeExternalVideo) {
-    // 外部動画サイトの場合は、直接iframeで表示（プロキシ不要）
-    console.log('📺 IVFree外部動画URLを直接表示:', normalizedUrl);
-    // iframe.srcは既に設定されているので、そのまま使用
-  } else if (source === 'ivfree' && normalizedUrl.includes('ivfree.asia') && !normalizedUrl.includes('/api/ivfree-proxy')) {
+  if (source === 'ivfree' && !normalizedUrl.includes('/api/ivfree-proxy')) {
     // まずプロキシ経由で元のURLを表示（エラーが発生しても表示されるように）
+    // 外部動画サイトのURLもプロキシ経由で表示（広告ブロッカー検出を回避）
     iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
     console.log('📺 IVFree動画をプロキシ経由で表示開始:', normalizedUrl);
     
@@ -1143,14 +1139,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       .then(data => {
         ivfreeStatusText = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
         ivfreeUpdateDebugInfo();
-        if (data.embedUrl && data.embedUrl !== normalizedUrl && !data.embedUrl.includes('ivfree.asia')) {
-          // 外部動画サイトのURLが取得できた場合は、直接表示
-          ivfreeStatusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
-          ivfreeUpdateDebugInfo();
-          iframe.src = data.embedUrl;
-          setTimeout(ivfreeUpdateDebugInfo, 500);
-        } else if (data.embedUrl && data.embedUrl !== normalizedUrl) {
-          // IVFree内部のURLが取得できた場合は、プロキシ経由で表示
+        if (data.embedUrl && data.embedUrl !== normalizedUrl) {
+          // 取得した動画URLもプロキシ経由で表示（広告ブロッカー検出を回避）
           ivfreeStatusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
           ivfreeUpdateDebugInfo();
           iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;

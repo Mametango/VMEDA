@@ -3818,29 +3818,122 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       return res.status(400).json({ error: 'IVFreeまたは動画サイトのURLが必要です' });
     }
     
-    // 外部動画サイトのURLの場合は、直接iframeで表示できるようにする
+    // 外部動画サイトのURLもプロキシ経由で処理（広告ブロッカー検出を回避）
     if (isExternalVideoUrl && !isIVFreeUrl) {
-      // 外部動画サイトの場合は、そのまま返す（プロキシ処理は不要）
+      // 外部動画サイトの場合は、プロキシ経由で取得して広告ブロッカー検出を回避
+      console.log('📺 外部動画サイトをプロキシ経由で取得:', videoUrl);
+      
+      const response = await axios.get(videoUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'ja,en-US;q=0.9',
+          'Referer': 'http://ivfree.asia/',
+          'Accept-Encoding': 'gzip, deflate, br'
+        },
+        timeout: 30000,
+        maxRedirects: 5
+      });
+      
+      const $ = cheerio.load(response.data);
+      const baseUrl = new URL(videoUrl);
+      
+      // 広告ブロッカー検出を回避するスクリプトを追加
+      $('head').prepend(`
+        <script>
+          // 広告ブロッカー検出を回避
+          (function() {
+            // AdBlock検出を無効化
+            if (typeof window.getComputedStyle === 'undefined') {
+              window.getComputedStyle = function() { return {}; };
+            }
+            // uBlock検出を無効化
+            if (typeof window.adsbygoogle === 'undefined') {
+              window.adsbygoogle = [];
+            }
+            // AdGuard検出を無効化
+            if (typeof window.adblock === 'undefined') {
+              window.adblock = false;
+            }
+            // 広告ブロッカー検出の一般的な関数を無効化
+            const originalQuerySelector = document.querySelector;
+            document.querySelector = function(selector) {
+              if (selector && (selector.includes('adsbygoogle') || selector.includes('advertisement'))) {
+                return null;
+              }
+              return originalQuerySelector.call(document, selector);
+            };
+          })();
+        </script>
+      `);
+      
+      // 広告ブロッカー検出メッセージを除去
+      $('body').find('*').each((index, elem) => {
+        const $elem = $(elem);
+        const text = $elem.text();
+        if (text && (
+          text.includes('Please change your browser') ||
+          text.includes('disable AdBlock') ||
+          text.includes('disable UBlock') ||
+          text.includes('disable AdGuard') ||
+          text.includes('AdBlock') ||
+          text.includes('UBlock') ||
+          text.includes('AdGuard')
+        )) {
+          $elem.remove();
+        }
+      });
+      
+      // 相対URLを絶対URLに変換
+      const toAbsoluteUrl = (url) => {
+        if (!url) return url;
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        if (url.startsWith('//')) return `https:${url}`;
+        if (url.startsWith('/')) return `${baseUrl.protocol}//${baseUrl.host}${url}`;
+        return `${baseUrl.protocol}//${baseUrl.host}/${url}`;
+      };
+      
+      $('a[href]').each((index, elem) => {
+        const href = $(elem).attr('href');
+        if (href && !href.startsWith('http') && !href.startsWith('//') && !href.startsWith('#')) {
+          $(elem).attr('href', toAbsoluteUrl(href));
+        }
+      });
+      
+      $('img[src]').each((index, elem) => {
+        const src = $(elem).attr('src');
+        if (src && !src.startsWith('http') && !src.startsWith('//') && !src.startsWith('data:')) {
+          $(elem).attr('src', toAbsoluteUrl(src));
+        }
+      });
+      
+      $('link[href]').each((index, elem) => {
+        const href = $(elem).attr('href');
+        if (href && !href.startsWith('http') && !href.startsWith('//')) {
+          $(elem).attr('href', toAbsoluteUrl(href));
+        }
+      });
+      
+      $('script[src]').each((index, elem) => {
+        const src = $(elem).attr('src');
+        if (src && !src.startsWith('http') && !src.startsWith('//')) {
+          $(elem).attr('src', toAbsoluteUrl(src));
+        }
+      });
+      
+      // baseタグを追加
+      if ($('head base').length === 0) {
+        $('head').prepend(`<base href="${baseUrl.protocol}//${baseUrl.host}${baseUrl.pathname}">`);
+      }
+      
+      let html = $.html();
+      
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('X-Frame-Options', 'ALLOWALL');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      // 外部動画サイトをiframeで表示するためのHTMLを返す
-      res.send(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>動画プレイヤー</title>
-  <style>
-    body { margin: 0; padding: 0; background: #000; }
-    iframe { width: 100%; height: 100vh; border: none; }
-  </style>
-</head>
-<body>
-  <iframe src="${videoUrl}" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline"></iframe>
-</body>
-</html>`);
-      console.log('✅ IVFree外部動画URLをiframeで表示:', videoUrl);
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      
+      console.log('✅ 外部動画サイトをプロキシ経由で返送');
+      res.send(html);
       return;
     }
     
