@@ -558,12 +558,14 @@ async function loadRecentSearches() {
   }
 
   try {
-    // 検索履歴を最優先で取得（高速化のためキャッシュを活用）
+    // 検索履歴を最優先で取得（最新のデータを取得するためキャッシュを無効化）
     const response = await fetch('/api/recent-searches', {
-      cache: 'default', // キャッシュを活用して高速化
+      cache: 'no-store', // キャッシュを無効化して最新のデータを取得
       priority: 'high', // 優先度を高く設定
       headers: {
-        'Cache-Control': 'max-age=10' // 10秒間キャッシュ
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     });
     if (!response.ok) {
@@ -664,6 +666,24 @@ if (recentSearchesDiv && recentSearchesList) {
 // 注意: loadRecentSearches()は検索履歴を表示するだけで、検索は実行しない
 // 最優先で検索履歴を取得（即座に実行）
 loadRecentSearches();
+
+// DOMContentLoadedイベントでも検索履歴を取得（確実に実行）
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('📋 DOMContentLoaded: 検索履歴を取得');
+    loadRecentSearches();
+  });
+} else {
+  // 既にDOMContentLoadedが完了している場合は即座に実行
+  console.log('📋 DOMContentLoaded完了済み: 検索履歴を取得');
+  loadRecentSearches();
+}
+
+// window.onloadイベントでも検索履歴を取得（確実に実行）
+window.addEventListener('load', () => {
+  console.log('📋 window.onload: 検索履歴を取得');
+  loadRecentSearches();
+});
 
 // ページ読み込み時の自動検索は完全に無効化
 // URLパラメータから検索キーワードを取得して検索入力欄に設定するだけ（検索は実行しない）
