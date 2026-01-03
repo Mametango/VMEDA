@@ -3852,11 +3852,94 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       const $ = cheerio.load(response.data);
       const baseUrl = new URL(videoUrl);
       
+      // ポップアップ広告を生成するスクリプトを除去
+      $('script').each((index, elem) => {
+        const scriptContent = $(elem).html() || '';
+        const scriptSrc = $(elem).attr('src') || '';
+        if (
+          (scriptContent.includes('window.open') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
+          scriptContent.includes('popup') ||
+          scriptContent.includes('popunder') ||
+          scriptContent.includes('pop-up') ||
+          scriptContent.includes('pop_up') ||
+          scriptSrc.includes('ad') ||
+          scriptSrc.includes('popup') ||
+          scriptSrc.includes('popunder')
+        ) {
+          $(elem).remove();
+        }
+      });
+      
+      // ポップアップ広告を生成するaタグやボタンを除去
+      $('a[onclick], button[onclick], div[onclick]').each((index, elem) => {
+        const onclick = $(elem).attr('onclick') || '';
+        if (onclick.includes('window.open') || onclick.includes('popup') || onclick.includes('popunder')) {
+          $(elem).remove();
+        }
+      });
+      
+      // target="_blank"のaタグで広告関連のURLを除去
+      $('a[target="_blank"]').each((index, elem) => {
+        const href = $(elem).attr('href') || '';
+        if (href.includes('ad') || href.includes('popup') || href.includes('popunder')) {
+          $(elem).remove();
+        }
+      });
+      
       // 広告ブロッカー検出を回避するスクリプトを追加
+      // ポップアップ広告を無効化するスクリプトも追加
       $('head').prepend(`
         <script>
           // 広告ブロッカー検出を回避
+          // ポップアップ広告を無効化
           (function() {
+            // window.openを完全に無効化（より早期に実行）
+            const originalOpen = window.open;
+            Object.defineProperty(window, 'open', {
+              value: function() {
+                console.log('🚫 ポップアップがブロックされました');
+                return null;
+              },
+              writable: false,
+              configurable: false
+            });
+            
+            // showModalDialogも無効化
+            if (window.showModalDialog) {
+              window.showModalDialog = function() {
+                console.log('🚫 モーダルダイアログがブロックされました');
+                return null;
+              };
+            }
+            
+            // ポップアップ広告を生成するイベントリスナーを無効化
+            const originalAddEventListener = EventTarget.prototype.addEventListener;
+            EventTarget.prototype.addEventListener = function(type, listener, options) {
+              if (type === 'click' && listener && listener.toString().includes('window.open')) {
+                console.log('🚫 ポップアップ広告イベントリスナーがブロックされました');
+                return;
+              }
+              return originalAddEventListener.call(this, type, listener, options);
+            };
+            
+            // ポップアップ広告を生成するsetTimeout/setIntervalを監視
+            const originalSetTimeout = window.setTimeout;
+            window.setTimeout = function(func, delay) {
+              if (func && func.toString().includes('window.open')) {
+                console.log('🚫 ポップアップ広告のsetTimeoutがブロックされました');
+                return 0;
+              }
+              return originalSetTimeout.call(window, func, delay);
+            };
+            
+            const originalSetInterval = window.setInterval;
+            window.setInterval = function(func, delay) {
+              if (func && func.toString().includes('window.open')) {
+                console.log('🚫 ポップアップ広告のsetIntervalがブロックされました');
+                return 0;
+              }
+              return originalSetInterval.call(window, func, delay);
+            };
             // AdBlock検出を無効化
             if (typeof window.getComputedStyle === 'undefined') {
               window.getComputedStyle = function() { return {}; };
@@ -4109,15 +4192,23 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     // ポップアップ広告を生成するJavaScriptを除去（ただし、動画プレイヤーに必要なスクリプトは保持）
     $('script').each((index, elem) => {
       const scriptContent = $(elem).html() || '';
-      // ポップアップ広告関連のスクリプトのみ除去
+      const scriptSrc = $(elem).attr('src') || '';
+      // ポップアップ広告関連のスクリプトを除去（より厳格に）
       if (
         (scriptContent.includes('window.open') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
         (scriptContent.includes('popup') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
         (scriptContent.includes('popunder')) ||
+        (scriptContent.includes('pop-up')) ||
+        (scriptContent.includes('pop_up')) ||
         (scriptContent.includes('adsbygoogle')) ||
         (scriptContent.includes('googlesyndication')) ||
         (scriptContent.includes('doubleclick')) ||
-        (scriptContent.includes('advertising') && !scriptContent.includes('video'))
+        (scriptContent.includes('advertising') && !scriptContent.includes('video')) ||
+        (scriptContent.includes('advertisement')) ||
+        (scriptContent.includes('advert')) ||
+        scriptSrc.includes('ad') ||
+        scriptSrc.includes('popup') ||
+        scriptSrc.includes('popunder')
       ) {
         $(elem).remove();
       }
@@ -4126,8 +4217,28 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     // ポップアップ広告を生成するaタグのonclick属性を除去
     $('a[onclick]').each((index, elem) => {
       const onclick = $(elem).attr('onclick') || '';
-      if (onclick.includes('window.open') || onclick.includes('popup')) {
+      if (onclick.includes('window.open') || onclick.includes('popup') || onclick.includes('popunder')) {
         $(elem).removeAttr('onclick');
+        // ポップアップ広告を生成するaタグ自体を削除
+        if ($(elem).attr('href') && ($(elem).attr('href').includes('ad') || $(elem).attr('href').includes('popup'))) {
+          $(elem).remove();
+        }
+      }
+    });
+    
+    // ポップアップ広告を生成するボタンやdivを除去
+    $('button[onclick], div[onclick], span[onclick]').each((index, elem) => {
+      const onclick = $(elem).attr('onclick') || '';
+      if (onclick.includes('window.open') || onclick.includes('popup') || onclick.includes('popunder')) {
+        $(elem).remove();
+      }
+    });
+    
+    // target="_blank"のaタグで広告関連のURLを除去
+    $('a[target="_blank"]').each((index, elem) => {
+      const href = $(elem).attr('href') || '';
+      if (href.includes('ad') || href.includes('popup') || href.includes('popunder') || href.includes('advertisement')) {
+        $(elem).remove();
       }
     });
     
@@ -4150,14 +4261,56 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       $('head').prepend('<meta http-equiv="Content-Security-Policy" content="default-src \'self\' http://ivfree.asia https://ivfree.asia; script-src \'self\' http://ivfree.asia https://ivfree.asia \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' http://ivfree.asia https://ivfree.asia data:; media-src \'self\' http://ivfree.asia https://ivfree.asia *; frame-src \'self\' http://ivfree.asia https://ivfree.asia *; object-src \'none\'; base-uri \'self\' http://ivfree.asia https://ivfree.asia; form-action \'self\'; frame-ancestors \'self\'; upgrade-insecure-requests;">');
     }
     
-    // window.openを無効化するスクリプトを追加
-    $('head').append(`
+    // window.openを無効化するスクリプトを追加（より強力に）
+    $('head').prepend(`
       <script>
         (function() {
+          // window.openを完全に無効化（より早期に実行）
           const originalOpen = window.open;
-          window.open = function() {
-            console.log('🚫 ポップアップがブロックされました');
-            return null;
+          Object.defineProperty(window, 'open', {
+            value: function() {
+              console.log('🚫 ポップアップがブロックされました');
+              return null;
+            },
+            writable: false,
+            configurable: false
+          });
+          
+          // showModalDialogも無効化
+          if (window.showModalDialog) {
+            window.showModalDialog = function() {
+              console.log('🚫 モーダルダイアログがブロックされました');
+              return null;
+            };
+          }
+          
+          // ポップアップ広告を生成するイベントリスナーを無効化
+          const originalAddEventListener = EventTarget.prototype.addEventListener;
+          EventTarget.prototype.addEventListener = function(type, listener, options) {
+            if (type === 'click' && listener && listener.toString().includes('window.open')) {
+              console.log('🚫 ポップアップ広告イベントリスナーがブロックされました');
+              return;
+            }
+            return originalAddEventListener.call(this, type, listener, options);
+          };
+          
+          // ポップアップ広告を生成するsetTimeout/setIntervalを監視
+          const originalSetTimeout = window.setTimeout;
+          window.setTimeout = function(func, delay) {
+            if (func && func.toString().includes('window.open')) {
+              console.log('🚫 ポップアップ広告のsetTimeoutがブロックされました');
+              return 0;
+            }
+            return originalSetTimeout.call(window, func, delay);
+          };
+          
+          const originalSetInterval = window.setInterval;
+          window.setInterval = function(func, delay) {
+            if (func && func.toString().includes('window.open')) {
+              console.log('🚫 ポップアップ広告のsetIntervalがブロックされました');
+              return 0;
+            }
+            return originalSetInterval.call(window, func, delay);
           };
         })();
       </script>
