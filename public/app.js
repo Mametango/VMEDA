@@ -960,6 +960,29 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // iframeのsrcを設定（douga4の場合は後で更新される可能性がある）
   iframe.src = normalizedUrl;
+  
+  // 外部動画サイトの場合は、src設定後にもsandbox属性を確実に削除
+  if (source === 'ivfree' && isIVFreeExternalVideoForSandbox) {
+    // src設定後にsandbox属性を削除（複数回試行）
+    setTimeout(() => {
+      iframe.removeAttribute('sandbox');
+      if (iframe.hasAttribute('sandbox')) {
+        iframe.removeAttribute('sandbox');
+      }
+    }, 0);
+    setTimeout(() => {
+      iframe.removeAttribute('sandbox');
+      if (iframe.hasAttribute('sandbox')) {
+        iframe.removeAttribute('sandbox');
+      }
+    }, 100);
+    setTimeout(() => {
+      iframe.removeAttribute('sandbox');
+      if (iframe.hasAttribute('sandbox')) {
+        iframe.removeAttribute('sandbox');
+      }
+    }, 500);
+  }
   iframe.allowFullscreen = true;
   iframe.className = 'video-player';
   iframe.setAttribute('loading', 'lazy');
@@ -1207,21 +1230,57 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     iframe.src = proxyUrl;
     // iframe.srcを設定した後も、サンドボックス属性を確認して削除（複数回試行）
     if (isExternalVideo) {
+      // 即座に削除
+      iframe.removeAttribute('sandbox');
+      // 複数のタイミングで削除を試行
       setTimeout(() => {
+        iframe.removeAttribute('sandbox');
+        if (iframe.hasAttribute('sandbox')) {
+          iframe.removeAttribute('sandbox');
+        }
+      }, 0);
+      setTimeout(() => {
+        iframe.removeAttribute('sandbox');
         if (iframe.hasAttribute('sandbox')) {
           iframe.removeAttribute('sandbox');
         }
       }, 50);
       setTimeout(() => {
+        iframe.removeAttribute('sandbox');
+        if (iframe.hasAttribute('sandbox')) {
+          iframe.removeAttribute('sandbox');
+        }
+      }, 100);
+      setTimeout(() => {
+        iframe.removeAttribute('sandbox');
         if (iframe.hasAttribute('sandbox')) {
           iframe.removeAttribute('sandbox');
         }
       }, 200);
       setTimeout(() => {
+        iframe.removeAttribute('sandbox');
         if (iframe.hasAttribute('sandbox')) {
           iframe.removeAttribute('sandbox');
         }
       }, 500);
+      setTimeout(() => {
+        iframe.removeAttribute('sandbox');
+        if (iframe.hasAttribute('sandbox')) {
+          iframe.removeAttribute('sandbox');
+        }
+      }, 1000);
+      // 定期的に削除を試行（念のため）
+      const sandboxRemover = setInterval(() => {
+        if (iframe.hasAttribute('sandbox')) {
+          iframe.removeAttribute('sandbox');
+        } else {
+          clearInterval(sandboxRemover);
+        }
+      }, 100);
+      // 10秒後に停止
+      setTimeout(() => {
+        clearInterval(sandboxRemover);
+      }, 10000);
     }
     console.log('📺 IVFree動画をプロキシ経由で表示開始:', normalizedUrl);
     
@@ -1259,7 +1318,57 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
                                       data.embedUrl.includes('luluvdoo.com') ||
                                       data.embedUrl.includes('embed');
           if (isExternalEmbedUrl) {
+            // 即座に削除
             iframe.removeAttribute('sandbox');
+            // 複数のタイミングで削除を試行
+            setTimeout(() => {
+              iframe.removeAttribute('sandbox');
+              if (iframe.hasAttribute('sandbox')) {
+                iframe.removeAttribute('sandbox');
+              }
+            }, 0);
+            setTimeout(() => {
+              iframe.removeAttribute('sandbox');
+              if (iframe.hasAttribute('sandbox')) {
+                iframe.removeAttribute('sandbox');
+              }
+            }, 50);
+            setTimeout(() => {
+              iframe.removeAttribute('sandbox');
+              if (iframe.hasAttribute('sandbox')) {
+                iframe.removeAttribute('sandbox');
+              }
+            }, 100);
+            setTimeout(() => {
+              iframe.removeAttribute('sandbox');
+              if (iframe.hasAttribute('sandbox')) {
+                iframe.removeAttribute('sandbox');
+              }
+            }, 200);
+            setTimeout(() => {
+              iframe.removeAttribute('sandbox');
+              if (iframe.hasAttribute('sandbox')) {
+                iframe.removeAttribute('sandbox');
+              }
+            }, 500);
+            setTimeout(() => {
+              iframe.removeAttribute('sandbox');
+              if (iframe.hasAttribute('sandbox')) {
+                iframe.removeAttribute('sandbox');
+              }
+            }, 1000);
+            // 定期的に削除を試行（念のため）
+            const sandboxRemover2 = setInterval(() => {
+              if (iframe.hasAttribute('sandbox')) {
+                iframe.removeAttribute('sandbox');
+              } else {
+                clearInterval(sandboxRemover2);
+              }
+            }, 100);
+            // 10秒後に停止
+            setTimeout(() => {
+              clearInterval(sandboxRemover2);
+            }, 10000);
           }
           iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
           // iframe.srcを設定した後も、サンドボックス属性を確認して削除
