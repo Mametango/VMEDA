@@ -4170,7 +4170,29 @@ app.get('/api/ivfree-proxy', async (req, res) => {
               }
               return originalQuerySelector.call(document, selector);
             };
-            // サンドボックス検出メッセージを除去
+            // grecaptcha関数を無効化
+            if (typeof window.grecaptcha !== 'undefined') {
+              window.grecaptcha = {
+                ready: function(callback) { if (callback) callback(); },
+                execute: function() { return Promise.resolve(''); },
+                render: function() { return ''; },
+                reset: function() {},
+                getResponse: function() { return ''; }
+              };
+            }
+            Object.defineProperty(window, 'grecaptcha', {
+              value: {
+                ready: function(callback) { if (callback) callback(); },
+                execute: function() { return Promise.resolve(''); },
+                render: function() { return ''; },
+                reset: function() {},
+                getResponse: function() { return ''; }
+              },
+              writable: false,
+              configurable: false
+            });
+            
+            // サンドボックス検出メッセージとロボット検証メッセージを除去
             function initObserver() {
               if (document.body) {
                 const observer = new MutationObserver(function(mutations) {
@@ -4182,7 +4204,34 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                             text.includes('sandboxed environment') ||
                             text.includes('AdBlock is enabled') ||
                             text.includes('Sandbox detected') ||
-                            text.includes('document.domain restriction')) {
+                            text.includes('document.domain restriction') ||
+                            text.includes('I\'m not a robot') ||
+                            text.includes('I am not a robot') ||
+                            text.includes('ロボットではありません') ||
+                            text.includes('Verify you are human') ||
+                            text.includes('Verify you\'re human') ||
+                            text.includes('Please verify you are human') ||
+                            text.includes('Please verify you\'re human') ||
+                            text.includes('Human verification') ||
+                            text.includes('Security check') ||
+                            text.includes('Security verification') ||
+                            text.includes('Cloudflare') ||
+                            text.includes('Checking your browser') ||
+                            text.includes('Just a moment') ||
+                            text.includes('Please wait') ||
+                            text.includes('Verifying') ||
+                            text.includes('Verification') ||
+                            text.includes('CAPTCHA') ||
+                            text.includes('reCAPTCHA')) {
+                          node.remove();
+                        }
+                        // ロボット検証の要素も除去
+                        const id = node.id || '';
+                        const className = node.className || '';
+                        if (id.includes('recaptcha') || id.includes('captcha') || 
+                            className.includes('recaptcha') || className.includes('captcha') ||
+                            id.includes('cf-browser-verification') || className.includes('cf-browser-verification') ||
+                            id.includes('challenge-platform') || className.includes('challenge-platform')) {
                           node.remove();
                         }
                       }
@@ -4208,6 +4257,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       `);
       
       // 広告ブロッカー検出メッセージを除去
+      // ロボット検証（CAPTCHA/reCAPTCHA）のメッセージも除去
       $('body').find('*').each((index, elem) => {
         const $elem = $(elem);
         const text = $elem.text();
@@ -4223,7 +4273,25 @@ app.get('/api/ivfree-proxy', async (req, res) => {
           text.includes('sandboxed environment') ||
           text.includes('sandboxed') ||
           text.includes('AdBlock is enabled') ||
-          text.includes('page is running in a sandboxed')
+          text.includes('page is running in a sandboxed') ||
+          text.includes('I\'m not a robot') ||
+          text.includes('I am not a robot') ||
+          text.includes('ロボットではありません') ||
+          text.includes('Verify you are human') ||
+          text.includes('Verify you\'re human') ||
+          text.includes('Please verify you are human') ||
+          text.includes('Please verify you\'re human') ||
+          text.includes('Human verification') ||
+          text.includes('Security check') ||
+          text.includes('Security verification') ||
+          text.includes('Cloudflare') ||
+          text.includes('Checking your browser') ||
+          text.includes('Just a moment') ||
+          text.includes('Please wait') ||
+          text.includes('Verifying') ||
+          text.includes('Verification') ||
+          text.includes('CAPTCHA') ||
+          text.includes('reCAPTCHA')
         )) {
           $elem.remove();
         }
@@ -4545,6 +4613,28 @@ app.get('/api/ivfree-proxy', async (req, res) => {
             };
           }
           
+          // grecaptcha関数を無効化
+          if (typeof window.grecaptcha !== 'undefined') {
+            window.grecaptcha = {
+              ready: function(callback) { if (callback) callback(); },
+              execute: function() { return Promise.resolve(''); },
+              render: function() { return ''; },
+              reset: function() {},
+              getResponse: function() { return ''; }
+            };
+          }
+          Object.defineProperty(window, 'grecaptcha', {
+            value: {
+              ready: function(callback) { if (callback) callback(); },
+              execute: function() { return Promise.resolve(''); },
+              render: function() { return ''; },
+              reset: function() {},
+              getResponse: function() { return ''; }
+            },
+            writable: false,
+            configurable: false
+          });
+          
           // ポップアップ広告を生成するイベントリスナーを無効化
           const originalAddEventListener = EventTarget.prototype.addEventListener;
           EventTarget.prototype.addEventListener = function(type, listener, options) {
@@ -4615,6 +4705,50 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                 });
               } catch(e) {}
             });
+            
+            // ロボット検証（CAPTCHA/reCAPTCHA）の要素を除去
+            const captchaSelectors = [
+              'iframe[src*="recaptcha"]',
+              'iframe[src*="captcha"]',
+              'iframe[src*="google.com/recaptcha"]',
+              'iframe[src*="gstatic.com/recaptcha"]',
+              'div[id*="recaptcha"]',
+              'div[id*="captcha"]',
+              'div[class*="recaptcha"]',
+              'div[class*="captcha"]',
+              'div[data-sitekey]',
+              'div[data-callback]',
+              '[id*="cf-browser-verification"]',
+              '[class*="cf-browser-verification"]',
+              '[id*="challenge-platform"]',
+              '[class*="challenge-platform"]'
+            ];
+            
+            captchaSelectors.forEach(selector => {
+              try {
+                document.querySelectorAll(selector).forEach(elem => {
+                  elem.remove();
+                });
+              } catch(e) {}
+            });
+            
+            // ロボット検証のメッセージを含む要素を除去
+            try {
+              document.querySelectorAll('*').forEach(elem => {
+                const text = elem.textContent || elem.innerText || '';
+                if (text.includes('I\'m not a robot') || text.includes('I am not a robot') ||
+                    text.includes('ロボットではありません') || text.includes('Verify you are human') ||
+                    text.includes('Verify you\'re human') || text.includes('Please verify you are human') ||
+                    text.includes('Please verify you\'re human') || text.includes('Human verification') ||
+                    text.includes('Security check') || text.includes('Security verification') ||
+                    text.includes('Cloudflare') || text.includes('Checking your browser') ||
+                    text.includes('Just a moment') || text.includes('Please wait') ||
+                    text.includes('Verifying') || text.includes('Verification') ||
+                    text.includes('CAPTCHA') || text.includes('reCAPTCHA')) {
+                  elem.remove();
+                }
+              });
+            } catch(e) {}
           }
           
           // ページ読み込み時に実行
