@@ -1208,81 +1208,19 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   );
   
   if (source === 'ivfree' && !normalizedUrl.includes('/api/ivfree-proxy')) {
-    // まずプロキシ経由で元のURLを表示（エラーが発生しても表示されるように）
-    // 外部動画サイトのURLもプロキシ経由で表示（広告ブロッカー検出を回避）
-    // 外部動画サイトの場合は、サンドボックス属性を設定しない（動画が再生できなくなる可能性があるため）
-    const isExternalVideo = isIVFreeExternalVideo;
-    if (isExternalVideo) {
-      // 外部動画サイトの場合は、サンドボックス属性を確実に削除（複数回試行）
+    // 外部動画サイト（luluvid.comなど）の場合は、直接iframeで表示（プロキシを使わない）
+    // プロキシ経由だとHLSストリームがCORSでブロックされるため
+    if (isIVFreeExternalVideo) {
+      // 外部動画サイトの場合は、直接iframeで表示
       iframe.removeAttribute('sandbox');
-      iframe.removeAttribute('sandbox'); // 2回目
-      // サンドボックス属性が設定されていないことを確認
-      if (iframe.hasAttribute('sandbox')) {
-        iframe.removeAttribute('sandbox');
-      }
+      iframe.src = normalizedUrl;
+      console.log('📺 IVFree外部動画URLを直接表示（プロキシなし）:', normalizedUrl);
+    } else {
+      // IVFree内部URLの場合は、プロキシ経由で表示（広告ブロッカー検出を回避）
+      const proxyUrl = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
+      iframe.src = proxyUrl;
+      console.log('📺 IVFree動画をプロキシ経由で表示開始:', normalizedUrl);
     }
-    // プロキシ経由で表示する前に、サンドボックス属性を確実に削除
-    const proxyUrl = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
-    // iframe.srcを設定する前に、サンドボックス属性を削除
-    if (isExternalVideo) {
-      iframe.removeAttribute('sandbox');
-    }
-    iframe.src = proxyUrl;
-    // iframe.srcを設定した後も、サンドボックス属性を確認して削除（複数回試行）
-    if (isExternalVideo) {
-      // 即座に削除
-      iframe.removeAttribute('sandbox');
-      // 複数のタイミングで削除を試行
-      setTimeout(() => {
-        iframe.removeAttribute('sandbox');
-        if (iframe.hasAttribute('sandbox')) {
-          iframe.removeAttribute('sandbox');
-        }
-      }, 0);
-      setTimeout(() => {
-        iframe.removeAttribute('sandbox');
-        if (iframe.hasAttribute('sandbox')) {
-          iframe.removeAttribute('sandbox');
-        }
-      }, 50);
-      setTimeout(() => {
-        iframe.removeAttribute('sandbox');
-        if (iframe.hasAttribute('sandbox')) {
-          iframe.removeAttribute('sandbox');
-        }
-      }, 100);
-      setTimeout(() => {
-        iframe.removeAttribute('sandbox');
-        if (iframe.hasAttribute('sandbox')) {
-          iframe.removeAttribute('sandbox');
-        }
-      }, 200);
-      setTimeout(() => {
-        iframe.removeAttribute('sandbox');
-        if (iframe.hasAttribute('sandbox')) {
-          iframe.removeAttribute('sandbox');
-        }
-      }, 500);
-      setTimeout(() => {
-        iframe.removeAttribute('sandbox');
-        if (iframe.hasAttribute('sandbox')) {
-          iframe.removeAttribute('sandbox');
-        }
-      }, 1000);
-      // 定期的に削除を試行（念のため）
-      const sandboxRemover = setInterval(() => {
-        if (iframe.hasAttribute('sandbox')) {
-          iframe.removeAttribute('sandbox');
-        } else {
-          clearInterval(sandboxRemover);
-        }
-      }, 100);
-      // 10秒後に停止
-      setTimeout(() => {
-        clearInterval(sandboxRemover);
-      }, 10000);
-    }
-    console.log('📺 IVFree動画をプロキシ経由で表示開始:', normalizedUrl);
     
     // バックグラウンドで動画URLを取得（成功したら更新）
     let ivfreeStatusText = 'IVFree動画URL取得中...';
@@ -1307,77 +1245,45 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
         ivfreeStatusText = `URL取得完了: ${data.embedUrl ? '成功' : '失敗'}`;
         ivfreeUpdateDebugInfo();
         if (data.embedUrl && data.embedUrl !== normalizedUrl) {
-          // 取得した動画URLもプロキシ経由で表示（広告ブロッカー検出を回避）
-          ivfreeStatusText = `動画URL更新: ${data.embedUrl.substring(0, 30)}...`;
-          ivfreeUpdateDebugInfo();
-          // 外部動画サイトの場合は、サンドボックス属性を削除
+          // 外部動画サイト（luluvid.comなど）の場合は、直接iframeで表示（プロキシを使わない）
+          // プロキシ経由だとHLSストリームがCORSでブロックされるため
           const isExternalEmbedUrl = data.embedUrl.includes('vidnest.io') || 
                                       data.embedUrl.includes('cdn.loadvid.com') || 
                                       data.embedUrl.includes('loadvid.com') ||
                                       data.embedUrl.includes('luluvid.com') ||
                                       data.embedUrl.includes('luluvdoo.com') ||
                                       data.embedUrl.includes('embed');
+          
           if (isExternalEmbedUrl) {
-            // 即座に削除
+            // 外部動画サイトの場合は、直接iframeで表示
             iframe.removeAttribute('sandbox');
-            // 複数のタイミングで削除を試行
+            iframe.src = data.embedUrl;
+            ivfreeStatusText = `動画URL更新（直接表示）: ${data.embedUrl.substring(0, 30)}...`;
+            ivfreeUpdateDebugInfo();
+            console.log('📺 IVFree外部動画URLを直接表示（プロキシなし）:', data.embedUrl);
+            
+            // 複数のタイミングでsandbox属性を削除（念のため）
             setTimeout(() => {
               iframe.removeAttribute('sandbox');
-              if (iframe.hasAttribute('sandbox')) {
-                iframe.removeAttribute('sandbox');
-              }
             }, 0);
             setTimeout(() => {
               iframe.removeAttribute('sandbox');
-              if (iframe.hasAttribute('sandbox')) {
-                iframe.removeAttribute('sandbox');
-              }
             }, 50);
             setTimeout(() => {
               iframe.removeAttribute('sandbox');
-              if (iframe.hasAttribute('sandbox')) {
-                iframe.removeAttribute('sandbox');
-              }
             }, 100);
             setTimeout(() => {
               iframe.removeAttribute('sandbox');
-              if (iframe.hasAttribute('sandbox')) {
-                iframe.removeAttribute('sandbox');
-              }
             }, 200);
             setTimeout(() => {
               iframe.removeAttribute('sandbox');
-              if (iframe.hasAttribute('sandbox')) {
-                iframe.removeAttribute('sandbox');
-              }
             }, 500);
-            setTimeout(() => {
-              iframe.removeAttribute('sandbox');
-              if (iframe.hasAttribute('sandbox')) {
-                iframe.removeAttribute('sandbox');
-              }
-            }, 1000);
-            // 定期的に削除を試行（念のため）
-            const sandboxRemover2 = setInterval(() => {
-              if (iframe.hasAttribute('sandbox')) {
-                iframe.removeAttribute('sandbox');
-              } else {
-                clearInterval(sandboxRemover2);
-              }
-            }, 100);
-            // 10秒後に停止
-            setTimeout(() => {
-              clearInterval(sandboxRemover2);
-            }, 10000);
-          }
-          iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
-          // iframe.srcを設定した後も、サンドボックス属性を確認して削除
-          setTimeout(() => {
-            if (isExternalEmbedUrl && iframe.hasAttribute('sandbox')) {
-              iframe.removeAttribute('sandbox');
-            }
+          } else {
+            // IVFree内部URLの場合は、プロキシ経由で表示
+            iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
+            ivfreeStatusText = `動画URL更新（プロキシ経由）: ${data.embedUrl.substring(0, 30)}...`;
             ivfreeUpdateDebugInfo();
-          }, 100);
+          }
         } else {
           // 元のURLを使用（既に設定済み）
           ivfreeStatusText = '元のURLを使用（プロキシ経由）';
