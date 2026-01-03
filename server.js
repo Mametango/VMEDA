@@ -4400,6 +4400,43 @@ app.get('/api/ivfree-proxy', async (req, res) => {
         $('head').prepend(`<base href="${baseUrl.protocol}//${baseUrl.host}${baseUrl.pathname}">`);
       }
       
+      // luluvid.comのAdBlock検出スクリプトを除去
+      if (videoUrl.includes('luluvid.com') || videoUrl.includes('luluvdoo.com')) {
+        // sandboxed.htmlへのリダイレクトを生成するスクリプトを除去
+        $('script').each((index, elem) => {
+          const scriptContent = $(elem).html() || '';
+          const scriptSrc = $(elem).attr('src') || '';
+          if (
+            scriptContent.includes('sandboxed.html') ||
+            scriptContent.includes('location.replace') && scriptContent.includes('sandboxed') ||
+            scriptContent.includes('location.assign') && scriptContent.includes('sandboxed') ||
+            scriptContent.includes('window.location') && scriptContent.includes('sandboxed') ||
+            scriptSrc.includes('sandboxed') ||
+            scriptSrc.includes('cdn-cgi/rum')
+          ) {
+            $(elem).remove();
+          }
+        });
+        
+        // sandboxed.htmlへのリンクを除去
+        $('a[href*="sandboxed.html"]').remove();
+        
+        // AdBlock検出のメッセージを除去
+        $('body').find('*').each((index, elem) => {
+          const $elem = $(elem);
+          const text = $elem.text();
+          if (text && (
+            text.includes('AdBlock') ||
+            text.includes('adblock') ||
+            text.includes('ad-block') ||
+            text.includes('Please disable AdBlock') ||
+            text.includes('AdBlock detected')
+          )) {
+            $elem.remove();
+          }
+        });
+      }
+      
       // 外部動画サイト用のCSPを設定（緩和版）
       // すべてのCSPメタタグを削除（既存のCSPを確実に削除）
       $('head meta[http-equiv="Content-Security-Policy"]').remove();
@@ -4415,6 +4452,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${cspContent}">`);
       
       // sandbox属性を削除するスクリプトを追加（外部動画サイトの場合）
+      // luluvid.comのAdBlock検出を回避するスクリプトも追加
       $('head').prepend(`
         <script>
           (function() {
@@ -4443,6 +4481,102 @@ app.get('/api/ivfree-proxy', async (req, res) => {
               }
             } catch(e) {
               console.log('sessionStorageアクセスエラー:', e);
+            }
+            
+            // luluvid.comのAdBlock検出を回避
+            if (window.location.hostname.includes('luluvid.com') || window.location.hostname.includes('luluvdoo.com')) {
+              // sandboxed.htmlへのリダイレクトを防止
+              const originalLocationReplace = window.location.replace;
+              window.location.replace = function(url) {
+                if (url && url.includes('sandboxed.html')) {
+                  console.log('🚫 sandboxed.htmlへのリダイレクトをブロックしました');
+                  return;
+                }
+                return originalLocationReplace.call(window.location, url);
+              };
+              
+              const originalLocationAssign = window.location.assign;
+              window.location.assign = function(url) {
+                if (url && url.includes('sandboxed.html')) {
+                  console.log('🚫 sandboxed.htmlへのリダイレクトをブロックしました');
+                  return;
+                }
+                return originalLocationAssign.call(window.location, url);
+              };
+              
+              // AdBlock検出のAPI呼び出しをブロック
+              const originalFetch = window.fetch;
+              window.fetch = function(url, options) {
+                if (typeof url === 'string' && (url.includes('cdn-cgi/rum') || url.includes('adblock') || url.includes('ad-block'))) {
+                  console.log('🚫 AdBlock検出API呼び出しをブロックしました:', url);
+                  return Promise.reject(new Error('Blocked'));
+                }
+                return originalFetch.call(window, url, options);
+              };
+              
+              const originalXMLHttpRequest = window.XMLHttpRequest;
+              window.XMLHttpRequest = function() {
+                const xhr = new originalXMLHttpRequest();
+                const originalOpen = xhr.open;
+                xhr.open = function(method, url) {
+                  if (typeof url === 'string' && (url.includes('cdn-cgi/rum') || url.includes('adblock') || url.includes('ad-block'))) {
+                    console.log('🚫 AdBlock検出XMLHttpRequestをブロックしました:', url);
+                    return;
+                  }
+                  return originalOpen.call(xhr, method, url);
+                };
+                return xhr;
+              };
+              
+              // AdBlock検出スクリプトを無効化
+              if (typeof window.adblock !== 'undefined') {
+                window.adblock = false;
+              }
+              Object.defineProperty(window, 'adblock', {
+                value: false,
+                writable: false,
+                configurable: false
+              });
+              
+              // sandboxed.htmlへのリダイレクトを監視して防止
+              const observer = new MutationObserver(function(mutations) {
+                if (window.location.href.includes('sandboxed.html')) {
+                  console.log('🚫 sandboxed.htmlへのリダイレクトを検出、元のURLに戻します');
+                  const hash = window.location.hash;
+                  if (hash) {
+                    try {
+                      const decodedUrl = decodeURIComponent(hash.substring(1));
+                      if (decodedUrl.startsWith('http')) {
+                        window.location.replace(decodedUrl);
+                      }
+                    } catch(e) {
+                      console.log('URLデコードエラー:', e);
+                    }
+                  }
+                }
+              });
+              
+              observer.observe(document.body || document.documentElement, {
+                childList: true,
+                subtree: true
+              });
+              
+              // 定期的にsandboxed.htmlへのリダイレクトをチェック
+              setInterval(function() {
+                if (window.location.href.includes('sandboxed.html')) {
+                  const hash = window.location.hash;
+                  if (hash) {
+                    try {
+                      const decodedUrl = decodeURIComponent(hash.substring(1));
+                      if (decodedUrl.startsWith('http')) {
+                        window.location.replace(decodedUrl);
+                      }
+                    } catch(e) {
+                      console.log('URLデコードエラー:', e);
+                    }
+                  }
+                }
+              }, 100);
             }
           })();
         </script>
