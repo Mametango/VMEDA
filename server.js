@@ -800,8 +800,10 @@ app.post('/api/search', async (req, res) => {
     
     // このサイトを通して検索したワードを保存（最新30個を保持）
     // プライバシー保護のため、検索ワードのみを保存（IPアドレスやその他の個人情報は収集しない）
+    // ただし、タイムスタンプを追加して、他のユーザーの利用有無を確認できるようにする
     const searchEntry = {
-      query: sanitizedQuery
+      query: sanitizedQuery,
+      timestamp: new Date().toISOString()
     };
     
     // 同じ検索ワードが既にある場合は削除（重複を避ける）
@@ -3590,16 +3592,23 @@ app.get('/api/recent-searches', async (req, res) => {
     
     // このサイトを通して検索したワードを最新30個返す
     // 自分の検索も他の人の検索も含めて、すべての検索ワードを履歴として表示
-    // 検索ワードのみを返す（時間情報は不要）
+    // 検索ワードとタイムスタンプを返す（他のユーザーの利用有無を確認できるようにする）
     const searches = allSearches
       .slice(0, MAX_RECENT_SEARCHES) // 最新30件
       .map(entry => ({
-        query: entry.query
+        query: entry.query,
+        timestamp: entry.timestamp || null // タイムスタンプがあれば返す
       }));
     
     console.log(`📋 検索履歴取得: ${searches.length}件 (全検索: ${allSearches.length}件)`);
     if (searches.length > 0) {
       console.log(`📋 検索履歴サンプル: ${searches.slice(0, 3).map(s => s.query).join(', ')}`);
+      // タイムスタンプがある場合は、最新の検索時刻を表示
+      const searchesWithTimestamp = searches.filter(s => s.timestamp);
+      if (searchesWithTimestamp.length > 0) {
+        const latestSearch = searchesWithTimestamp[0];
+        console.log(`📋 最新の検索: "${latestSearch.query}" (${latestSearch.timestamp})`);
+      }
     }
     
     // キャッシュヘッダーを追加（クライアント側のキャッシュを有効化、高速化のため）
