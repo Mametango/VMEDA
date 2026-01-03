@@ -3960,10 +3960,40 @@ app.get('/api/ivfree-proxy', async (req, res) => {
         }
       });
       
-      // ロボット検証（CAPTCHA/reCAPTCHA）のdiv要素を除去
-      $('div[id*="recaptcha"], div[id*="captcha"], div[class*="recaptcha"], div[class*="captcha"]').remove();
-      $('div[data-sitekey]').remove(); // reCAPTCHAのdata-sitekey属性を持つdiv
-      $('div[data-callback]').remove(); // reCAPTCHAのdata-callback属性を持つdiv
+      // ロボット検証（CAPTCHA/reCAPTCHA）のdiv要素を除去（ただし、動画プレイヤーの要素は保護）
+      $('div[id*="recaptcha"], div[id*="captcha"], div[class*="recaptcha"], div[class*="captcha"]').each((index, elem) => {
+        const $elem = $(elem);
+        // 動画プレイヤーの要素は保護
+        const isPlayerElement = $elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0 ||
+                               $elem.find('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0;
+        if (!isPlayerElement) {
+          $elem.remove();
+        }
+      });
+      // reCAPTCHAのdata-sitekey属性を持つdivを除去（ただし、動画プレイヤーの要素は保護）
+      $('div[data-sitekey]').each((index, elem) => {
+        const $elem = $(elem);
+        const sitekey = $elem.attr('data-sitekey') || '';
+        // 動画プレイヤーの要素は保護
+        const isPlayerElement = $elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0 ||
+                               $elem.find('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0;
+        // reCAPTCHAのsitekeyは通常6文字以上の文字列
+        if (!isPlayerElement && sitekey.length >= 6 && !sitekey.includes('video') && !sitekey.includes('player')) {
+          $elem.remove();
+        }
+      });
+      // reCAPTCHAのdata-callback属性を持つdivを除去（ただし、動画プレイヤーの要素は保護）
+      $('div[data-callback]').each((index, elem) => {
+        const $elem = $(elem);
+        const callback = $elem.attr('data-callback') || '';
+        // 動画プレイヤーの要素は保護
+        const isPlayerElement = $elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0 ||
+                               $elem.find('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0;
+        // reCAPTCHAのcallbackは通常recaptchaを含む
+        if (!isPlayerElement && (callback.includes('recaptcha') || callback.includes('captcha'))) {
+          $elem.remove();
+        }
+      });
       
       // 広告ブロッカー検出を回避するスクリプトを追加
       // ポップアップ広告を無効化するスクリプトも追加
@@ -4062,7 +4092,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                 } catch(e) {}
               });
               
-              // ロボット検証（CAPTCHA/reCAPTCHA）の要素を除去
+              // ロボット検証（CAPTCHA/reCAPTCHA）の要素を除去（ただし、動画プレイヤーの要素は保護）
               const captchaSelectors = [
                 'iframe[src*="recaptcha"]',
                 'iframe[src*="captcha"]',
@@ -4072,8 +4102,6 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                 'div[id*="captcha"]',
                 'div[class*="recaptcha"]',
                 'div[class*="captcha"]',
-                'div[data-sitekey]',
-                'div[data-callback]',
                 '[id*="cf-browser-verification"]',
                 '[class*="cf-browser-verification"]',
                 '[id*="challenge-platform"]',
@@ -4083,10 +4111,43 @@ app.get('/api/ivfree-proxy', async (req, res) => {
               captchaSelectors.forEach(selector => {
                 try {
                   document.querySelectorAll(selector).forEach(elem => {
-                    elem.remove();
+                    // 動画プレイヤーの要素は保護
+                    const isPlayerElement = elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]') ||
+                                           elem.querySelector('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]');
+                    if (!isPlayerElement) {
+                      elem.remove();
+                    }
                   });
                 } catch(e) {}
               });
+              
+              // reCAPTCHAのdata-sitekey属性を持つdivを除去（ただし、動画プレイヤーの要素は保護）
+              try {
+                document.querySelectorAll('div[data-sitekey]').forEach(elem => {
+                  const sitekey = elem.getAttribute('data-sitekey') || '';
+                  // 動画プレイヤーの要素は保護
+                  const isPlayerElement = elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]') ||
+                                         elem.querySelector('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]');
+                  // reCAPTCHAのsitekeyは通常6文字以上の文字列
+                  if (!isPlayerElement && sitekey.length >= 6 && !sitekey.includes('video') && !sitekey.includes('player')) {
+                    elem.remove();
+                  }
+                });
+              } catch(e) {}
+              
+              // reCAPTCHAのdata-callback属性を持つdivを除去（ただし、動画プレイヤーの要素は保護）
+              try {
+                document.querySelectorAll('div[data-callback]').forEach(elem => {
+                  const callback = elem.getAttribute('data-callback') || '';
+                  // 動画プレイヤーの要素は保護
+                  const isPlayerElement = elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]') ||
+                                         elem.querySelector('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]');
+                  // reCAPTCHAのcallbackは通常recaptchaを含む
+                  if (!isPlayerElement && (callback.includes('recaptcha') || callback.includes('captcha'))) {
+                    elem.remove();
+                  }
+                });
+              } catch(e) {}
             }
             
             // ページ読み込み時に実行
@@ -4574,10 +4635,40 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       }
     });
     
-    // ロボット検証（CAPTCHA/reCAPTCHA）のdiv要素を除去
-    $('div[id*="recaptcha"], div[id*="captcha"], div[class*="recaptcha"], div[class*="captcha"]').remove();
-    $('div[data-sitekey]').remove(); // reCAPTCHAのdata-sitekey属性を持つdiv
-    $('div[data-callback]').remove(); // reCAPTCHAのdata-callback属性を持つdiv
+    // ロボット検証（CAPTCHA/reCAPTCHA）のdiv要素を除去（ただし、動画プレイヤーの要素は保護）
+    $('div[id*="recaptcha"], div[id*="captcha"], div[class*="recaptcha"], div[class*="captcha"]').each((index, elem) => {
+      const $elem = $(elem);
+      // 動画プレイヤーの要素は保護
+      const isPlayerElement = $elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0 ||
+                             $elem.find('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0;
+      if (!isPlayerElement) {
+        $elem.remove();
+      }
+    });
+    // reCAPTCHAのdata-sitekey属性を持つdivを除去（ただし、動画プレイヤーの要素は保護）
+    $('div[data-sitekey]').each((index, elem) => {
+      const $elem = $(elem);
+      const sitekey = $elem.attr('data-sitekey') || '';
+      // 動画プレイヤーの要素は保護
+      const isPlayerElement = $elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0 ||
+                             $elem.find('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0;
+      // reCAPTCHAのsitekeyは通常6文字以上の文字列
+      if (!isPlayerElement && sitekey.length >= 6 && !sitekey.includes('video') && !sitekey.includes('player')) {
+        $elem.remove();
+      }
+    });
+    // reCAPTCHAのdata-callback属性を持つdivを除去（ただし、動画プレイヤーの要素は保護）
+    $('div[data-callback]').each((index, elem) => {
+      const $elem = $(elem);
+      const callback = $elem.attr('data-callback') || '';
+      // 動画プレイヤーの要素は保護
+      const isPlayerElement = $elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0 ||
+                             $elem.find('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]').length > 0;
+      // reCAPTCHAのcallbackは通常recaptchaを含む
+      if (!isPlayerElement && (callback.includes('recaptcha') || callback.includes('captcha'))) {
+        $elem.remove();
+      }
+    });
     
     // baseタグを追加して相対URLを正しく解決
     if ($('head base').length === 0) {
@@ -4706,31 +4797,62 @@ app.get('/api/ivfree-proxy', async (req, res) => {
               } catch(e) {}
             });
             
-            // ロボット検証（CAPTCHA/reCAPTCHA）の要素を除去
-            const captchaSelectors = [
-              'iframe[src*="recaptcha"]',
-              'iframe[src*="captcha"]',
-              'iframe[src*="google.com/recaptcha"]',
-              'iframe[src*="gstatic.com/recaptcha"]',
-              'div[id*="recaptcha"]',
-              'div[id*="captcha"]',
-              'div[class*="recaptcha"]',
-              'div[class*="captcha"]',
-              'div[data-sitekey]',
-              'div[data-callback]',
-              '[id*="cf-browser-verification"]',
-              '[class*="cf-browser-verification"]',
-              '[id*="challenge-platform"]',
-              '[class*="challenge-platform"]'
-            ];
-            
-            captchaSelectors.forEach(selector => {
+              // ロボット検証（CAPTCHA/reCAPTCHA）の要素を除去（ただし、動画プレイヤーの要素は保護）
+              const captchaSelectors = [
+                'iframe[src*="recaptcha"]',
+                'iframe[src*="captcha"]',
+                'iframe[src*="google.com/recaptcha"]',
+                'iframe[src*="gstatic.com/recaptcha"]',
+                'div[id*="recaptcha"]',
+                'div[id*="captcha"]',
+                'div[class*="recaptcha"]',
+                'div[class*="captcha"]',
+                '[id*="cf-browser-verification"]',
+                '[class*="cf-browser-verification"]',
+                '[id*="challenge-platform"]',
+                '[class*="challenge-platform"]'
+              ];
+              
+              captchaSelectors.forEach(selector => {
+                try {
+                  document.querySelectorAll(selector).forEach(elem => {
+                    // 動画プレイヤーの要素は保護
+                    const isPlayerElement = elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]') ||
+                                           elem.querySelector('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]');
+                    if (!isPlayerElement) {
+                      elem.remove();
+                    }
+                  });
+                } catch(e) {}
+              });
+              
+              // reCAPTCHAのdata-sitekey属性を持つdivを除去（ただし、動画プレイヤーの要素は保護）
               try {
-                document.querySelectorAll(selector).forEach(elem => {
-                  elem.remove();
+                document.querySelectorAll('div[data-sitekey]').forEach(elem => {
+                  const sitekey = elem.getAttribute('data-sitekey') || '';
+                  // 動画プレイヤーの要素は保護
+                  const isPlayerElement = elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]') ||
+                                         elem.querySelector('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]');
+                  // reCAPTCHAのsitekeyは通常6文字以上の文字列
+                  if (!isPlayerElement && sitekey.length >= 6 && !sitekey.includes('video') && !sitekey.includes('player')) {
+                    elem.remove();
+                  }
                 });
               } catch(e) {}
-            });
+              
+              // reCAPTCHAのdata-callback属性を持つdivを除去（ただし、動画プレイヤーの要素は保護）
+              try {
+                document.querySelectorAll('div[data-callback]').forEach(elem => {
+                  const callback = elem.getAttribute('data-callback') || '';
+                  // 動画プレイヤーの要素は保護
+                  const isPlayerElement = elem.closest('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]') ||
+                                         elem.querySelector('[class*="player"], [id*="player"], [class*="video"], [id*="video"], [class*="jwplayer"], [id*="jwplayer"]');
+                  // reCAPTCHAのcallbackは通常recaptchaを含む
+                  if (!isPlayerElement && (callback.includes('recaptcha') || callback.includes('captcha'))) {
+                    elem.remove();
+                  }
+                });
+              } catch(e) {}
             
             // ロボット検証のメッセージを含む要素を除去
             try {
