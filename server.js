@@ -3727,19 +3727,38 @@ app.get('/api/ivfree-video', async (req, res) => {
     
     const $ = cheerio.load(response.data);
     
-    // ポップアップ広告を生成するスクリプトを除去
+    // ポップアップ広告を生成するスクリプトを除去（ただし、動画プレイヤーに必要なスクリプトは保持）
     $('script').each((index, elem) => {
       const scriptContent = $(elem).html() || '';
+      const scriptSrc = $(elem).attr('src') || '';
+      
+      // 動画プレイヤー関連のスクリプトは保護（削除しない）
+      const isPlayerScript = scriptSrc.includes('jwplayer') || 
+                            scriptSrc.includes('video.js') || 
+                            scriptSrc.includes('player') ||
+                            scriptSrc.includes('vidnest') ||
+                            scriptSrc.includes('loadvid') ||
+                            scriptSrc.includes('luluvid') ||
+                            scriptSrc.includes('luluvdoo') ||
+                            scriptContent.includes('jwplayer') ||
+                            scriptContent.includes('video.js') ||
+                            scriptContent.includes('JWPlayer') ||
+                            scriptContent.includes('VideoJS');
+      
+      if (isPlayerScript) {
+        return; // 動画プレイヤーのスクリプトは削除しない
+      }
+      
       // ポップアップ広告関連のスクリプトを除去
       if (
-        scriptContent.includes('window.open') ||
-        scriptContent.includes('popup') ||
+        (scriptContent.includes('window.open') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
+        (scriptContent.includes('popup') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
         scriptContent.includes('popunder') ||
-        scriptContent.includes('advertisement') ||
+        (scriptContent.includes('advertisement') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
         scriptContent.includes('adsbygoogle') ||
         scriptContent.includes('googlesyndication') ||
         scriptContent.includes('doubleclick') ||
-        scriptContent.includes('advertising')
+        (scriptContent.includes('advertising') && !scriptContent.includes('video'))
       ) {
         $(elem).remove();
       }
@@ -3852,17 +3871,35 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       const $ = cheerio.load(response.data);
       const baseUrl = new URL(videoUrl);
       
-      // ポップアップ広告を生成するスクリプトを除去
+      // ポップアップ広告を生成するスクリプトを除去（ただし、動画プレイヤーに必要なスクリプトは保持）
       $('script').each((index, elem) => {
         const scriptContent = $(elem).html() || '';
         const scriptSrc = $(elem).attr('src') || '';
+        
+        // 動画プレイヤー関連のスクリプトは保護（削除しない）
+        const isPlayerScript = scriptSrc.includes('jwplayer') || 
+                              scriptSrc.includes('video.js') || 
+                              scriptSrc.includes('player') ||
+                              scriptSrc.includes('vidnest') ||
+                              scriptSrc.includes('loadvid') ||
+                              scriptSrc.includes('luluvid') ||
+                              scriptSrc.includes('luluvdoo') ||
+                              scriptContent.includes('jwplayer') ||
+                              scriptContent.includes('video.js') ||
+                              scriptContent.includes('JWPlayer') ||
+                              scriptContent.includes('VideoJS');
+        
+        if (isPlayerScript) {
+          return; // 動画プレイヤーのスクリプトは削除しない
+        }
+        
         if (
           (scriptContent.includes('window.open') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
           scriptContent.includes('popup') ||
           scriptContent.includes('popunder') ||
           scriptContent.includes('pop-up') ||
           scriptContent.includes('pop_up') ||
-          scriptSrc.includes('ad') ||
+          (scriptSrc.includes('advertisement') || scriptSrc.includes('advert') || scriptSrc.includes('adsbygoogle') || scriptSrc.includes('googlesyndication') || scriptSrc.includes('doubleclick')) ||
           scriptSrc.includes('popup') ||
           scriptSrc.includes('popunder')
         ) {
@@ -4193,7 +4230,25 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     $('script').each((index, elem) => {
       const scriptContent = $(elem).html() || '';
       const scriptSrc = $(elem).attr('src') || '';
-      // ポップアップ広告関連のスクリプトを除去（より厳格に）
+      
+      // 動画プレイヤー関連のスクリプトは保護（削除しない）
+      const isPlayerScript = scriptSrc.includes('jwplayer') || 
+                            scriptSrc.includes('video.js') || 
+                            scriptSrc.includes('player') ||
+                            scriptSrc.includes('vidnest') ||
+                            scriptSrc.includes('loadvid') ||
+                            scriptSrc.includes('luluvid') ||
+                            scriptSrc.includes('luluvdoo') ||
+                            scriptContent.includes('jwplayer') ||
+                            scriptContent.includes('video.js') ||
+                            scriptContent.includes('JWPlayer') ||
+                            scriptContent.includes('VideoJS');
+      
+      if (isPlayerScript) {
+        return; // 動画プレイヤーのスクリプトは削除しない
+      }
+      
+      // ポップアップ広告関連のスクリプトを除去（より厳格に、ただし動画プレイヤーは保護）
       if (
         (scriptContent.includes('window.open') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
         (scriptContent.includes('popup') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
@@ -4204,9 +4259,9 @@ app.get('/api/ivfree-proxy', async (req, res) => {
         (scriptContent.includes('googlesyndication')) ||
         (scriptContent.includes('doubleclick')) ||
         (scriptContent.includes('advertising') && !scriptContent.includes('video')) ||
-        (scriptContent.includes('advertisement')) ||
-        (scriptContent.includes('advert')) ||
-        scriptSrc.includes('ad') ||
+        (scriptContent.includes('advertisement') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
+        (scriptContent.includes('advert') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
+        (scriptSrc.includes('advertisement') || scriptSrc.includes('advert') || scriptSrc.includes('adsbygoogle') || scriptSrc.includes('googlesyndication') || scriptSrc.includes('doubleclick')) ||
         scriptSrc.includes('popup') ||
         scriptSrc.includes('popunder')
       ) {
