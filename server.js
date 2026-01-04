@@ -1313,20 +1313,26 @@ async function searchJPdmv(query, strictMode = true) {
         const $ = cheerio.load(response.data);
         console.log(`🔍 JPdmv: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
-        // 複数のセレクタを試す
+        // 複数のセレクタを試す（より広範囲に）
         const selectors = [
-          '.video-item',
-          '.item',
           'a[href*="/video/"]',
           'a[href*="/watch/"]',
           'a[href*="/v/"]',
           'a[href*="/play/"]',
+          'a[href*="/movie/"]',
+          'a[href*="/embed/"]',
+          '.video-item',
+          '.item',
           '[class*="video"]',
           '[class*="item"]',
           '.result-item',
           '.search-result-item',
           'article',
-          '[class*="card"]'
+          '[class*="card"]',
+          'div[class*="video"]',
+          'div[class*="item"]',
+          'li a',
+          'div a'
         ];
         
         const seenUrls = new Set();
@@ -1350,8 +1356,12 @@ async function searchJPdmv(query, strictMode = true) {
               href = $parent.attr('href') || $parent.find('a').attr('href') || '';
             }
             
-            // JPdmvの動画URLパターンを確認
-            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/play/'))) {
+            // JPdmvの動画URLパターンを確認（より柔軟に）
+            // jpdmv.comのドメイン内のリンクで、動画らしいURLパターンを含むもの
+            if (!href) return;
+            const isJpdmvUrl = href.includes('jpdmv.com') || href.startsWith('/');
+            const hasVideoPattern = href.includes('/video/') || href.includes('/watch/') || href.includes('/v/') || href.includes('/play/') || href.includes('/movie/') || href.includes('/embed/');
+            if (!isJpdmvUrl || !hasVideoPattern) {
               return;
             }
             
@@ -2869,20 +2879,26 @@ async function searchJavmix(query, strictMode = true) {
         const $ = cheerio.load(response.data);
         console.log(`🔍 Javmix.TV: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
-        // 複数のセレクタを試す
+        // 複数のセレクタを試す（より広範囲に）
         const selectors = [
-          '.video-item',
-          '.item',
           'a[href*="/video/"]',
           'a[href*="/watch/"]',
           'a[href*="/v/"]',
           'a[href*="/play/"]',
+          'a[href*="/movie/"]',
+          'a[href*="/embed/"]',
+          '.video-item',
+          '.item',
           '[class*="video"]',
           '[class*="item"]',
           '.result-item',
           '.search-result-item',
           'article',
-          '[class*="card"]'
+          '[class*="card"]',
+          'div[class*="video"]',
+          'div[class*="item"]',
+          'li a',
+          'div a'
         ];
         
         const seenUrls = new Set();
@@ -2904,8 +2920,12 @@ async function searchJavmix(query, strictMode = true) {
               href = $parent.attr('href') || $parent.find('a').attr('href') || '';
             }
             
-            // Javmix.TVの動画URLパターンを確認
-            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/play/'))) {
+            // Javmix.TVの動画URLパターンを確認（より柔軟に）
+            // javmix.tvのドメイン内のリンクで、動画らしいURLパターンを含むもの
+            if (!href) return;
+            const isJavmixUrl = href.includes('javmix.tv') || href.startsWith('/');
+            const hasVideoPattern = href.includes('/video/') || href.includes('/watch/') || href.includes('/v/') || href.includes('/play/') || href.includes('/movie/') || href.includes('/embed/');
+            if (!isJavmixUrl || !hasVideoPattern) {
               return;
             }
             
@@ -2931,8 +2951,12 @@ async function searchJavmix(query, strictMode = true) {
             
             if (title && title.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
+              // strictMode=falseの場合は、より緩和した条件でマッチング
               if (!isTitleRelevant(title, query, strictMode)) {
-                return; // 関連性がない場合はスキップ
+                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
+                if (strictMode || title.length < 5) {
+                  return; // 関連性がない場合はスキップ
+                }
               }
               
               videos.push({
@@ -5275,20 +5299,26 @@ async function searchMat6tube(query, strictMode = true) {
         const $ = cheerio.load(response.data);
         console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
-        // 複数のセレクタを試す
+        // 複数のセレクタを試す（より広範囲に）
         const selectors = [
-          '.video-item',
-          '.item',
           'a[href*="/video/"]',
           'a[href*="/watch/"]',
           'a[href*="/v/"]',
           'a[href*="/play/"]',
+          'a[href*="/movie/"]',
+          'a[href*="/embed/"]',
+          '.video-item',
+          '.item',
           '[class*="video"]',
           '[class*="item"]',
           '.result-item',
           '.search-result-item',
           'article',
-          '[class*="card"]'
+          '[class*="card"]',
+          'div[class*="video"]',
+          'div[class*="item"]',
+          'li a',
+          'div a'
         ];
         
         const seenUrls = new Set();
@@ -5310,8 +5340,12 @@ async function searchMat6tube(query, strictMode = true) {
               href = $parent.attr('href') || $parent.find('a').attr('href') || '';
             }
             
-            // Mat6tubeの動画URLパターンを確認
-            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/play/'))) {
+            // Mat6tubeの動画URLパターンを確認（より柔軟に）
+            // mat6tube.comのドメイン内のリンクで、動画らしいURLパターンを含むもの
+            if (!href) return;
+            const isMat6tubeUrl = href.includes('mat6tube.com') || href.startsWith('/');
+            const hasVideoPattern = href.includes('/video/') || href.includes('/watch/') || href.includes('/v/') || href.includes('/play/') || href.includes('/movie/') || href.includes('/embed/');
+            if (!isMat6tubeUrl || !hasVideoPattern) {
               return;
             }
             
