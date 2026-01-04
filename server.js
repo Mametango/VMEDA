@@ -5377,7 +5377,7 @@ async function searchMat6tube(query, strictMode = true) {
         console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
         // /video/パスで検索した場合の特別処理
-        const isVideoPathSearch = url.includes('/video/') && !url.includes('/video/') === url.includes(`/video/${encodedQuery}`) || url.includes(`/video/${query}`);
+        const isVideoPathSearch = url.includes('/video/') && (url.includes(`/video/${encodedQuery}`) || url.includes(`/video/${query}`));
         
         // より積極的なアプローチ：すべてのリンクを確認
         // まず、mat6tube.comドメイン内のすべてのリンクを取得
