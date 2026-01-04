@@ -5354,7 +5354,6 @@ async function searchMat6tube(query, strictMode = true) {
           timeout: 30000
         });
         
-        const $ = cheerio.load(response.data);
         console.log(`🔍 Mat6tube: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
         const $ = cheerio.load(response.data);
         console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
