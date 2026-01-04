@@ -713,7 +713,7 @@ function calculateTitleSimilarity(title1, title2) {
 }
 
 // 検索クエリとタイトルの関連性をチェック
-function isTitleRelevant(title, query) {
+function isTitleRelevant(title, query, strictMode = true) {
   if (!title || !query) return false; // タイトルやクエリがない場合は関連なし
   
   const titleLower = title.toLowerCase();
@@ -725,15 +725,27 @@ function isTitleRelevant(title, query) {
   // クエリを単語に分割（日本語と英語に対応）
   const queryWords = queryLower.split(/\s+/).filter(word => word.length > 0);
   
-  // クエリが1単語の場合は、その単語がタイトルに含まれているかチェック
-  if (queryWords.length === 1) {
-    return titleLower.includes(queryWords[0]);
+  if (strictMode) {
+    // 厳格なマッチング: クエリが1単語の場合は、その単語がタイトルに含まれているかチェック
+    if (queryWords.length === 1) {
+      return titleLower.includes(queryWords[0]);
+    }
+    
+    // クエリが複数単語の場合は、50%以上の単語がタイトルに含まれているかチェック（より厳格）
+    const matchingWords = queryWords.filter(word => titleLower.includes(word)).length;
+    const minRequiredWords = Math.ceil(queryWords.length / 2); // 50%以上
+    return matchingWords >= minRequiredWords;
+  } else {
+    // 緩和したマッチング: クエリが1単語の場合は、その単語がタイトルに含まれているかチェック
+    if (queryWords.length === 1) {
+      return titleLower.includes(queryWords[0]);
+    }
+    
+    // クエリが複数単語の場合は、30%以上の単語がタイトルに含まれているかチェック（緩和）
+    const matchingWords = queryWords.filter(word => titleLower.includes(word)).length;
+    const minRequiredWords = Math.ceil(queryWords.length / 3); // 30%以上
+    return matchingWords >= minRequiredWords;
   }
-  
-  // クエリが複数単語の場合は、50%以上の単語がタイトルに含まれているかチェック（より厳格）
-  const matchingWords = queryWords.filter(word => titleLower.includes(word)).length;
-  const minRequiredWords = Math.ceil(queryWords.length / 2); // 50%以上
-  return matchingWords >= minRequiredWords;
 }
 
 // 入力検証関数
@@ -1005,6 +1017,53 @@ app.post('/api/search', async (req, res) => {
     console.log(`📊 詳細: 統合前${videos.length}件 → 重複除去後${uniqueVideos.length}件`);
     console.log(`📊 カウント確認: 成功${successCount}、エラー${errorCount}、0件${zeroCount}`);
     
+    // 厳格なマッチング結果のURLを記録（重複チェック用）
+    const strictMatchUrls = new Set(uniqueVideos.map(v => v.url));
+    
+    // 緩和したマッチング条件で関連動画を取得
+    console.log(`🔍 緩和したマッチング条件で関連動画を取得開始...`);
+    const relatedSearches = [];
+    searchFunctions.forEach(({ fn, name }) => {
+      try {
+        if (typeof fn === 'function') {
+          // 緩和したマッチング条件で検索（strictMode = false）
+          relatedSearches.push(fn(sanitizedQuery, false));
+        }
+      } catch (err) {
+        // エラーは無視
+      }
+    });
+    
+    const relatedResults = await Promise.allSettled(relatedSearches);
+    const relatedVideos = [];
+    
+    relatedResults.forEach((result) => {
+      if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+        // 厳格なマッチング結果に含まれていない動画のみを追加
+        result.value.forEach(video => {
+          if (video && video.url && !strictMatchUrls.has(video.url)) {
+            relatedVideos.push(video);
+          }
+        });
+      }
+    });
+    
+    // 関連動画を重複除去
+    const uniqueRelatedVideos = [];
+    const relatedUrls = new Set();
+    relatedVideos.forEach(video => {
+      if (video && video.url && !relatedUrls.has(video.url)) {
+        relatedUrls.add(video.url);
+        uniqueRelatedVideos.push(video);
+      }
+    });
+    
+    // 厳格なマッチング結果の後ろに、緩和したマッチング結果を追加（最大20件）
+    const finalVideos = [...uniqueVideos, ...uniqueRelatedVideos.slice(0, 20)];
+    
+    console.log(`📊 関連動画: ${uniqueRelatedVideos.length}件見つかり、${Math.min(uniqueRelatedVideos.length, 20)}件を追加`);
+    console.log(`✅ 最終結果: ${finalVideos.length}件（厳格: ${uniqueVideos.length}件、関連: ${Math.min(uniqueRelatedVideos.length, 20)}件）`);
+    
     // デバッグ情報をクライアントにも返す（開発用）
     const debugInfo = {
       totalBeforeDedup: videos.length,
@@ -1056,9 +1115,9 @@ app.post('/api/search', async (req, res) => {
     }
     
     // テスト用: 結果が0件の場合はテストデータを返す
-    if (uniqueVideos.length === 0) {
+    if (finalVideos.length === 0) {
       console.warn('⚠️ 検索結果が0件のため、テストデータを返します');
-      uniqueVideos.push({
+      finalVideos.push({
         id: 'test-1',
         title: `テスト動画: ${sanitizedQuery}`,
         thumbnail: '',
@@ -1070,8 +1129,8 @@ app.post('/api/search', async (req, res) => {
     }
     
     // 制限なしで全件返す（デバッグ情報も含む）
-    const responseData = { results: uniqueVideos, debug: debugInfo };
-    console.log(`📤 レスポンス送信: results=${uniqueVideos.length}件, debug=${debugInfo ? 'あり' : 'なし'}`);
+    const responseData = { results: finalVideos, debug: debugInfo };
+    console.log(`📤 レスポンス送信: results=${finalVideos.length}件, debug=${debugInfo ? 'あり' : 'なし'}`);
     res.json(responseData);
   } catch (error) {
     console.error('❌ 検索エラー:', error.message);
@@ -1217,7 +1276,7 @@ async function searchGoogle(query) {
 }
 
 // JPdmv検索
-async function searchJPdmv(query) {
+async function searchJPdmv(query, strictMode = true) {
   try {
     console.log(`🔍 JPdmv検索開始: "${query}"`);
     const startTime = Date.now();
@@ -1315,7 +1374,7 @@ async function searchJPdmv(query) {
             
             if (title && title.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
-              if (!isTitleRelevant(title, query)) {
+              if (!isTitleRelevant(title, query, strictMode)) {
                 return; // 関連性がない場合はスキップ
               }
               
@@ -1382,7 +1441,7 @@ async function searchJPdmv(query) {
 }
 
 // Douga4検索
-async function searchDouga4(query) {
+async function searchDouga4(query, strictMode = true) {
   try {
     const encodedQuery = encodeURIComponent(query);
     const url = `https://av.douga4.top/kw/${encodedQuery}`;
@@ -2000,7 +2059,7 @@ async function searchAkibaAbv(query) {
 
 // Bilibili検索（WEBスクレイピング）
 // 注意: Bilibiliはスクレイピング対策を講じている可能性があります
-async function searchBilibili(query) {
+async function searchBilibili(query, strictMode = true) {
   try {
     const encodedQuery = encodeURIComponent(query);
     const url = `https://search.bilibili.com/all?keyword=${encodedQuery}`;
@@ -2778,7 +2837,7 @@ async function searchMadou(query) {
 }
 
 // Javmix.TV検索
-async function searchJavmix(query) {
+async function searchJavmix(query, strictMode = true) {
   try {
     const encodedQuery = encodeURIComponent(query);
     // 複数のURLパターンを試す
@@ -2859,7 +2918,7 @@ async function searchJavmix(query) {
             
             if (title && title.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
-              if (!isTitleRelevant(title, query)) {
+              if (!isTitleRelevant(title, query, strictMode)) {
                 return; // 関連性がない場合はスキップ
               }
               
@@ -2901,7 +2960,7 @@ async function searchJavmix(query) {
 }
 
 // PPP.Porn検索
-async function searchPPP(query) {
+async function searchPPP(query, strictMode = true) {
   try {
     const encodedQuery = encodeURIComponent(query);
     // 複数のURLパターンを試す
@@ -2985,7 +3044,7 @@ async function searchPPP(query) {
             
             if (title && title.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
-              if (!isTitleRelevant(title, query)) {
+              if (!isTitleRelevant(title, query, strictMode)) {
                 return; // 関連性がない場合はスキップ
               }
               
@@ -3027,9 +3086,10 @@ async function searchPPP(query) {
 }
 
 // IVFree検索（ivfree.asia）
-async function searchIVFree(query) {
+// strictMode: true = 厳格なマッチング, false = 緩和したマッチング
+async function searchIVFree(query, strictMode = true) {
   try {
-    console.log(`🔍 IVFree検索開始: "${query}"`);
+    console.log(`🔍 IVFree検索開始: "${query}" (strictMode: ${strictMode})`);
     const startTime = Date.now();
     const queryLower = query.toLowerCase().trim();
     
@@ -3118,17 +3178,32 @@ async function searchIVFree(query) {
         const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
         const queryInTitle = titleLower.includes(queryLower);
         
-        // IDパターンがある場合は、IDパターンに完全一致、またはタイトルに完全一致のみを許可
-        // IDパターンがない場合は、タイトルに完全一致のみを許可
-        // 検索条件を非常に厳格にして、検索語と関連性の高い動画のみをマッチさせる
+        // 厳格なマッチングと緩和したマッチングを切り替え
         let shouldMatch = false;
         
-        if (hasIdPattern) {
-          // IDパターンがある場合: IDパターンに完全一致、またはタイトルに完全一致のみ
-          shouldMatch = queryInId || queryInTitle;
+        if (strictMode) {
+          // 厳格なマッチング: 完全一致のみ
+          if (hasIdPattern) {
+            // IDパターンがある場合: IDパターンに完全一致、またはタイトルに完全一致のみ
+            shouldMatch = queryInId || queryInTitle;
+          } else {
+            // IDパターンがない場合: タイトルに完全一致のみを許可（非常に厳格）
+            shouldMatch = queryInTitle;
+          }
         } else {
-          // IDパターンがない場合: タイトルに完全一致のみを許可（非常に厳格）
-          shouldMatch = queryInTitle;
+          // 緩和したマッチング: 部分一致や文字単位の一致も許可
+          const queryChars = queryLower.split('').filter(c => c.trim().length > 0 && c !== ' ');
+          const allCharsInTitle = queryChars.length > 0 && queryChars.every(char => titleLower.includes(char));
+          const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
+          const halfCharsMatch = queryChars.length >= 2 && matchingChars >= Math.ceil(queryChars.length / 2);
+          
+          if (hasIdPattern) {
+            // IDパターンがある場合: IDパターンに完全一致、タイトルに完全一致、すべての文字がタイトルに含まれている、または50%以上の文字が一致している
+            shouldMatch = queryInId || queryInTitle || allCharsInTitle || halfCharsMatch;
+          } else {
+            // IDパターンがない場合: タイトルに完全一致、すべての文字がタイトルに含まれている、または50%以上の文字が一致している
+            shouldMatch = queryInTitle || allCharsInTitle || halfCharsMatch;
+          }
         }
         
         if (!shouldMatch) {
@@ -5153,7 +5228,7 @@ if (process.env.VERCEL !== '1') {
 }
 
 // Mat6tube検索
-async function searchMat6tube(query) {
+async function searchMat6tube(query, strictMode = true) {
   try {
     const encodedQuery = encodeURIComponent(query);
     // 複数のURLパターンを試す
@@ -5235,7 +5310,7 @@ async function searchMat6tube(query) {
             
             if (title && title.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
-              if (!isTitleRelevant(title, query)) {
+              if (!isTitleRelevant(title, query, strictMode)) {
                 return; // 関連性がない場合はスキップ
               }
               
