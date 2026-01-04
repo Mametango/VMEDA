@@ -871,6 +871,9 @@ app.post('/api/search', async (req, res) => {
     if (mat6tubeType !== 'function') {
       console.error(`❌ searchMat6tubeが未定義です。型: ${mat6tubeType}, 値: ${searchMat6tube}`);
     }
+    if (fc2videoType !== 'function') {
+      console.error(`❌ searchFC2Videoが未定義です。型: ${fc2videoType}, 値: ${searchFC2Video}`);
+    }
     
     const searchFunctions = [
       { fn: searchIVFree, name: 'IVFree' }, // 優先順位: 最高
@@ -879,7 +882,8 @@ app.post('/api/search', async (req, res) => {
       { fn: searchDouga4, name: 'Douga4' },
       { fn: searchJavmix, name: 'Javmix.TV' },
       { fn: searchPPP, name: 'PPP.Porn' },
-      { fn: searchMat6tube, name: 'Mat6tube' } // 常に追加
+      { fn: searchMat6tube, name: 'Mat6tube' },
+      { fn: searchFC2Video, name: 'FC2Video.org' } // 常に追加
     ];
     
     console.log(`📋 検索関数リスト: ${searchFunctions.map(sf => sf.name).join(', ')} (全${searchFunctions.length}件)`);
@@ -5426,6 +5430,164 @@ async function searchMat6tube(query, strictMode = true) {
       console.warn('⚠️ Mat6tube検索: ページが見つかりません（404）');
     } else {
       console.error('❌ Mat6tube検索エラー:', error.message);
+    }
+    return [];
+  }
+}
+
+// FC2Video.org検索
+async function searchFC2Video(query, strictMode = true) {
+  try {
+    console.log(`🔍 FC2Video.org検索開始: "${query}" (strictMode: ${strictMode})`);
+    const encodedQuery = encodeURIComponent(query);
+    // 複数のURLパターンを試す
+    const urls = [
+      `https://fc2video.org/search?q=${encodedQuery}`,
+      `https://fc2video.org/?q=${encodedQuery}`,
+      `https://fc2video.org/search/${encodedQuery}`
+    ];
+    
+    let videos = [];
+    
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://fc2video.org/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000
+        });
+        
+        const $ = cheerio.load(response.data);
+        console.log(`🔍 FC2Video.org: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
+        
+        // 複数のセレクタを試す（より広範囲に）
+        const selectors = [
+          'a[href*="/video/"]',
+          'a[href*="/watch/"]',
+          'a[href*="/v/"]',
+          'a[href*="/play/"]',
+          'a[href*="/movie/"]',
+          'a[href*="/embed/"]',
+          '.video-item',
+          '.item',
+          '[class*="video"]',
+          '[class*="item"]',
+          '.result-item',
+          '.search-result-item',
+          'article',
+          '[class*="card"]',
+          'div[class*="video"]',
+          'div[class*="item"]',
+          'li a',
+          'div a'
+        ];
+        
+        const seenUrls = new Set();
+        let foundCount = 0;
+        let matchedCount = 0;
+        
+        selectors.forEach(selector => {
+          $(selector).each((index, elem) => {
+            if (videos.length >= 200) return false;
+            
+            foundCount++;
+            
+            const $item = $(elem);
+            let href = $item.attr('href') || $item.find('a').attr('href') || '';
+            
+            // hrefが見つからない場合は親要素を探す
+            if (!href) {
+              const $parent = $item.parent();
+              href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+            }
+            
+            // FC2Video.orgの動画URLパターンを確認（より柔軟に）
+            // fc2video.orgのドメイン内のリンクで、動画らしいURLパターンを含むもの
+            if (!href) return;
+            const isFC2VideoUrl = href.includes('fc2video.org') || href.startsWith('/');
+            const hasVideoPattern = href.includes('/video/') || href.includes('/watch/') || href.includes('/v/') || href.includes('/play/') || href.includes('/movie/') || href.includes('/embed/') || href.includes('PPV-') || href.includes('PPV');
+            if (!isFC2VideoUrl || !hasVideoPattern) {
+              return;
+            }
+            
+            matchedCount++;
+            
+            // 相対URLを絶対URLに変換
+            let fullUrl = href;
+            if (href.startsWith('//')) {
+              fullUrl = 'https:' + href;
+            } else if (href.startsWith('/')) {
+              fullUrl = `https://fc2video.org${href}`;
+            } else if (!href.startsWith('http')) {
+              fullUrl = `https://fc2video.org/${href}`;
+            }
+            
+            // 重複チェック
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            const title = extractTitle($, $item);
+            const thumbnail = extractThumbnail($, $item);
+            const duration = extractDurationFromHtml($, $item);
+            
+            if (title && title.length > 3) {
+              // 検索クエリとタイトルの関連性をチェック
+              // strictMode=falseの場合は、より緩和した条件でマッチング
+              if (!isTitleRelevant(title, query, strictMode)) {
+                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
+                if (strictMode || title.length < 5) {
+                  return; // 関連性がない場合はスキップ
+                }
+              }
+              
+              videos.push({
+                id: `fc2video-${Date.now()}-${index}`,
+                title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'fc2video'
+              });
+            }
+          });
+        });
+        
+        console.log(`🔍 FC2Video.org: 見つかった要素: ${foundCount}件、マッチした要素: ${matchedCount}件、動画: ${videos.length}件`);
+        
+        // 結果が見つかったらループを抜ける
+        if (videos.length > 0) {
+          console.log(`✅ FC2Video.org: ${videos.length}件の動画を取得（URL: ${url}）`);
+          break;
+        } else {
+          console.log(`ℹ️ FC2Video.org: このURLでは結果が見つかりませんでした（URL: ${url}）`);
+        }
+      } catch (urlError) {
+        // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
+        const urlIndex = urls.indexOf(url) + 1;
+        if (urlIndex === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
+          console.log(`ℹ️ FC2Video.org: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
+        } else if (urlError.response) {
+          console.warn(`⚠️ FC2Video.org URL試行エラー (${url}): Request failed with status code ${urlError.response.status}`);
+        } else {
+          console.warn(`⚠️ FC2Video.org URL試行エラー (${url}): ${urlError.message}`);
+        }
+        continue;
+      }
+    }
+    
+    console.log(`✅ FC2Video.org: ${videos.length}件の動画を取得`);
+    return videos;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ FC2Video.org検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ FC2Video.org検索エラー:', error.message);
     }
     return [];
   }

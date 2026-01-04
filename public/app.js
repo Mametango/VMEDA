@@ -1527,6 +1527,7 @@ function getSourceName(source) {
     'javmix': 'Javmix.TV',
     'ivfree': 'IVFree',
     'mat6tube': 'Mat6tube',
+    'fc2video': 'FC2Video.org',
     'test': 'テスト'
   };
   return names[source] || source;
