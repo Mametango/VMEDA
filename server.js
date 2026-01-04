@@ -5464,8 +5464,12 @@ async function searchMat6tube(query, strictMode = true) {
             // mat6tube.comのドメイン内のリンクで、動画らしいURLパターンを含むもの
             if (!href) return;
             
-            // より広範囲なURLパターンを許可
+            // より広範囲なURLパターンを許可（/video/パスを最優先）
             const isMat6tubeUrl = href.includes('mat6tube.com') || href.startsWith('/');
+            const excludePatterns = ['/category/', '/tag/', '/author/', '/page/', '/search', '/login', '/register', '/contact', '/about', '/privacy', '/terms', '/sitemap', '.jpg', '.png', '.gif', '.css', '.js', '#', 'mailto:', 'javascript:', '/feed', '/rss'];
+            const hasExcludePattern = excludePatterns.some(pattern => href.includes(pattern));
+            
+            // /video/パスを最優先で認識
             const hasVideoPattern = href.includes('/video/') || 
                                    href.includes('/watch/') || 
                                    href.includes('/v/') || 
@@ -5475,7 +5479,7 @@ async function searchMat6tube(query, strictMode = true) {
                                    href.includes('/view/') ||
                                    href.includes('/detail/') ||
                                    href.includes('/p/') ||
-                                   (href.includes('mat6tube.com') && !href.includes('/category/') && !href.includes('/tag/') && !href.includes('/author/') && !href.includes('/page/'));
+                                   (href.includes('mat6tube.com') && !hasExcludePattern && href.match(/\/[^\/]+\/[^\/]+/)); // パスが2段階以上ある
             
             if (!isMat6tubeUrl || !hasVideoPattern) {
               return;
