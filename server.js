@@ -5525,6 +5525,73 @@ async function searchMat6tube(query, strictMode = true) {
           });
         });
         
+        // アプローチ2: セレクタで見つからない場合、すべてのmat6tube.comリンクを直接確認
+        if (videos.length === 0) {
+          console.log(`🔍 Mat6tube: セレクタで見つからなかったため、すべてのリンクを直接確認します`);
+          const allLinks = $('a[href]');
+          console.log(`🔍 Mat6tube: 見つかったリンク総数: ${allLinks.length}`);
+          
+          allLinks.each((index, elem) => {
+            if (videos.length >= 200) return false;
+            
+            const $link = $(elem);
+            let href = $link.attr('href') || '';
+            
+            if (!href) return;
+            
+            // 相対URLを絶対URLに変換
+            if (href.startsWith('//')) {
+              href = 'https:' + href;
+            } else if (href.startsWith('/')) {
+              href = `https://mat6tube.com${href}`;
+            } else if (!href.startsWith('http')) {
+              href = `https://mat6tube.com/${href}`;
+            }
+            
+            // mat6tube.comのリンクで、除外パターンがないものを確認
+            if (!href.includes('mat6tube.com')) return;
+            
+            const excludePatterns = ['/category/', '/tag/', '/author/', '/page/', '/search', '/login', '/register', '/contact', '/about', '/privacy', '/terms', '/sitemap', '.jpg', '.png', '.gif', '.css', '.js', '#', 'mailto:', 'javascript:', '/feed', '/rss'];
+            const hasExcludePattern = excludePatterns.some(pattern => href.includes(pattern));
+            
+            if (hasExcludePattern) return;
+            if (seenUrls.has(href)) return;
+            
+            // パスが2段階以上ある、または動画らしいパターンを含む
+            const pathMatch = href.match(/mat6tube\.com\/([^\/]+\/[^\/]+)/);
+            const hasVideoPattern = href.includes('/video/') || 
+                                   href.includes('/watch/') || 
+                                   href.includes('/v/') || 
+                                   href.includes('/play/') || 
+                                   href.includes('/movie/') ||
+                                   pathMatch;
+            
+            if (!hasVideoPattern) return;
+            
+            seenUrls.add(href);
+            matchedCount++;
+            
+            const title = $link.text().trim() || $link.attr('title') || extractTitle($, $link) || '';
+            const thumbnail = extractThumbnail($, $link);
+            const duration = extractDurationFromHtml($, $link);
+            
+            if (title && title.length > 3) {
+              // strictMode=falseの場合は、タイトルがあれば基本的に追加
+              if (!strictMode || isTitleRelevant(title, query, strictMode)) {
+                videos.push({
+                  id: `mat6tube-${Date.now()}-${index}`,
+                  title: title.substring(0, 200),
+                  thumbnail: thumbnail || '',
+                  duration: duration || '',
+                  url: href,
+                  embedUrl: href,
+                  source: 'mat6tube'
+                });
+              }
+            }
+          });
+        }
+        
         console.log(`🔍 Mat6tube: 見つかった要素: ${foundCount}件、マッチした要素: ${matchedCount}件、動画: ${videos.length}件`);
         
         // 結果が見つかったらループを抜ける
