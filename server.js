@@ -5346,6 +5346,7 @@ async function searchMat6tube(query, strictMode = true) {
     const urls = [
       `https://mat6tube.com/video/${encodedQuery}`, // 最優先：/video/パスで検索
       `https://mat6tube.com/video/${query}`, // エンコードなしも試す
+      `https://mat6tube.com/video/`, // /video/パスで全動画を取得（クエリに関係なく）
       `https://mat6tube.com/search?q=${encodedQuery}`,
       `https://mat6tube.com/search/${encodedQuery}`,
       `https://mat6tube.com/?q=${encodedQuery}`,
@@ -5377,7 +5378,8 @@ async function searchMat6tube(query, strictMode = true) {
         console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
         // /video/パスで検索した場合の特別処理
-        const isVideoPathSearch = url.includes('/video/') && (url.includes(`/video/${encodedQuery}`) || url.includes(`/video/${query}`));
+        // /video/パスが含まれている場合は、すべての/video/リンクを取得
+        const isVideoPathSearch = url.includes('/video/');
         
         // より積極的なアプローチ：すべてのリンクを確認
         // まず、mat6tube.comドメイン内のすべてのリンクを取得
