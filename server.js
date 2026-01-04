@@ -1276,7 +1276,7 @@ async function searchGoogle(query) {
 // JPdmv検索
 async function searchJPdmv(query, strictMode = true) {
   try {
-    console.log(`🔍 JPdmv検索開始: "${query}"`);
+    console.log(`🔍 JPdmv検索開始: "${query}" (strictMode: ${strictMode})`);
     const startTime = Date.now();
     const encodedQuery = encodeURIComponent(query);
     // 複数のURLパターンを試す
@@ -1311,6 +1311,7 @@ async function searchJPdmv(query, strictMode = true) {
         console.log(`🔍 JPdmv: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
         
         const $ = cheerio.load(response.data);
+        console.log(`🔍 JPdmv: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
         // 複数のセレクタを試す
         const selectors = [
@@ -1319,11 +1320,13 @@ async function searchJPdmv(query, strictMode = true) {
           'a[href*="/video/"]',
           'a[href*="/watch/"]',
           'a[href*="/v/"]',
+          'a[href*="/play/"]',
           '[class*="video"]',
           '[class*="item"]',
           '.result-item',
           '.search-result-item',
-          'article'
+          'article',
+          '[class*="card"]'
         ];
         
         const seenUrls = new Set();
@@ -1348,7 +1351,9 @@ async function searchJPdmv(query, strictMode = true) {
             }
             
             // JPdmvの動画URLパターンを確認
-            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/play/'))) {
+              return;
+            }
             
             matchedElements++;
             
@@ -2837,6 +2842,7 @@ async function searchMadou(query) {
 // Javmix.TV検索
 async function searchJavmix(query, strictMode = true) {
   try {
+    console.log(`🔍 Javmix.TV検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
     // 複数のURLパターンを試す
     const urls = [
@@ -2861,6 +2867,7 @@ async function searchJavmix(query, strictMode = true) {
         });
         
         const $ = cheerio.load(response.data);
+        console.log(`🔍 Javmix.TV: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
         // 複数のセレクタを試す
         const selectors = [
@@ -2879,10 +2886,14 @@ async function searchJavmix(query, strictMode = true) {
         ];
         
         const seenUrls = new Set();
+        let foundCount = 0;
+        let matchedCount = 0;
         
         selectors.forEach(selector => {
           $(selector).each((index, elem) => {
             if (videos.length >= 50) return false;
+            
+            foundCount++;
             
             const $item = $(elem);
             let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -2894,7 +2905,11 @@ async function searchJavmix(query, strictMode = true) {
             }
             
             // Javmix.TVの動画URLパターンを確認
-            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/play/'))) return;
+            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/play/'))) {
+              return;
+            }
+            
+            matchedCount++;
             
             // 相対URLを絶対URLに変換
             let fullUrl = href;
@@ -2933,13 +2948,24 @@ async function searchJavmix(query, strictMode = true) {
           });
         });
         
+        console.log(`🔍 Javmix.TV: 見つかった要素: ${foundCount}件、マッチした要素: ${matchedCount}件、動画: ${videos.length}件`);
+        
         // 結果が見つかったらループを抜ける
-        if (videos.length > 0) break;
+        if (videos.length > 0) {
+          console.log(`✅ Javmix.TV: ${videos.length}件の動画を取得（URL: ${url}）`);
+          break;
+        } else {
+          console.log(`ℹ️ Javmix.TV: このURLでは結果が見つかりませんでした（URL: ${url}）`);
+        }
       } catch (urlError) {
         // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
         const urlIndex = urls.indexOf(url) + 1;
         if (urlIndex === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
           console.log(`ℹ️ Javmix.TV: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
+        } else if (urlError.response) {
+          console.warn(`⚠️ Javmix.TV URL試行エラー (${url}): Request failed with status code ${urlError.response.status}`);
+        } else {
+          console.warn(`⚠️ Javmix.TV URL試行エラー (${url}): ${urlError.message}`);
         }
         continue;
       }
@@ -5221,6 +5247,7 @@ app.get('/favicon.ico', (req, res) => {
 // Mat6tube検索
 async function searchMat6tube(query, strictMode = true) {
   try {
+    console.log(`🔍 Mat6tube検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
     // 複数のURLパターンを試す
     const urls = [
@@ -5246,6 +5273,7 @@ async function searchMat6tube(query, strictMode = true) {
         });
         
         const $ = cheerio.load(response.data);
+        console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
         // 複数のセレクタを試す
         const selectors = [
@@ -5264,10 +5292,14 @@ async function searchMat6tube(query, strictMode = true) {
         ];
         
         const seenUrls = new Set();
+        let foundCount = 0;
+        let matchedCount = 0;
         
         selectors.forEach(selector => {
           $(selector).each((index, elem) => {
             if (videos.length >= 200) return false;
+            
+            foundCount++;
             
             const $item = $(elem);
             let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -5279,7 +5311,11 @@ async function searchMat6tube(query, strictMode = true) {
             }
             
             // Mat6tubeの動画URLパターンを確認
-            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/play/'))) return;
+            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/play/'))) {
+              return;
+            }
+            
+            matchedCount++;
             
             // 相対URLを絶対URLに変換
             let fullUrl = href;
@@ -5318,13 +5354,24 @@ async function searchMat6tube(query, strictMode = true) {
           });
         });
         
+        console.log(`🔍 Mat6tube: 見つかった要素: ${foundCount}件、マッチした要素: ${matchedCount}件、動画: ${videos.length}件`);
+        
         // 結果が見つかったらループを抜ける
-        if (videos.length > 0) break;
+        if (videos.length > 0) {
+          console.log(`✅ Mat6tube: ${videos.length}件の動画を取得（URL: ${url}）`);
+          break;
+        } else {
+          console.log(`ℹ️ Mat6tube: このURLでは結果が見つかりませんでした（URL: ${url}）`);
+        }
       } catch (urlError) {
         // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
         const urlIndex = urls.indexOf(url) + 1;
         if (urlIndex === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
           console.log(`ℹ️ Mat6tube: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
+        } else if (urlError.response) {
+          console.warn(`⚠️ Mat6tube URL試行エラー (${url}): Request failed with status code ${urlError.response.status}`);
+        } else {
+          console.warn(`⚠️ Mat6tube URL試行エラー (${url}): ${urlError.message}`);
         }
         continue;
       }
