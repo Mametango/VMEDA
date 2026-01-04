@@ -541,6 +541,9 @@ function sortVideos(videos, sortType) {
 // 検索履歴を取得（自分の検索も他の人の検索も含む）
 // 現在表示中の検索履歴を保持（更新失敗時も消えないように）
 let currentDisplayedSearches = [];
+let isLoadingRecentSearches = false; // 取得中フラグ
+let lastLoadTime = 0; // 最後に取得した時刻
+const LOAD_INTERVAL = 5000; // 5秒以内の再取得はスキップ
 
 async function loadRecentSearches() {
   // recentSearchesDivとrecentSearchesListが存在するか確認
@@ -549,11 +552,31 @@ async function loadRecentSearches() {
     return;
   }
 
+  // 既に取得中の場合はスキップ
+  if (isLoadingRecentSearches) {
+    console.log('ℹ️ 検索履歴の取得中です。スキップします。');
+    return;
+  }
+
+  // 最近取得した場合はスキップ（5秒以内）
+  const now = Date.now();
+  if (lastLoadTime > 0 && (now - lastLoadTime) < LOAD_INTERVAL) {
+    console.log('ℹ️ 最近取得済みです。スキップします。');
+    return;
+  }
+
   // 検索履歴エリアを確実に表示（即座に表示）
   recentSearchesDiv.style.display = 'block';
   
-  // データ取得中は必ずローディング状態を表示（既存の表示を上書き）
-  recentSearchesList.innerHTML = '<p class="loading-searches">検索履歴を取得中...</p>';
+  // 既に検索履歴が表示されている場合は、ローディング表示を上書きしない
+  if (currentDisplayedSearches.length === 0) {
+    // データ取得中は必ずローディング状態を表示
+    recentSearchesList.innerHTML = '<p class="loading-searches">検索履歴を取得中...</p>';
+  }
+
+  // 取得中フラグを設定
+  isLoadingRecentSearches = true;
+  lastLoadTime = now;
 
   try {
     // 検索履歴を最優先で取得（最新のデータを取得するためキャッシュを無効化）
@@ -604,10 +627,13 @@ async function loadRecentSearches() {
     if (currentDisplayedSearches.length > 0) {
       console.log('ℹ️ エラー時は既存の検索履歴を保持します');
       displayRecentSearches(currentDisplayedSearches);
-      return;
+    } else {
+      // 既存の表示がない場合はエラーメッセージを表示
+      recentSearchesList.innerHTML = '<p class="no-recent-searches">検索履歴の取得に失敗しました</p>';
     }
-    // 既存の表示がない場合はエラーメッセージを表示
-    recentSearchesList.innerHTML = '<p class="no-recent-searches">検索履歴の取得に失敗しました</p>';
+  } finally {
+    // 取得中フラグを解除
+    isLoadingRecentSearches = false;
   }
 }
 
@@ -665,10 +691,8 @@ if (recentSearchesDiv && recentSearchesList) {
 
 // ページ読み込み時に他のユーザーの検索ワードを取得（検索は実行しない）
 // 注意: loadRecentSearches()は検索履歴を表示するだけで、検索は実行しない
-// 最優先で検索履歴を取得（即座に実行）
-loadRecentSearches();
-
-// DOMContentLoadedイベントでも検索履歴を取得（確実に実行）
+// 最優先で検索履歴を取得（即座に実行、1回のみ）
+// DOMContentLoadedまたはwindow.onloadで確実に実行されるようにする
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     console.log('📋 DOMContentLoaded: 検索履歴を取得');
@@ -679,12 +703,6 @@ if (document.readyState === 'loading') {
   console.log('📋 DOMContentLoaded完了済み: 検索履歴を取得');
   loadRecentSearches();
 }
-
-// window.onloadイベントでも検索履歴を取得（確実に実行）
-window.addEventListener('load', () => {
-  console.log('📋 window.onload: 検索履歴を取得');
-  loadRecentSearches();
-});
 
 // ページ読み込み時の自動検索は完全に無効化
 // URLパラメータから検索キーワードを取得して検索入力欄に設定するだけ（検索は実行しない）
