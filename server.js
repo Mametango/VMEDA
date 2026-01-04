@@ -5313,7 +5313,7 @@ async function searchMat6tube(query, strictMode = true) {
       `https://mat6tube.com/search?q=${encodedQuery}`,
       `https://mat6tube.com/search/${encodedQuery}`,
       `https://mat6tube.com/?q=${encodedQuery}`,
-      `https://mat6tube.com/recent?q=${encodedQuery}`
+      `https://mat6tube.com/recent` // /recentページは検索クエリなしで最新動画を取得
     ];
     
     let videos = [];
