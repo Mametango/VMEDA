@@ -852,6 +852,7 @@ app.post('/api/search', async (req, res) => {
     const javmixType = typeof searchJavmix;
     const pppType = typeof searchPPP;
     const mat6tubeType = typeof searchMat6tube;
+    const fc2videoType = typeof searchFC2Video;
     
     console.log(`  - searchIVFree: ${ivfreeType} ${ivfreeType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchJPdmv: ${jpdmvType} ${jpdmvType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
@@ -860,6 +861,7 @@ app.post('/api/search', async (req, res) => {
     console.log(`  - searchJavmix: ${javmixType} ${javmixType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchPPP: ${pppType} ${pppType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchMat6tube: ${mat6tubeType} ${mat6tubeType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
+    console.log(`  - searchFC2Video: ${fc2videoType} ${fc2videoType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     
     // 関数が未定義の場合の詳細情報
     if (ivfreeType !== 'function') {
