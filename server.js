@@ -5385,10 +5385,71 @@ async function searchMat6tube(query, strictMode = true) {
         console.log(`🔍 Mat6tube: 見つかったリンク総数: ${allLinks.length}`);
         
         // /video/パスで検索した場合、すべての/video/リンクを優先的に取得
+        // /video/パスで検索した場合、すべての/video/リンクを直接取得（最優先処理）
         if (isVideoPathSearch) {
-          console.log(`🔍 Mat6tube: /video/パス検索を検出、すべての/video/リンクを取得します`);
+          console.log(`🔍 Mat6tube: /video/パス検索を検出、すべての/video/リンクを直接取得します`);
           const videoLinks = $('a[href*="/video/"]');
           console.log(`🔍 Mat6tube: /video/リンク数: ${videoLinks.length}`);
+          
+          videoLinks.each((index, elem) => {
+            if (videos.length >= 200) return false;
+            
+            const $link = $(elem);
+            let href = $link.attr('href') || '';
+            
+            if (!href) return;
+            
+            // 相対URLを絶対URLに変換
+            if (href.startsWith('//')) {
+              href = 'https:' + href;
+            } else if (href.startsWith('/')) {
+              href = `https://mat6tube.com${href}`;
+            } else if (!href.startsWith('http')) {
+              href = `https://mat6tube.com/${href}`;
+            }
+            
+            // /video/パスを含むリンクのみ
+            if (!href.includes('/video/')) return;
+            if (seenUrls.has(href)) return;
+            
+            // /video/パスで検索した場合、検索ページ自体（/video/fc2など）は除外
+            // ただし、/video/xxx/yyy のような3段階以上のパスは動画ページとして扱う
+            const videoPathMatch = href.match(/mat6tube\.com\/video\/([^\/]+)$/);
+            if (videoPathMatch) {
+              const pathSegment = decodeURIComponent(videoPathMatch[1]);
+              // 検索クエリと一致する単一パス（/video/fc2など）は検索ページなので除外
+              if (pathSegment.toLowerCase() === query.toLowerCase() || pathSegment.toLowerCase() === encodedQuery.toLowerCase()) {
+                return;
+              }
+            }
+            
+            seenUrls.add(href);
+            matchedCount++;
+            
+            const title = $link.text().trim() || $link.attr('title') || extractTitle($, $link) || '';
+            const thumbnail = extractThumbnail($, $link);
+            const duration = extractDurationFromHtml($, $link);
+            
+            if (title && title.length > 3) {
+              // /video/パスで検索した場合、タイトルがあれば基本的に追加（より積極的に）
+              videos.push({
+                id: `mat6tube-${Date.now()}-${index}`,
+                title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: href,
+                embedUrl: href,
+                source: 'mat6tube'
+              });
+            }
+          });
+          
+          // /video/パスで検索した場合、結果が見つかったら他の処理をスキップ
+          if (videos.length > 0) {
+            console.log(`✅ Mat6tube: /video/パス検索で${videos.length}件の動画を取得（URL: ${url}）`);
+            // ループを抜けるために、このURLで結果が見つかったことを示す
+            // （breakは外側のforループで処理される）
+          }
         }
         
         // Mat6tubeの実際のHTML構造に基づくセレクタ（/video/ページに対応）
