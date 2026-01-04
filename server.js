@@ -1076,22 +1076,37 @@ app.post('/api/search', async (req, res) => {
     console.log(`📊 サイト別件数:`, siteCounts);
     
     // サイトごとの件数が多い順に並び替え
-    const sortedVideos = finalVideos.sort((a, b) => {
-      const sourceA = a.source || 'unknown';
-      const sourceB = b.source || 'unknown';
-      const countA = siteCounts[sourceA] || 0;
-      const countB = siteCounts[sourceB] || 0;
+    let sortedVideos = [];
+    try {
+      // 配列のコピーを作成してからソート（元の配列を変更しない）
+      sortedVideos = [...finalVideos].sort((a, b) => {
+        try {
+          const sourceA = (a && a.source) ? a.source : 'unknown';
+          const sourceB = (b && b.source) ? b.source : 'unknown';
+          const countA = siteCounts[sourceA] || 0;
+          const countB = siteCounts[sourceB] || 0;
+          
+          // 件数が多い順（降順）
+          if (countB !== countA) {
+            return countB - countA;
+          }
+          
+          // 件数が同じ場合は、元の順序を維持（安定ソート）
+          return 0;
+        } catch (sortError) {
+          console.error('❌ ソート処理エラー:', sortError.message);
+          return 0; // エラーが発生した場合は順序を維持
+        }
+      });
       
-      // 件数が多い順（降順）
-      if (countB !== countA) {
-        return countB - countA;
-      }
-      
-      // 件数が同じ場合は、元の順序を維持（安定ソート）
-      return 0;
-    });
-    
-    console.log(`📊 サイト別件数順に並び替え完了: ${sortedVideos.length}件`);
+      console.log(`📊 サイト別件数順に並び替え完了: ${sortedVideos.length}件`);
+    } catch (sortError) {
+      console.error('❌ ソート処理でエラーが発生しました:', sortError.message);
+      console.error('❌ スタックトレース:', sortError.stack);
+      // エラーが発生した場合は、元の配列をそのまま使用
+      sortedVideos = finalVideos;
+      console.log(`⚠️ ソートをスキップして、元の配列を使用: ${sortedVideos.length}件`);
+    }
     
     // デバッグ情報をクライアントにも返す（開発用）
     const debugInfo = {
