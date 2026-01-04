@@ -673,9 +673,9 @@ function displayRecentSearches(searches) {
   }
 
   if (!searches || searches.length === 0) {
-    // 検索履歴が空の場合でも表示を更新
-    recentSearchesList.innerHTML = '<p class="no-recent-searches">まだ検索履歴がありません</p>';
-    console.log('ℹ️ 検索履歴が空のため、空のメッセージを表示しました');
+    // 検索履歴が空の場合は何も表示しない
+    recentSearchesList.innerHTML = '';
+    console.log('ℹ️ 検索履歴が空です');
     return;
   }
   
