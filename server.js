@@ -30,6 +30,7 @@ const MAX_RECENT_SEARCHES = 20; // 最新20個だけ保持
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'vmeda';
 const COLLECTION_NAME = 'recent_searches';
+const ACCESS_LOG_COLLECTION_NAME = 'access_logs';
 
 let mongoClient = null;
 let mongoDb = null;
