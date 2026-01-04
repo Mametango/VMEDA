@@ -153,7 +153,7 @@ async function searchVideos(query) {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || '検索に失敗しました');
+      throw new Error(errorData.error || 'Search failed');
     }
 
     const data = await response.json();
@@ -608,7 +608,7 @@ async function loadRecentSearches(forceRetry = false) {
         return;
       }
       // 既存の表示がない場合はエラーメッセージを表示
-      recentSearchesList.innerHTML = '<p class="no-recent-searches">検索履歴の取得に失敗しました</p>';
+      recentSearchesList.innerHTML = '<p class="no-recent-searches">Failed to retrieve search history</p>';
       return;
     }
     
@@ -653,7 +653,7 @@ async function loadRecentSearches(forceRetry = false) {
         }, 1000 * (retryCount + 1)); // リトライ回数に応じて待機時間を増やす
       } else {
         // リトライ回数を超えた場合はエラーメッセージを表示
-        recentSearchesList.innerHTML = '<p class="no-recent-searches">検索履歴の取得に失敗しました</p>';
+        recentSearchesList.innerHTML = '<p class="no-recent-searches">Failed to retrieve search history</p>';
       }
     }
   } finally {

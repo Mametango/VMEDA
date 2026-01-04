@@ -242,7 +242,7 @@ app.use(cors(corsOptions));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分
   max: 100, // 15分間に100リクエストまで
-  message: 'リクエストが多すぎます。しばらく待ってから再度お試しください。',
+  message: 'Too many requests. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -252,7 +252,7 @@ app.use('/api/', limiter);
 const searchLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1分
   max: 10, // 1分間に10リクエストまで
-  message: '検索リクエストが多すぎます。しばらく待ってから再度お試しください。',
+  message: 'Too many search requests. Please try again later.',
 });
 app.use('/api/search', searchLimiter);
 
@@ -320,7 +320,7 @@ app.get('/api/ad-config', (req, res) => {
     });
   } catch (error) {
     console.error('❌ 広告設定取得エラー:', error.message);
-    res.status(500).json({ error: '広告設定の取得に失敗しました' });
+    res.status(500).json({ error: 'Failed to retrieve ad settings' });
   }
 });
 
@@ -816,7 +816,7 @@ app.post('/api/search', async (req, res) => {
     // リクエストボディの検証
     if (!req.body || typeof req.body !== 'object') {
       console.error('❌ リクエストボディが無効です');
-      return res.status(400).json({ error: 'リクエストボディが無効です' });
+      return res.status(400).json({ error: 'Invalid request body' });
     }
     
     const { query } = req.body;
@@ -1216,7 +1216,7 @@ app.post('/api/search', async (req, res) => {
     if (process.env.NODE_ENV !== 'production') {
       console.error('❌ エラー詳細:', error);
     }
-    res.status(500).json({ error: '検索に失敗しました。しばらく待ってから再度お試しください。' });
+    res.status(500).json({ error: 'Search failed. Please try again later.' });
   }
 });
 
@@ -1232,7 +1232,7 @@ async function searchGoogle(query) {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
         'Referer': 'https://www.google.com/',
         'DNT': '1',
@@ -1378,7 +1378,7 @@ async function searchJPdmv(query, strictMode = true) {
         const response = await axios.get(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'ja,en-US;q=0.9',
+            'Accept-Language': 'en-US,en;q=0.9',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Referer': 'https://jpdmv.com/',
             'Accept-Encoding': 'gzip, deflate, br'
@@ -1623,7 +1623,7 @@ async function searchSpankbang(query) {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Referer': 'https://spankbang.com/',
         'Cookie': 'age_verified=1; sb_csrf_session=1'
@@ -1675,7 +1675,7 @@ async function searchX1hub(query) {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://x1hub.com/'
       },
@@ -1750,7 +1750,7 @@ async function searchPorntube(query) {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://porntube.com/'
       },
@@ -1825,7 +1825,7 @@ async function searchJavGuru(query) {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://jav.guru/'
       },
@@ -1901,7 +1901,7 @@ async function searchJapanhub(query) {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://japanhub.net/'
       },
@@ -1977,7 +1977,7 @@ async function searchTktube(query) {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://tktube.com/'
       },
@@ -2053,7 +2053,7 @@ async function searchFC2(query) {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://fc2.com/'
       },
@@ -2660,7 +2660,7 @@ async function searchMissAV(query) {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Referer': 'https://missav.com/'
       },
@@ -2977,7 +2977,7 @@ async function searchJavmix(query, strictMode = true) {
         const response = await axios.get(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'ja,en-US;q=0.9',
+            'Accept-Language': 'en-US,en;q=0.9',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Referer': 'https://javmix.tv/',
             'Accept-Encoding': 'gzip, deflate, br'
@@ -3377,7 +3377,7 @@ async function searchIVFree(query, strictMode = true) {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Referer': 'http://ivfree.asia/',
         'Accept-Encoding': 'gzip, deflate, br'
@@ -3924,7 +3924,7 @@ app.get('/api/recent-searches', async (req, res) => {
     res.json({ searches: searches });
   } catch (error) {
     console.error('❌ 検索履歴取得エラー:', error);
-    res.status(500).json({ error: '検索履歴の取得に失敗しました' });
+    res.status(500).json({ error: 'Failed to retrieve search history' });
   }
 });
 
@@ -3953,7 +3953,7 @@ app.get('/api/douga4-video', async (req, res) => {
   try {
     const videoUrl = req.query.url;
     if (!videoUrl || !videoUrl.includes('douga4.top')) {
-      return res.status(400).json({ error: 'douga4のURLが必要です' });
+      return res.status(400).json({ error: 'douga4 URL is required' });
     }
     
     
@@ -3962,7 +3962,7 @@ app.get('/api/douga4-video', async (req, res) => {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Referer': 'https://av.douga4.top/',
         'Accept-Encoding': 'gzip, deflate, br'
       },
@@ -4007,7 +4007,7 @@ app.get('/api/douga4-video', async (req, res) => {
     
     res.json({ embedUrl: embedUrl, originalUrl: videoUrl });
   } catch (error) {
-    res.status(500).json({ error: '動画URLの取得に失敗しました', embedUrl: req.query.url });
+    res.status(500).json({ error: 'Failed to retrieve video URL', embedUrl: req.query.url });
   }
 });
 
@@ -4016,7 +4016,7 @@ app.get('/api/ivfree-video', async (req, res) => {
   try {
     const videoUrl = req.query.url;
     if (!videoUrl || !videoUrl.includes('ivfree.asia')) {
-      return res.status(400).json({ error: 'IVFreeのURLが必要です' });
+      return res.status(400).json({ error: 'IVFree URL is required' });
     }
     
     console.log('📺 IVFree動画URL取得リクエスト:', videoUrl);
@@ -4026,7 +4026,7 @@ app.get('/api/ivfree-video', async (req, res) => {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Referer': 'http://ivfree.asia/',
         'Accept-Encoding': 'gzip, deflate, br'
       },
@@ -4121,7 +4121,7 @@ app.get('/api/ivfree-video', async (req, res) => {
     res.json({ embedUrl: embedUrl, originalUrl: videoUrl, thumbnail: thumbnail });
   } catch (error) {
     console.error('❌ IVFree動画URL取得エラー:', error.message);
-    res.status(500).json({ error: '動画URLの取得に失敗しました', embedUrl: req.query.url });
+    res.status(500).json({ error: 'Failed to retrieve video URL', embedUrl: req.query.url });
   }
 });
 
@@ -4140,7 +4140,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
   try {
     const videoUrl = req.query.url;
     if (!videoUrl) {
-      return res.status(400).json({ error: 'URLが必要です' });
+      return res.status(400).json({ error: 'URL is required' });
     }
     
     // IVFreeの動画ページまたは外部動画サイトのURLを許可
@@ -4157,7 +4157,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                                 videoUrl.includes('play');
     
     if (!isIVFreeUrl && !isExternalVideoUrl) {
-      return res.status(400).json({ error: 'IVFreeまたは動画サイトのURLが必要です' });
+      return res.status(400).json({ error: 'IVFree or video site URL is required' });
     }
     
     // 外部動画サイトのURLもプロキシ経由で処理（広告ブロッカー検出を回避）
@@ -4169,7 +4169,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'ja,en-US;q=0.9',
+          'Accept-Language': 'en-US,en;q=0.9',
           'Referer': 'http://ivfree.asia/',
           'Accept-Encoding': 'gzip, deflate, br'
         },
@@ -4916,7 +4916,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Referer': 'http://ivfree.asia/',
         'Accept-Encoding': 'gzip, deflate, br'
       },
@@ -5366,7 +5366,7 @@ app.get('/api/proxy-video', async (req, res) => {
   try {
     const videoUrl = req.query.url;
     if (!videoUrl) {
-      return res.status(400).json({ error: 'URLパラメータが必要です' });
+      return res.status(400).json({ error: 'URL parameter is required' });
     }
     
     console.log('📺 動画プロキシリクエスト:', videoUrl);
@@ -5376,7 +5376,7 @@ app.get('/api/proxy-video', async (req, res) => {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ja,en-US;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Referer': videoUrl,
         'Accept-Encoding': 'gzip, deflate, br'
       },
@@ -5394,7 +5394,7 @@ app.get('/api/proxy-video', async (req, res) => {
     res.send(response.data);
   } catch (error) {
     console.error('❌ 動画プロキシエラー:', error.message);
-    res.status(500).json({ error: '動画の取得に失敗しました' });
+    res.status(500).json({ error: 'Failed to retrieve video' });
   }
 });
 
@@ -5525,7 +5525,7 @@ async function searchMat6tube(query, strictMode = true) {
         const response = await axios.get(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'ja,en-US;q=0.9',
+            'Accept-Language': 'en-US,en;q=0.9',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Referer': 'https://mat6tube.com/',
             'Accept-Encoding': 'gzip, deflate, br'
