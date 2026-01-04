@@ -5444,12 +5444,9 @@ async function searchMat6tube(query, strictMode = true) {
             }
           });
           
-          // /video/パスで検索した場合、結果が見つかったら他の処理をスキップ
-          if (videos.length > 0) {
-            console.log(`✅ Mat6tube: /video/パス検索で${videos.length}件の動画を取得（URL: ${url}）`);
-            // ループを抜けるために、このURLで結果が見つかったことを示す
-            // （breakは外側のforループで処理される）
-          }
+          console.log(`🔍 Mat6tube: /video/パス検索で${videos.length}件の動画を取得（URL: ${url}）`);
+          // /video/パス検索の結果は既にvideosに追加されているので、
+          // 通常のセレクタベースの検索も続行して、より多くの結果を取得
         }
         
         // Mat6tubeの実際のHTML構造に基づくセレクタ（/video/ページに対応）
