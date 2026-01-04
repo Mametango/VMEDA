@@ -5411,6 +5411,18 @@ async function searchMat6tube(query, strictMode = true) {
         let foundCount = 0;
         let matchedCount = 0;
         
+        // HTML構造のデバッグ（最初のURLのみ）
+        if (urls.indexOf(url) === 0) {
+          const sampleLinks = $('a[href*="mat6tube"]').slice(0, 5);
+          console.log(`🔍 Mat6tube: サンプルリンク数: ${sampleLinks.length}`);
+          sampleLinks.each((i, elem) => {
+            const href = $(elem).attr('href');
+            if (href) {
+              console.log(`🔍 Mat6tube: サンプルリンク ${i + 1}: ${href.substring(0, 100)}`);
+            }
+          });
+        }
+        
         selectors.forEach(selector => {
           $(selector).each((index, elem) => {
             if (videos.length >= 200) return false;
@@ -5426,11 +5438,29 @@ async function searchMat6tube(query, strictMode = true) {
               href = $parent.attr('href') || $parent.find('a').attr('href') || '';
             }
             
+            // さらに上の親要素から探す
+            if (!href) {
+              const $grandParent = $item.parent().parent();
+              href = $grandParent.attr('href') || $grandParent.find('a').attr('href') || '';
+            }
+            
             // Mat6tubeの動画URLパターンを確認（より柔軟に）
             // mat6tube.comのドメイン内のリンクで、動画らしいURLパターンを含むもの
             if (!href) return;
+            
+            // より広範囲なURLパターンを許可
             const isMat6tubeUrl = href.includes('mat6tube.com') || href.startsWith('/');
-            const hasVideoPattern = href.includes('/video/') || href.includes('/watch/') || href.includes('/v/') || href.includes('/play/') || href.includes('/movie/') || href.includes('/embed/');
+            const hasVideoPattern = href.includes('/video/') || 
+                                   href.includes('/watch/') || 
+                                   href.includes('/v/') || 
+                                   href.includes('/play/') || 
+                                   href.includes('/movie/') || 
+                                   href.includes('/embed/') ||
+                                   href.includes('/view/') ||
+                                   href.includes('/detail/') ||
+                                   href.includes('/p/') ||
+                                   (href.includes('mat6tube.com') && !href.includes('/category/') && !href.includes('/tag/') && !href.includes('/author/') && !href.includes('/page/'));
+            
             if (!isMat6tubeUrl || !hasVideoPattern) {
               return;
             }
