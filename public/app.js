@@ -281,7 +281,7 @@ function displayResults(videos, searchQuery) {
     const playIcon = isBilibili ? '📺' : '▶';
     
     return `
-    <div class="video-item">
+    <div class="video-item" data-source="${video.source || ''}">
       <div class="video-header">
         <h3 class="video-title">${escapeHtml(video.title)}</h3>
         <div class="video-header-right">

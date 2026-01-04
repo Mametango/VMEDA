@@ -260,6 +260,22 @@ body {
   touch-action: manipulation;
 }
 
+/* PPP.Pornの動画プレイヤー用の特別なスタイル（下側が切れないように） */
+.video-item[data-source="ppp"] .video-player-container,
+.video-item[data-source="ppp"] .video-player {
+  overflow: visible;
+}
+
+.video-item[data-source="ppp"] .video-player-container {
+  padding-top: 60%; /* 16:9より少し高くして、下側が切れないように */
+  min-height: 400px; /* 最小高さを確保 */
+}
+
+.video-item[data-source="ppp"] .video-player {
+  height: 100%;
+  min-height: 100%;
+}
+
 .play-btn {
   position: absolute;
   top: 50%;
