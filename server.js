@@ -5342,11 +5342,12 @@ async function searchMat6tube(query, strictMode = true) {
   try {
     console.log(`🔍 Mat6tube検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
-    // 複数のURLパターンを試す
+    // 複数のURLパターンを試す（Mat6tubeの実際の検索機能に基づく）
     const urls = [
       `https://mat6tube.com/search?q=${encodedQuery}`,
       `https://mat6tube.com/search/${encodedQuery}`,
       `https://mat6tube.com/?q=${encodedQuery}`,
+      `https://mat6tube.com/?s=${encodedQuery}`, // WordPressスタイルの検索
       `https://mat6tube.com/recent` // /recentページは検索クエリなしで最新動画を取得
     ];
     
@@ -5354,6 +5355,7 @@ async function searchMat6tube(query, strictMode = true) {
     
     for (const url of urls) {
       try {
+        console.log(`🔍 Mat6tube: URL試行: ${url}`);
         const response = await axios.get(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -5369,26 +5371,40 @@ async function searchMat6tube(query, strictMode = true) {
         const $ = cheerio.load(response.data);
         console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
-        // 複数のセレクタを試す（より広範囲に）
+        // Mat6tubeの実際のHTML構造に基づくセレクタ（より広範囲に）
         const selectors = [
+          // 動画リンクのパターン
           'a[href*="/video/"]',
           'a[href*="/watch/"]',
           'a[href*="/v/"]',
           'a[href*="/play/"]',
           'a[href*="/movie/"]',
           'a[href*="/embed/"]',
+          'a[href*="/view/"]',
+          'a[href*="/detail/"]',
+          // クラスベースのセレクタ
           '.video-item',
           '.item',
+          '.video-card',
+          '.card',
+          '.post',
+          '.entry',
+          '.article',
           '[class*="video"]',
           '[class*="item"]',
+          '[class*="card"]',
+          '[class*="post"]',
+          // 検索結果用のセレクタ
           '.result-item',
           '.search-result-item',
+          '.search-result',
+          // 汎用的なセレクタ
           'article',
-          '[class*="card"]',
-          'div[class*="video"]',
-          'div[class*="item"]',
+          'article a',
           'li a',
-          'div a'
+          'div a',
+          '.content a',
+          '.main a'
         ];
         
         const seenUrls = new Set();
