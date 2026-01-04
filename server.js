@@ -5342,8 +5342,10 @@ async function searchMat6tube(query, strictMode = true) {
   try {
     console.log(`🔍 Mat6tube検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
-    // 複数のURLパターンを試す（より広範囲に）
+    // 複数のURLパターンを試す（/video/パスを最優先に）
     const urls = [
+      `https://mat6tube.com/video/${encodedQuery}`, // 最優先：/video/パスで検索
+      `https://mat6tube.com/video/${query}`, // エンコードなしも試す
       `https://mat6tube.com/search?q=${encodedQuery}`,
       `https://mat6tube.com/search/${encodedQuery}`,
       `https://mat6tube.com/?q=${encodedQuery}`,
