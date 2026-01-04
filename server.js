@@ -1066,6 +1066,33 @@ app.post('/api/search', async (req, res) => {
     console.log(`📊 関連動画: ${uniqueRelatedVideos.length}件見つかり、${Math.min(uniqueRelatedVideos.length, 20)}件を追加`);
     console.log(`✅ 最終結果: ${finalVideos.length}件（厳格: ${uniqueVideos.length}件、関連: ${Math.min(uniqueRelatedVideos.length, 20)}件）`);
     
+    // サイトごとの件数をカウント
+    const siteCounts = {};
+    finalVideos.forEach(video => {
+      const source = video.source || 'unknown';
+      siteCounts[source] = (siteCounts[source] || 0) + 1;
+    });
+    
+    console.log(`📊 サイト別件数:`, siteCounts);
+    
+    // サイトごとの件数が多い順に並び替え
+    const sortedVideos = finalVideos.sort((a, b) => {
+      const sourceA = a.source || 'unknown';
+      const sourceB = b.source || 'unknown';
+      const countA = siteCounts[sourceA] || 0;
+      const countB = siteCounts[sourceB] || 0;
+      
+      // 件数が多い順（降順）
+      if (countB !== countA) {
+        return countB - countA;
+      }
+      
+      // 件数が同じ場合は、元の順序を維持（安定ソート）
+      return 0;
+    });
+    
+    console.log(`📊 サイト別件数順に並び替え完了: ${sortedVideos.length}件`);
+    
     // デバッグ情報をクライアントにも返す（開発用）
     const debugInfo = {
       totalBeforeDedup: videos.length,
@@ -1117,9 +1144,9 @@ app.post('/api/search', async (req, res) => {
     }
     
     // テスト用: 結果が0件の場合はテストデータを返す
-    if (finalVideos.length === 0) {
+    if (sortedVideos.length === 0) {
       console.warn('⚠️ 検索結果が0件のため、テストデータを返します');
-      finalVideos.push({
+      sortedVideos.push({
         id: 'test-1',
         title: `テスト動画: ${sanitizedQuery}`,
         thumbnail: '',
