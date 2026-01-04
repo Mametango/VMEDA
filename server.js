@@ -108,6 +108,24 @@ async function saveRecentSearchesToMongoDB(searches) {
   }
 }
 
+// アクセスログをMongoDBに保存（一般的なサイトと同じようにIPアドレスを記録）
+async function saveAccessLogToMongoDB(logData) {
+  const db = await connectToMongoDB();
+  if (!db) {
+    // MongoDBが利用できない場合はログのみ
+    console.log('⚠️ MongoDBに接続できません。アクセスログをスキップします。');
+    return;
+  }
+
+  try {
+    const collection = db.collection(ACCESS_LOG_COLLECTION_NAME);
+    await collection.insertOne(logData);
+    console.log(`📝 アクセスログを保存: IP: ${logData.ip}, Query: ${logData.query}`);
+  } catch (error) {
+    console.error('❌ アクセスログの保存エラー:', error.message);
+  }
+}
+
 // ファイルシステムのフォールバック関数（Vercel KVが利用できない場合）
 const SEARCHES_FILE = path.join(__dirname, 'data', 'recent-searches.json');
 
@@ -241,11 +259,15 @@ app.use('/api/search', searchLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// リクエストログ（デバッグ用）
+// リクエストログ（デバッグ用・IPアドレスを含む）
 app.use((req, res, next) => {
   const userAgent = req.get('user-agent') || '';
   const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
-  console.log(`📱 ${req.method} ${req.path} - ${isMobile ? 'Mobile' : 'Desktop'} - ${userAgent.substring(0, 50)}`);
+  // IPアドレスを取得（プロキシ経由の場合も考慮）
+  const clientIp = req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || 'unknown';
+  console.log(`📱 ${req.method} ${req.path} - ${isMobile ? 'Mobile' : 'Desktop'} - IP: ${clientIp} - ${userAgent.substring(0, 50)}`);
+  // リクエストオブジェクトにIPアドレスを保存（後で使用できるように）
+  req.clientIp = clientIp;
   next();
 });
 
