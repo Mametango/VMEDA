@@ -5337,17 +5337,20 @@ app.get('/favicon.ico', (req, res) => {
   }
 });
 
-// Mat6tube検索
+// Mat6tube検索（アプローチ変更：より積極的に動画を取得）
 async function searchMat6tube(query, strictMode = true) {
   try {
     console.log(`🔍 Mat6tube検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
-    // 複数のURLパターンを試す（Mat6tubeの実際の検索機能に基づく）
+    // 複数のURLパターンを試す（より広範囲に）
     const urls = [
       `https://mat6tube.com/search?q=${encodedQuery}`,
       `https://mat6tube.com/search/${encodedQuery}`,
       `https://mat6tube.com/?q=${encodedQuery}`,
-      `https://mat6tube.com/?s=${encodedQuery}`, // WordPressスタイルの検索
+      `https://mat6tube.com/?s=${encodedQuery}`,
+      `https://mat6tube.com/?search=${encodedQuery}`,
+      `https://mat6tube.com/search.php?q=${encodedQuery}`,
+      `https://mat6tube.com/index.php?q=${encodedQuery}`,
       `https://mat6tube.com/recent` // /recentページは検索クエリなしで最新動画を取得
     ];
     
@@ -5371,9 +5374,14 @@ async function searchMat6tube(query, strictMode = true) {
         const $ = cheerio.load(response.data);
         console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
+        // より積極的なアプローチ：すべてのリンクを確認
+        // まず、mat6tube.comドメイン内のすべてのリンクを取得
+        const allLinks = $('a[href]');
+        console.log(`🔍 Mat6tube: 見つかったリンク総数: ${allLinks.length}`);
+        
         // Mat6tubeの実際のHTML構造に基づくセレクタ（より広範囲に）
         const selectors = [
-          // 動画リンクのパターン
+          // 動画リンクのパターン（優先度：高）
           'a[href*="/video/"]',
           'a[href*="/watch/"]',
           'a[href*="/v/"]',
@@ -5382,6 +5390,7 @@ async function searchMat6tube(query, strictMode = true) {
           'a[href*="/embed/"]',
           'a[href*="/view/"]',
           'a[href*="/detail/"]',
+          'a[href*="/p/"]',
           // クラスベースのセレクタ
           '.video-item',
           '.item',
@@ -5394,17 +5403,22 @@ async function searchMat6tube(query, strictMode = true) {
           '[class*="item"]',
           '[class*="card"]',
           '[class*="post"]',
+          '[class*="entry"]',
           // 検索結果用のセレクタ
           '.result-item',
           '.search-result-item',
           '.search-result',
-          // 汎用的なセレクタ
+          // 汎用的なセレクタ（より広範囲）
           'article',
           'article a',
           'li a',
           'div a',
           '.content a',
-          '.main a'
+          '.main a',
+          '.container a',
+          '.wrapper a',
+          // すべてのリンク（最後の手段）
+          'a[href*="mat6tube.com"]'
         ];
         
         const seenUrls = new Set();
@@ -5489,22 +5503,14 @@ async function searchMat6tube(query, strictMode = true) {
               // /recentページの場合は、検索クエリとの関連性チェックをスキップ（最新動画を取得）
               const isRecentPage = url.includes('/recent') && !url.includes('?q=');
               
-              if (!isRecentPage) {
-                // 検索クエリとタイトルの関連性をチェック
-                // strictMode=falseの場合は、より緩和した条件でマッチング
-                if (strictMode) {
-                  // 厳格モードの場合のみ関連性チェック
-                  if (!isTitleRelevant(title, query, strictMode)) {
-                    return; // 関連性がない場合はスキップ
-                  }
-                } else {
-                  // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
-                  // 完全に無関係なものは除外するが、少しでも関連があれば追加
-                  if (!isTitleRelevant(title, query, strictMode) && title.length < 10) {
-                    return; // タイトルが短く、完全に無関係な場合はスキップ
-                  }
+              // より積極的なアプローチ：strictMode=falseの場合は関連性チェックを大幅に緩和
+              if (!isRecentPage && strictMode) {
+                // 厳格モードの場合のみ関連性チェック
+                if (!isTitleRelevant(title, query, strictMode)) {
+                  return; // 関連性がない場合はスキップ
                 }
               }
+              // strictMode=falseの場合は、タイトルがあれば基本的に追加（より積極的に）
               
               videos.push({
                 id: `mat6tube-${Date.now()}-${index}`,
