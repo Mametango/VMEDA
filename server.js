@@ -3035,19 +3035,46 @@ async function searchJavmix(query, strictMode = true) {
             const thumbnail = extractThumbnail($, $item);
             const duration = extractDurationFromHtml($, $item);
             
-            if (title && title.length > 3) {
+            // タイトルが空の場合、URLからタイトルを抽出
+            let finalTitle = title;
+            if (!finalTitle || finalTitle.length < 3) {
+              // URLからタイトルを抽出を試みる
+              const urlMatch = fullUrl.match(/\/([^\/]+)$/);
+              if (urlMatch) {
+                finalTitle = decodeURIComponent(urlMatch[1]).replace(/[-_]/g, ' ').trim();
+              }
+              // それでもタイトルがない場合、リンクテキストを使用
+              if (!finalTitle || finalTitle.length < 3) {
+                finalTitle = $item.text().trim() || $item.find('a').text().trim() || '';
+              }
+            }
+            
+            // タイトルがあれば追加（より積極的に）
+            if (finalTitle && finalTitle.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
               // strictMode=falseの場合は、より緩和した条件でマッチング
-              if (!isTitleRelevant(title, query, strictMode)) {
-                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
-                if (strictMode || title.length < 5) {
+              if (!isTitleRelevant(finalTitle, query, strictMode)) {
+                // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
+                if (strictMode || finalTitle.length < 10) {
                   return; // 関連性がない場合はスキップ
                 }
               }
               
               videos.push({
                 id: `javmix-${Date.now()}-${index}`,
-                title: title.substring(0, 200),
+                title: finalTitle.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'javmix'
+              });
+            } else if (fullUrl && fullUrl.includes('javmix.tv')) {
+              // タイトルがなくても、URLが有効な場合は追加（フォールバック）
+              const fallbackTitle = fullUrl.match(/\/([^\/]+)$/)?.[1] || '動画';
+              videos.push({
+                id: `javmix-${Date.now()}-${index}`,
+                title: decodeURIComponent(fallbackTitle).replace(/[-_]/g, ' ').substring(0, 200),
                 thumbnail: thumbnail || '',
                 duration: duration || '',
                 url: fullUrl,
@@ -5929,25 +5956,47 @@ async function searchFC2Video(query, strictMode = true) {
             const thumbnail = extractThumbnail($, $item);
             const duration = extractDurationFromHtml($, $item);
             
-            if (title && title.length > 3) {
+            // タイトルが空の場合、URLからタイトルを抽出
+            let finalTitle = title;
+            if (!finalTitle || finalTitle.length < 3) {
+              // URLからタイトルを抽出を試みる
+              const urlMatch = fullUrl.match(/\/([^\/]+)$/);
+              if (urlMatch) {
+                finalTitle = decodeURIComponent(urlMatch[1]).replace(/[-_]/g, ' ').trim();
+              }
+              // それでもタイトルがない場合、リンクテキストを使用
+              if (!finalTitle || finalTitle.length < 3) {
+                finalTitle = $item.text().trim() || $item.find('a').text().trim() || '';
+              }
+            }
+            
+            // タイトルがあれば追加（より積極的に）
+            if (finalTitle && finalTitle.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
               // strictMode=falseの場合は、より緩和した条件でマッチング
-              if (strictMode) {
-                // 厳格モードの場合のみ関連性チェック
-                if (!isTitleRelevant(title, query, strictMode)) {
+              if (!isTitleRelevant(finalTitle, query, strictMode)) {
+                // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
+                // タイトルが10文字以上あれば、関連性チェックを緩和
+                if (strictMode || finalTitle.length < 10) {
                   return; // 関連性がない場合はスキップ
-                }
-              } else {
-                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
-                // 完全に無関係なものは除外するが、少しでも関連があれば追加
-                if (!isTitleRelevant(title, query, strictMode) && title.length < 10) {
-                  return; // タイトルが短く、完全に無関係な場合はスキップ
                 }
               }
               
               videos.push({
                 id: `fc2video-${Date.now()}-${index}`,
-                title: title.substring(0, 200),
+                title: finalTitle.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'fc2video'
+              });
+            } else if (fullUrl && fullUrl.includes('fc2video.org')) {
+              // タイトルがなくても、URLが有効な場合は追加（フォールバック）
+              const fallbackTitle = fullUrl.match(/\/([^\/]+)$/)?.[1] || '動画';
+              videos.push({
+                id: `fc2video-${Date.now()}-${index}`,
+                title: decodeURIComponent(fallbackTitle).replace(/[-_]/g, ' ').substring(0, 200),
                 thumbnail: thumbnail || '',
                 duration: duration || '',
                 url: fullUrl,
