@@ -1427,10 +1427,8 @@ async function searchDouga4(query) {
       }
     });
     
-    console.log(`✅ Douga4: ${videos.length}件の動画を取得`);
     return videos;
   } catch (error) {
-    console.error('Douga4検索エラー:', error.message);
     return [];
   }
 }
@@ -3606,7 +3604,6 @@ app.get('/api/douga4-video', async (req, res) => {
       return res.status(400).json({ error: 'douga4のURLが必要です' });
     }
     
-    console.log('📺 douga4動画URL取得リクエスト:', videoUrl);
     
     // デスクトップのUser-Agentでリクエスト
     const response = await axios.get(videoUrl, {
@@ -3656,10 +3653,8 @@ app.get('/api/douga4-video', async (req, res) => {
       }
     }
     
-    console.log('✅ douga4動画URL取得:', embedUrl);
     res.json({ embedUrl: embedUrl, originalUrl: videoUrl });
   } catch (error) {
-    console.error('❌ douga4動画URL取得エラー:', error.message);
     res.status(500).json({ error: '動画URLの取得に失敗しました', embedUrl: req.query.url });
   }
 });
