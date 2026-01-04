@@ -781,11 +781,11 @@ function validateQuery(query) {
   
   // 長さチェック
   if (trimmed.length === 0) {
-    return { valid: false, error: '検索クエリが空です' };
+    return { valid: false, error: 'Search query is empty' };
   }
   
   if (trimmed.length > 200) {
-    return { valid: false, error: '検索クエリが長すぎます（最大200文字）' };
+    return { valid: false, error: 'Search query is too long (max 200 characters)' };
   }
   
   // 危険な文字列をチェック（SQLインジェクション、XSS対策）
