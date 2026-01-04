@@ -1387,8 +1387,12 @@ async function searchJPdmv(query, strictMode = true) {
             
             if (title && title.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
+              // strictMode=falseの場合は、より緩和した条件でマッチング
               if (!isTitleRelevant(title, query, strictMode)) {
-                return; // 関連性がない場合はスキップ
+                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
+                if (strictMode || title.length < 5) {
+                  return; // 関連性がない場合はスキップ
+                }
               }
               
               videos.push({
@@ -5371,8 +5375,12 @@ async function searchMat6tube(query, strictMode = true) {
             
             if (title && title.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
+              // strictMode=falseの場合は、より緩和した条件でマッチング
               if (!isTitleRelevant(title, query, strictMode)) {
-                return; // 関連性がない場合はスキップ
+                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
+                if (strictMode || title.length < 5) {
+                  return; // 関連性がない場合はスキップ
+                }
               }
               
               videos.push({
