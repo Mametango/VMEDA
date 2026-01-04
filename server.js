@@ -3151,8 +3151,18 @@ async function searchPPP(query, strictMode = true) {
             
             if (title && title.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
-              if (!isTitleRelevant(title, query, strictMode)) {
-                return; // 関連性がない場合はスキップ
+              // strictMode=falseの場合は、より柔軟にマッチング
+              if (strictMode) {
+                // 厳格モードの場合のみ関連性チェック
+                if (!isTitleRelevant(title, query, strictMode)) {
+                  return; // 関連性がない場合はスキップ
+                }
+              } else {
+                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
+                // 完全に無関係なものは除外するが、少しでも関連があれば追加
+                if (!isTitleRelevant(title, query, strictMode) && title.length < 10) {
+                  return; // タイトルが短く、完全に無関係な場合はスキップ
+                }
               }
               
               videos.push({
@@ -5436,10 +5446,16 @@ async function searchMat6tube(query, strictMode = true) {
               if (!isRecentPage) {
                 // 検索クエリとタイトルの関連性をチェック
                 // strictMode=falseの場合は、より緩和した条件でマッチング
-                if (!isTitleRelevant(title, query, strictMode)) {
-                  // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
-                  if (strictMode || title.length < 5) {
+                if (strictMode) {
+                  // 厳格モードの場合のみ関連性チェック
+                  if (!isTitleRelevant(title, query, strictMode)) {
                     return; // 関連性がない場合はスキップ
+                  }
+                } else {
+                  // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
+                  // 完全に無関係なものは除外するが、少しでも関連があれば追加
+                  if (!isTitleRelevant(title, query, strictMode) && title.length < 10) {
+                    return; // タイトルが短く、完全に無関係な場合はスキップ
                   }
                 }
               }
@@ -5596,10 +5612,16 @@ async function searchFC2Video(query, strictMode = true) {
             if (title && title.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
               // strictMode=falseの場合は、より緩和した条件でマッチング
-              if (!isTitleRelevant(title, query, strictMode)) {
-                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
-                if (strictMode || title.length < 5) {
+              if (strictMode) {
+                // 厳格モードの場合のみ関連性チェック
+                if (!isTitleRelevant(title, query, strictMode)) {
                   return; // 関連性がない場合はスキップ
+                }
+              } else {
+                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
+                // 完全に無関係なものは除外するが、少しでも関連があれば追加
+                if (!isTitleRelevant(title, query, strictMode) && title.length < 10) {
+                  return; // タイトルが短く、完全に無関係な場合はスキップ
                 }
               }
               
