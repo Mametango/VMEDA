@@ -3097,27 +3097,54 @@ async function searchPPP(query, strictMode = true) {
         
         const $ = cheerio.load(response.data);
         
-        // 複数のセレクタを試す
+        // 複数のセレクタを試す（より広範囲に）
         const selectors = [
-          '.video-item',
-          '.item',
+          // 優先度の高いセレクタ
           'a[href*="/video/"]',
           'a[href*="/watch/"]',
           'a[href*="/v/"]',
           'a[href*="/pp1/"]',
+          // クラスベースのセレクタ
+          '.video-item',
+          '.item',
+          '.video-card',
+          '.card',
+          '.post',
+          '.entry',
+          '.article',
           '[class*="video"]',
           '[class*="item"]',
+          '[class*="card"]',
+          '[class*="post"]',
+          '[class*="entry"]',
+          // 検索結果用のセレクタ
           '.result-item',
           '.search-result-item',
+          '.search-result',
+          // 汎用的なセレクタ
           'article',
-          '[class*="card"]'
+          'article a',
+          'li a',
+          'div a',
+          '.content a',
+          '.main a',
+          '.container a',
+          '.wrapper a',
+          // すべてのリンク（最後の手段）
+          'a[href*="ppp.porn"]'
         ];
         
         const seenUrls = new Set();
+        let foundCount = 0;
+        let matchedCount = 0;
+        
+        console.log(`🔍 PPP.Porn: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
         selectors.forEach(selector => {
           $(selector).each((index, elem) => {
-            if (videos.length >= 50) return false;
+            if (videos.length >= 200) return false;
+            
+            foundCount++;
             
             const $item = $(elem);
             let href = $item.attr('href') || $item.find('a').attr('href') || '';
@@ -3128,8 +3155,36 @@ async function searchPPP(query, strictMode = true) {
               href = $parent.attr('href') || $parent.find('a').attr('href') || '';
             }
             
-            // PPP.Pornの動画URLパターンを確認
-            if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/') && !href.includes('/pp1/'))) return;
+            // さらに上の親要素から探す
+            if (!href) {
+              const $grandParent = $item.parent().parent();
+              href = $grandParent.attr('href') || $grandParent.find('a').attr('href') || '';
+            }
+            
+            if (!href) return;
+            
+            // PPP.Pornの動画URLパターンを確認（より柔軟に）
+            // ppp.pornドメイン内のリンクで、除外パターンがないものを確認
+            const isPPPUrl = href.includes('ppp.porn') || href.startsWith('/');
+            if (!isPPPUrl) return;
+            
+            // 除外パターン
+            const excludePatterns = ['/category/', '/tag/', '/author/', '/page/', '/search', '/login', '/register', '/contact', '/about', '/privacy', '/terms', '/sitemap', '.jpg', '.png', '.gif', '.css', '.js', '#', 'mailto:', 'javascript:', '/feed', '/rss'];
+            const hasExcludePattern = excludePatterns.some(pattern => href.includes(pattern));
+            if (hasExcludePattern) return;
+            
+            // 動画らしいURLパターンを含むもの（より柔軟に）
+            const hasVideoPattern = href.includes('/video/') || 
+                                   href.includes('/watch/') || 
+                                   href.includes('/v/') || 
+                                   href.includes('/pp1/') ||
+                                   href.includes('/play/') ||
+                                   href.includes('/movie/') ||
+                                   href.includes('/embed/') ||
+                                   href.match(/\/\d+\//) || // 数字を含むパス（例: /12345/）
+                                   href.match(/\/[a-z0-9-]+\/[a-z0-9-]+/); // 2段階以上のパス
+            
+            if (!hasVideoPattern) return;
             
             // 相対URLを絶対URLに変換
             let fullUrl = href;
@@ -3144,30 +3199,58 @@ async function searchPPP(query, strictMode = true) {
             // 重複チェック
             if (seenUrls.has(fullUrl)) return;
             seenUrls.add(fullUrl);
+            matchedCount++;
             
             const title = extractTitle($, $item);
             const thumbnail = extractThumbnail($, $item);
             const duration = extractDurationFromHtml($, $item);
             
-            if (title && title.length > 3) {
+            // タイトルが空の場合、URLからタイトルを抽出
+            let finalTitle = title;
+            if (!finalTitle || finalTitle.length < 3) {
+              // URLからタイトルを抽出を試みる
+              const urlMatch = fullUrl.match(/\/([^\/]+)$/);
+              if (urlMatch) {
+                finalTitle = decodeURIComponent(urlMatch[1]).replace(/[-_]/g, ' ').trim();
+              }
+              // それでもタイトルがない場合、リンクテキストを使用
+              if (!finalTitle || finalTitle.length < 3) {
+                finalTitle = $item.text().trim() || $item.find('a').text().trim() || '';
+              }
+            }
+            
+            // タイトルがあれば追加（より積極的に）
+            if (finalTitle && finalTitle.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
               // strictMode=falseの場合は、より柔軟にマッチング
               if (strictMode) {
                 // 厳格モードの場合のみ関連性チェック
-                if (!isTitleRelevant(title, query, strictMode)) {
+                if (!isTitleRelevant(finalTitle, query, strictMode)) {
                   return; // 関連性がない場合はスキップ
                 }
               } else {
-                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
-                // 完全に無関係なものは除外するが、少しでも関連があれば追加
-                if (!isTitleRelevant(title, query, strictMode) && title.length < 10) {
+                // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
+                // タイトルが10文字以上あれば、関連性チェックを緩和
+                if (!isTitleRelevant(finalTitle, query, strictMode) && finalTitle.length < 10) {
                   return; // タイトルが短く、完全に無関係な場合はスキップ
                 }
               }
               
               videos.push({
                 id: `ppp-${Date.now()}-${index}`,
-                title: title.substring(0, 200),
+                title: finalTitle.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'ppp'
+              });
+            } else if (fullUrl && fullUrl.includes('ppp.porn')) {
+              // タイトルがなくても、URLが有効な場合は追加（フォールバック）
+              const fallbackTitle = fullUrl.match(/\/([^\/]+)$/)?.[1] || '動画';
+              videos.push({
+                id: `ppp-${Date.now()}-${index}`,
+                title: decodeURIComponent(fallbackTitle).replace(/[-_]/g, ' ').substring(0, 200),
                 thumbnail: thumbnail || '',
                 duration: duration || '',
                 url: fullUrl,
