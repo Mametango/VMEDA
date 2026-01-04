@@ -895,7 +895,8 @@ app.post('/api/search', async (req, res) => {
       try {
         if (typeof fn === 'function') {
           console.log(`🚀 [${index + 1}/${searchFunctions.length}] ${name}検索関数を呼び出し:`, fn.name);
-          allSearches.push(fn(sanitizedQuery));
+          // strictMode=trueで呼び出す（厳格なマッチング）
+          allSearches.push(fn(sanitizedQuery, true));
         } else {
           console.warn(`⚠️ [${index + 1}/${searchFunctions.length}] ${name}関数が定義されていません (typeof: ${typeof fn})`);
           // 関数が定義されていない場合も空の配列を返すPromiseを追加
@@ -5354,6 +5355,8 @@ async function searchMat6tube(query, strictMode = true) {
         });
         
         const $ = cheerio.load(response.data);
+        console.log(`🔍 Mat6tube: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
+        const $ = cheerio.load(response.data);
         console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
         // 複数のセレクタを試す（より広範囲に）
@@ -5516,6 +5519,7 @@ async function searchFC2Video(query, strictMode = true) {
           timeout: 30000
         });
         
+        console.log(`🔍 FC2Video.org: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
         const $ = cheerio.load(response.data);
         console.log(`🔍 FC2Video.org: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
