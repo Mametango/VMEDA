@@ -859,13 +859,13 @@ app.post('/api/search', async (req, res) => {
     
     console.log(`📋 検索関数リスト: ${searchFunctions.map(sf => sf.name).join(', ')} (全${searchFunctions.length}件)`);
     
-    // 各検索関数を安全に呼び出す
+    // 各検索関数を安全に呼び出す（まずはstrictMode=falseで緩和したマッチングを試す）
     searchFunctions.forEach(({ fn, name }, index) => {
       try {
         if (typeof fn === 'function') {
           console.log(`🚀 [${index + 1}/${searchFunctions.length}] ${name}検索関数を呼び出し:`, fn.name);
-          // strictMode=trueで呼び出す（厳格なマッチング）
-          allSearches.push(fn(sanitizedQuery, true));
+          // strictMode=falseで呼び出す（緩和したマッチングでより多くの結果を取得）
+          allSearches.push(fn(sanitizedQuery, false));
         } else {
           console.warn(`⚠️ [${index + 1}/${searchFunctions.length}] ${name}関数が定義されていません (typeof: ${typeof fn})`);
           // 関数が定義されていない場合も空の配列を返すPromiseを追加
