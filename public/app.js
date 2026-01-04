@@ -694,7 +694,6 @@ function displayRecentSearches(searches) {
     const isDefaultQuery = query.trim() === '動画';
     return `
       <div class="recent-search-item" onclick="const q='${query}'; const input=document.getElementById('search-input'); if(input) { input.value=q; ${isDefaultQuery ? '/* 動画というワードは検索しない */' : 'searchVideos(q);'} }" title="${query}">
-        <span class="recent-search-icon">🔍</span>
         <span class="recent-search-query">${escapeHtml(displayQuery)}</span>
       </div>
     `;
@@ -723,11 +722,24 @@ if (recentSearchesDiv && recentSearchesList) {
 (function() {
   console.log('📋 ページ読み込み: 検索履歴を取得開始');
   
-  // 即座に実行を試みる
-  if (recentSearchesDiv && recentSearchesList) {
-    console.log('📋 即座に検索履歴を取得');
-    loadRecentSearches();
+  // 即座に実行を試みる（複数回試行）
+  function tryLoadImmediately(attempt = 0) {
+    if (recentSearchesDiv && recentSearchesList) {
+      console.log('📋 即座に検索履歴を取得');
+      loadRecentSearches();
+      return;
+    }
+    
+    // DOM要素がまだない場合は、少し待ってから再試行（最大5回）
+    if (attempt < 5) {
+      setTimeout(() => {
+        tryLoadImmediately(attempt + 1);
+      }, 50);
+    }
   }
+  
+  // 即座に実行を試みる
+  tryLoadImmediately();
   
   // DOMContentLoadedでも実行
   if (document.readyState === 'loading') {
