@@ -1526,6 +1526,7 @@ function getSourceName(source) {
     'ppp': 'PPP.Porn',
     'javmix': 'Javmix.TV',
     'ivfree': 'IVFree',
+    'mat6tube': 'Mat6tube',
     'test': 'テスト'
   };
   return names[source] || source;
