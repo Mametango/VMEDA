@@ -1440,19 +1440,46 @@ async function searchJPdmv(query, strictMode = true) {
             const thumbnail = extractThumbnail($, $item);
             const duration = extractDurationFromHtml($, $item);
             
-            if (title && title.length > 3) {
+            // タイトルが空の場合、URLからタイトルを抽出
+            let finalTitle = title;
+            if (!finalTitle || finalTitle.length < 3) {
+              // URLからタイトルを抽出を試みる
+              const urlMatch = fullUrl.match(/\/([^\/]+)$/);
+              if (urlMatch) {
+                finalTitle = decodeURIComponent(urlMatch[1]).replace(/[-_]/g, ' ').trim();
+              }
+              // それでもタイトルがない場合、リンクテキストを使用
+              if (!finalTitle || finalTitle.length < 3) {
+                finalTitle = $item.text().trim() || $item.find('a').text().trim() || '';
+              }
+            }
+            
+            // タイトルがあれば追加（より積極的に）
+            if (finalTitle && finalTitle.length > 3) {
               // 検索クエリとタイトルの関連性をチェック
               // strictMode=falseの場合は、より緩和した条件でマッチング
-              if (!isTitleRelevant(title, query, strictMode)) {
-                // 緩和モードの場合、タイトルが空でなければ追加（より柔軟に）
-                if (strictMode || title.length < 5) {
+              if (!isTitleRelevant(finalTitle, query, strictMode)) {
+                // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
+                if (strictMode || finalTitle.length < 10) {
                   return; // 関連性がない場合はスキップ
                 }
               }
               
               videos.push({
                 id: `jpdmv-${Date.now()}-${index}`,
-                title: title.substring(0, 200),
+                title: finalTitle.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'jpdmv'
+              });
+            } else if (fullUrl && fullUrl.includes('jpdmv.com')) {
+              // タイトルがなくても、URLが有効な場合は追加（フォールバック）
+              const fallbackTitle = fullUrl.match(/\/([^\/]+)$/)?.[1] || '動画';
+              videos.push({
+                id: `jpdmv-${Date.now()}-${index}`,
+                title: decodeURIComponent(fallbackTitle).replace(/[-_]/g, ' ').substring(0, 200),
                 thumbnail: thumbnail || '',
                 duration: duration || '',
                 url: fullUrl,
