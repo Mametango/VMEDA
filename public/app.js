@@ -552,10 +552,8 @@ async function loadRecentSearches() {
   // 検索履歴エリアを確実に表示（即座に表示）
   recentSearchesDiv.style.display = 'block';
   
-  // データ取得中はローディング状態を表示（既存の表示がない場合のみ）
-  if (currentDisplayedSearches.length === 0) {
-    recentSearchesList.innerHTML = '<p class="loading-searches">検索履歴を読み込み中...</p>';
-  }
+  // データ取得中は必ずローディング状態を表示（既存の表示を上書き）
+  recentSearchesList.innerHTML = '<p class="loading-searches">検索履歴を取得中...</p>';
 
   try {
     // 検索履歴を最優先で取得（最新のデータを取得するためキャッシュを無効化）
@@ -570,13 +568,14 @@ async function loadRecentSearches() {
     });
     if (!response.ok) {
       console.error('❌ 検索履歴取得エラー:', response.status, response.statusText);
-      // エラー時は既存の表示を保持
+      // エラー時は既存の表示を保持（取得済みの検索履歴がある場合）
       if (currentDisplayedSearches.length > 0) {
         console.log('ℹ️ エラー時は既存の検索履歴を保持します');
+        displayRecentSearches(currentDisplayedSearches);
         return;
       }
-      // 既存の表示がない場合のみ空を表示
-      displayRecentSearches([]);
+      // 既存の表示がない場合はエラーメッセージを表示
+      recentSearchesList.innerHTML = '<p class="no-recent-searches">検索履歴の取得に失敗しました</p>';
       return;
     }
     
@@ -594,19 +593,21 @@ async function loadRecentSearches() {
     } else {
       // 検索履歴が空の場合でも表示を更新
       console.log('ℹ️ 検索履歴が空です');
+      currentDisplayedSearches = [];
       displayRecentSearches([]);
     }
     
     console.log('✅ 検索履歴エリアを表示しました');
   } catch (error) {
     console.error('❌ 検索履歴取得エラー:', error);
-    // エラー時は既存の表示を保持
+    // エラー時は既存の表示を保持（取得済みの検索履歴がある場合）
     if (currentDisplayedSearches.length > 0) {
       console.log('ℹ️ エラー時は既存の検索履歴を保持します');
+      displayRecentSearches(currentDisplayedSearches);
       return;
     }
-    // 既存の表示がない場合のみ空を表示
-    displayRecentSearches([]);
+    // 既存の表示がない場合はエラーメッセージを表示
+    recentSearchesList.innerHTML = '<p class="no-recent-searches">検索履歴の取得に失敗しました</p>';
   }
 }
 
@@ -658,8 +659,8 @@ function displayRecentSearches(searches) {
 // ページ読み込み時に検索履歴エリアを即座に表示（データ取得前に表示）
 if (recentSearchesDiv && recentSearchesList) {
   recentSearchesDiv.style.display = 'block';
-  // 初期状態でローディング表示
-  recentSearchesList.innerHTML = '<p class="loading-searches">検索履歴を読み込み中...</p>';
+  // 初期状態でローディング表示（取得中を表示）
+  recentSearchesList.innerHTML = '<p class="loading-searches">検索履歴を取得中...</p>';
 }
 
 // ページ読み込み時に他のユーザーの検索ワードを取得（検索は実行しない）
