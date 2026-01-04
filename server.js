@@ -5376,15 +5376,27 @@ async function searchMat6tube(query, strictMode = true) {
         const $ = cheerio.load(response.data);
         console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
+        // /video/パスで検索した場合の特別処理
+        const isVideoPathSearch = url.includes('/video/') && !url.includes('/video/') === url.includes(`/video/${encodedQuery}`) || url.includes(`/video/${query}`);
+        
         // より積極的なアプローチ：すべてのリンクを確認
         // まず、mat6tube.comドメイン内のすべてのリンクを取得
         const allLinks = $('a[href]');
         console.log(`🔍 Mat6tube: 見つかったリンク総数: ${allLinks.length}`);
         
-        // Mat6tubeの実際のHTML構造に基づくセレクタ（より広範囲に）
+        // /video/パスで検索した場合、すべての/video/リンクを優先的に取得
+        if (isVideoPathSearch) {
+          console.log(`🔍 Mat6tube: /video/パス検索を検出、すべての/video/リンクを取得します`);
+          const videoLinks = $('a[href*="/video/"]');
+          console.log(`🔍 Mat6tube: /video/リンク数: ${videoLinks.length}`);
+        }
+        
+        // Mat6tubeの実際のHTML構造に基づくセレクタ（/video/ページに対応）
         const selectors = [
-          // 動画リンクのパターン（優先度：高）
+          // /video/ページの動画リンク（最優先）
           'a[href*="/video/"]',
+          'a[href^="/video/"]',
+          // その他の動画リンクのパターン
           'a[href*="/watch/"]',
           'a[href*="/v/"]',
           'a[href*="/play/"]',
