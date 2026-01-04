@@ -774,7 +774,7 @@ function isTitleRelevant(title, query, strictMode = true) {
 // 入力検証関数
 function validateQuery(query) {
   if (!query || typeof query !== 'string') {
-    return { valid: false, error: '検索クエリが必要です' };
+    return { valid: false, error: 'Search query is required' };
   }
   
   const trimmed = query.trim();
