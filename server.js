@@ -851,6 +851,7 @@ app.post('/api/search', async (req, res) => {
     const douga4Type = typeof searchDouga4;
     const javmixType = typeof searchJavmix;
     const pppType = typeof searchPPP;
+    const mat6tubeType = typeof searchMat6tube;
     
     console.log(`  - searchIVFree: ${ivfreeType} ${ivfreeType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchJPdmv: ${jpdmvType} ${jpdmvType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
@@ -858,6 +859,7 @@ app.post('/api/search', async (req, res) => {
     console.log(`  - searchDouga4: ${douga4Type} ${douga4Type === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchJavmix: ${javmixType} ${javmixType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchPPP: ${pppType} ${pppType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
+    console.log(`  - searchMat6tube: ${mat6tubeType} ${mat6tubeType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     
     // 関数が未定義の場合の詳細情報
     if (ivfreeType !== 'function') {
@@ -866,6 +868,9 @@ app.post('/api/search', async (req, res) => {
     if (jpdmvType !== 'function') {
       console.error(`❌ searchJPdmvが未定義です。型: ${jpdmvType}, 値: ${searchJPdmv}`);
     }
+    if (mat6tubeType !== 'function') {
+      console.error(`❌ searchMat6tubeが未定義です。型: ${mat6tubeType}, 値: ${searchMat6tube}`);
+    }
     
     const searchFunctions = [
       { fn: searchIVFree, name: 'IVFree' }, // 優先順位: 最高
@@ -873,16 +878,9 @@ app.post('/api/search', async (req, res) => {
       { fn: searchBilibili, name: 'Bilibili' },
       { fn: searchDouga4, name: 'Douga4' },
       { fn: searchJavmix, name: 'Javmix.TV' },
-      { fn: searchPPP, name: 'PPP.Porn' }
+      { fn: searchPPP, name: 'PPP.Porn' },
+      { fn: searchMat6tube, name: 'Mat6tube' } // 常に追加
     ];
-    
-    // searchMat6tubeが定義されている場合のみ追加
-    if (typeof searchMat6tube === 'function') {
-      searchFunctions.push({ fn: searchMat6tube, name: 'Mat6tube' });
-      console.log(`  - searchMat6tube: ✅ 定義済み`);
-    } else {
-      console.log(`  - searchMat6tube: ❌ 未定義`);
-    }
     
     console.log(`📋 検索関数リスト: ${searchFunctions.map(sf => sf.name).join(', ')} (全${searchFunctions.length}件)`);
     
@@ -5219,13 +5217,6 @@ app.get('/favicon.ico', (req, res) => {
     res.status(500).end();
   }
 });
-
-// サーバー起動（Vercel以外の環境用）
-if (process.env.VERCEL !== '1') {
-  app.listen(PORT, () => {
-    console.log(`🚀 サーバー起動: http://localhost:${PORT}`);
-  });
-}
 
 // Mat6tube検索
 async function searchMat6tube(query, strictMode = true) {
