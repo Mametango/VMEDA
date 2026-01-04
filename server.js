@@ -1158,8 +1158,8 @@ app.post('/api/search', async (req, res) => {
     }
     
     // 制限なしで全件返す（デバッグ情報も含む）
-    const responseData = { results: finalVideos, debug: debugInfo };
-    console.log(`📤 レスポンス送信: results=${finalVideos.length}件, debug=${debugInfo ? 'あり' : 'なし'}`);
+    const responseData = { results: sortedVideos, debug: debugInfo };
+    console.log(`📤 レスポンス送信: results=${sortedVideos.length}件, debug=${debugInfo ? 'あり' : 'なし'}`);
     res.json(responseData);
   } catch (error) {
     console.error('❌ 検索エラー:', error.message);
