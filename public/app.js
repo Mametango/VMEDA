@@ -850,6 +850,26 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   // 現在の動画IDを記録
   currentPlayingVideoId = videoId;
   
+  // 動画プレイヤー表示時に周辺の広告を非表示にする
+  const videoItem = container.closest('.video-item');
+  if (videoItem) {
+    // 動画アイテム内の広告を非表示
+    const adsInItem = videoItem.querySelectorAll('.ad-container, .ad-in-content');
+    adsInItem.forEach(ad => {
+      ad.style.display = 'none';
+    });
+    
+    // 動画アイテムの前後の広告も非表示（動画アイテムの直後/直前の広告）
+    const nextSibling = videoItem.nextElementSibling;
+    if (nextSibling && (nextSibling.classList.contains('ad-container') || nextSibling.classList.contains('ad-in-content'))) {
+      nextSibling.style.display = 'none';
+    }
+    const prevSibling = videoItem.previousElementSibling;
+    if (prevSibling && (prevSibling.classList.contains('ad-container') || prevSibling.classList.contains('ad-in-content'))) {
+      prevSibling.style.display = 'none';
+    }
+  }
+  
   // 埋め込み可能かどうかを判定（基本的には試してみる）
   const canEmbed = isEmbeddable(embedUrl, source);
   
@@ -1570,7 +1590,28 @@ function insertAdsInResults() {
   if (videoItems.length === 0) return;
   
   // 5件ごとに広告を挿入（最初の広告は3件目以降）
+  // ただし、動画プレイヤーが表示されている動画アイテムの前後には広告を挿入しない
   for (let i = 3; i < videoItems.length; i += 5) {
+    const videoItem = videoItems[i];
+    
+    // この動画アイテムに動画プレイヤーが表示されているかチェック
+    const hasPlayer = videoItem.querySelector('.video-player-container iframe');
+    if (hasPlayer) {
+      // 動画プレイヤーが表示されている場合は、この位置には広告を挿入しない
+      continue;
+    }
+    
+    // 前後の動画アイテムに動画プレイヤーが表示されているかチェック
+    const prevItem = videoItems[i - 1];
+    const nextItem = videoItems[i + 1];
+    const prevHasPlayer = prevItem && prevItem.querySelector('.video-player-container iframe');
+    const nextHasPlayer = nextItem && nextItem.querySelector('.video-player-container iframe');
+    
+    if (prevHasPlayer || nextHasPlayer) {
+      // 前後の動画アイテムに動画プレイヤーが表示されている場合は、この位置には広告を挿入しない
+      continue;
+    }
+    
     const adDiv = document.createElement('div');
     adDiv.className = 'ad-container ad-in-content';
     adDiv.innerHTML = `

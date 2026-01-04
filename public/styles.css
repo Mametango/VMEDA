@@ -224,6 +224,21 @@ body {
   background: #000;
   border-radius: 8px;
   overflow: hidden;
+  /* 動画プレイヤー周辺の広告を非表示 */
+  z-index: 10;
+}
+
+/* 動画プレイヤーコンテナ内の広告を非表示 */
+.video-player-container .ad-container,
+.video-player-container .ad-in-content,
+.video-item .ad-container {
+  display: none !important;
+}
+
+/* 動画プレイヤーが表示されている時、その周辺の広告を非表示 */
+.video-item:has(.video-player-container) .ad-container,
+.video-item:has(.video-player-container) .ad-in-content {
+  display: none !important;
 }
 
 .video-player {
