@@ -20,11 +20,11 @@ const { MongoClient } = require('mongodb');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// このサイトを通して検索したワードを保存（MongoDB Atlasに永続化、最新30個を保持）
+// このサイトを通して検索したワードを保存（MongoDB Atlasに永続化、最新20個を保持）
 // 重複を避けるため、同じ検索ワードは最新のもののみ残す
-// 30個を超えると古いものから自動的に削除される
+// 20個を超えると古いものから自動的に削除される
 // 自分の検索も含めて、すべての検索ワードを履歴として残す
-const MAX_RECENT_SEARCHES = 30; // 最新30個だけ保持
+const MAX_RECENT_SEARCHES = 20; // 最新20個だけ保持
 
 // MongoDB接続設定
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -799,7 +799,7 @@ app.post('/api/search', async (req, res) => {
     invalidateRecentSearchesCache();
     let currentSearches = await loadRecentSearchesFromMongoDB();
     
-    // このサイトを通して検索したワードを保存（最新30個を保持）
+    // このサイトを通して検索したワードを保存（最新20個を保持）
     // プライバシー保護のため、検索ワードのみを保存（IPアドレスやその他の個人情報は収集しない）
     const searchEntry = {
       query: sanitizedQuery
@@ -814,9 +814,9 @@ app.post('/api/search', async (req, res) => {
     // 最新の検索ワードを先頭に追加
     currentSearches.unshift(searchEntry);
     
-    // 最新30個だけを保持（古いものは自動的に削除）
+    // 最新20個だけを保持（古いものは自動的に削除）
     if (currentSearches.length > MAX_RECENT_SEARCHES) {
-      currentSearches.splice(MAX_RECENT_SEARCHES); // 30個目以降を削除
+      currentSearches.splice(MAX_RECENT_SEARCHES); // 20個目以降を削除
     }
     
     // MongoDBに保存（永続化）
@@ -3542,17 +3542,17 @@ async function searchRou(query) {
   }
 }
 
-// 検索履歴を取得するAPI（このサイトを通して検索したワードを最新30個返す）
+// 検索履歴を取得するAPI（このサイトを通して検索したワードを最新20個返す）
 app.get('/api/recent-searches', async (req, res) => {
   try {
     // キャッシュ付きで検索履歴を取得（高速化）
     const allSearches = await getRecentSearchesCached();
     
-    // このサイトを通して検索したワードを最新30個返す
+    // このサイトを通して検索したワードを最新20個返す
     // 自分の検索も他の人の検索も含めて、すべての検索ワードを履歴として表示
     // 検索ワードのみを返す（時間情報は不要）
     const searches = allSearches
-      .slice(0, MAX_RECENT_SEARCHES) // 最新30件
+      .slice(0, MAX_RECENT_SEARCHES) // 最新20件
       .map(entry => ({
         query: entry.query
       }));
