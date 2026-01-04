@@ -5432,11 +5432,24 @@ async function searchMat6tube(query, strictMode = true) {
             const thumbnail = extractThumbnail($, $link);
             const duration = extractDurationFromHtml($, $link);
             
+            // /video/パスで検索した場合、タイトルがあれば基本的に追加（より積極的に）
+            // タイトルが空でも、URLが有効な場合は追加
             if (title && title.length > 3) {
-              // /video/パスで検索した場合、タイトルがあれば基本的に追加（より積極的に）
               videos.push({
                 id: `mat6tube-${Date.now()}-${index}`,
                 title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: href,
+                embedUrl: href,
+                source: 'mat6tube'
+              });
+            } else if (href && href.includes('/video/') && !href.match(/mat6tube\.com\/video\/[^\/]+$/)) {
+              // タイトルがなくても、/video/パスで3段階以上のパス（動画ページ）の場合は追加
+              const fallbackTitle = href.match(/\/video\/([^\/]+)/)?.[1] || '動画';
+              videos.push({
+                id: `mat6tube-${Date.now()}-${index}`,
+                title: fallbackTitle.substring(0, 200),
                 thumbnail: thumbnail || '',
                 duration: duration || '',
                 url: href,
