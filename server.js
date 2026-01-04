@@ -807,38 +807,7 @@ app.post('/api/search', async (req, res) => {
     const sanitizedQuery = validation.query;
     console.log(`🔍 検索開始: "${sanitizedQuery}"`);
     
-    // サーバーレス環境では、毎回MongoDBから最新の検索履歴を読み込む（キャッシュを無効化して最新を取得）
-    invalidateRecentSearchesCache();
-    let currentSearches = await loadRecentSearchesFromMongoDB();
-    
-    // このサイトを通して検索したワードを保存（最新20個を保持）
-    // プライバシー保護のため、検索ワードのみを保存（IPアドレスやその他の個人情報は収集しない）
-    const searchEntry = {
-      query: sanitizedQuery
-    };
-    
-    // 同じ検索ワードが既にある場合は削除（重複を避ける）
-    const existingIndex = currentSearches.findIndex(entry => entry.query === sanitizedQuery);
-    if (existingIndex !== -1) {
-      currentSearches.splice(existingIndex, 1);
-    }
-    
-    // 最新の検索ワードを先頭に追加
-    currentSearches.unshift(searchEntry);
-    
-    // 最新20個だけを保持（古いものは自動的に削除）
-    if (currentSearches.length > MAX_RECENT_SEARCHES) {
-      currentSearches.splice(MAX_RECENT_SEARCHES); // 20個目以降を削除
-    }
-    
-    // MongoDBに保存（永続化）
-    await saveRecentSearchesToMongoDB(currentSearches);
-    
-    // キャッシュを更新（次回の取得を高速化）
-    recentSearchesCache = currentSearches;
-    recentSearchesCacheTime = Date.now();
-    
-    console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${currentSearches.length}件)`);
+    // 検索履歴の保存は検索が成功した後に行う（検索処理の前に実行しない）
     
     // 定義されている検索関数のみを使用（0件のサイトは削除）
     const allSearches = [];
@@ -1173,6 +1142,38 @@ app.post('/api/search', async (req, res) => {
         embedUrl: 'https://example.com/test',
         source: 'test'
       });
+    }
+    
+    // 検索履歴を保存（検索が成功した後）
+    try {
+      const currentSearches = await getRecentSearchesCached();
+      const searchEntry = { query: sanitizedQuery };
+      
+      // 同じ検索ワードが既にある場合は削除（重複を避ける）
+      const existingIndex = currentSearches.findIndex(entry => entry.query === sanitizedQuery);
+      if (existingIndex !== -1) {
+        currentSearches.splice(existingIndex, 1);
+      }
+      
+      // 最新の検索ワードを先頭に追加
+      currentSearches.unshift(searchEntry);
+      
+      // 最新20個だけを保持（古いものは自動的に削除）
+      if (currentSearches.length > MAX_RECENT_SEARCHES) {
+        currentSearches.splice(MAX_RECENT_SEARCHES); // 20個目以降を削除
+      }
+      
+      // MongoDBに保存（永続化）
+      await saveRecentSearchesToMongoDB(currentSearches);
+      
+      // キャッシュを更新（次回の取得を高速化）
+      recentSearchesCache = currentSearches;
+      recentSearchesCacheTime = Date.now();
+      
+      console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${currentSearches.length}件)`);
+    } catch (historyError) {
+      console.error('❌ 検索履歴の保存エラー:', historyError.message);
+      // 検索履歴の保存に失敗しても検索結果は返す
     }
     
     // 制限なしで全件返す（デバッグ情報も含む）
