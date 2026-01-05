@@ -1312,14 +1312,105 @@ app.get('/api/random', async (req, res) => {
               return hasKeyword || hasIdPattern;
             });
             
-            const siteName = index === 2 ? 'Bilibili' : 'Mat6tube';
-            console.log(`🔍 ${siteName}からIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
+            console.log(`🔍 BilibiliからIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
             allVideos.push(...ivFilteredVideos);
           } else {
             allVideos.push(...result.value);
           }
         }
       });
+      
+      // IVFreeのタイトルからIDパターンを抽出してMat6tubeで検索
+      if (ivFreeVideos.length > 0) {
+        console.log(`🔍 IVFreeから取得した動画: ${ivFreeVideos.length}件、Mat6tube検索を開始`);
+        
+        // IVFreeのタイトルからIDパターン（[XXX-XXX]）を抽出
+        const idPatterns = new Set();
+        ivFreeVideos.forEach(video => {
+          if (video.title) {
+            // IDパターン [XXX-XXX] を抽出
+            const idMatch = video.title.match(/\[([A-Z]+-\d+)\]/);
+            if (idMatch) {
+              const idPattern = idMatch[1]; // 例: "IMOG-182"
+              idPatterns.add(idPattern.toLowerCase());
+            }
+            
+            // タイトルの最初の部分（IDパターンやシリーズ名）を抽出
+            // 例: "[IMOG-182] まりあ 純真無垢" → "IMOG-182" または "IMOG"
+            const titleStart = video.title.trim();
+            if (titleStart.length > 0) {
+              // 最初の単語やIDパターンを抽出
+              const firstPart = titleStart.split(/\s+/)[0].replace(/[\[\]]/g, '');
+              if (firstPart.length > 2 && firstPart.length < 20) {
+                idPatterns.add(firstPart.toLowerCase());
+              }
+            }
+          }
+        });
+        
+        console.log(`🔍 抽出したIDパターン/シリーズ名: ${Array.from(idPatterns).slice(0, 10).join(', ')}... (全${idPatterns.size}件)`);
+        
+        // 各IDパターンでMat6tubeを検索（最大20件まで）
+        const mat6tubeSearches = Array.from(idPatterns).slice(0, 20).map(pattern => {
+          return searchMat6tube(pattern, false);
+        });
+        
+        if (mat6tubeSearches.length > 0) {
+          const mat6tubeResults = await Promise.allSettled(mat6tubeSearches);
+          mat6tubeResults.forEach((result) => {
+            if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+              // Mat6tubeの結果はIV関連の動画のみをフィルタリング
+              const ivFilteredVideos = result.value.filter(video => {
+                const urlLower = (video.url || '').toLowerCase();
+                
+                // URLにIV関連のパスが含まれている場合は、タイトルがなくても追加
+                const hasIVPath = urlLower.includes('/video/imbd') || 
+                                  urlLower.includes('/video/imdb') ||
+                                  urlLower.includes('/video/kuromiya') ||
+                                  urlLower.includes('/video/imog') ||
+                                  urlLower.includes('/video/tl') ||
+                                  urlLower.includes('/video/iv') ||
+                                  urlLower.includes('/video/mmr') ||
+                                  urlLower.includes('/video/cpsky') ||
+                                  urlLower.includes('/video/icdv');
+                
+                // URLにIV関連のパスが含まれている場合は追加
+                if (hasIVPath) {
+                  return true;
+                }
+                
+                // タイトルがない場合は除外
+                if (!video.title) return false;
+                
+                const titleLower = video.title.toLowerCase();
+                
+                // IV関連のキーワードをチェック
+                const ivKeywords = [
+                  'iv', 'イメージビデオ', 'イメージ', 'image video',
+                  'imbd', 'imdb', 'kuromiya', 'mmr', 'cpsky', 'icdv',
+                  /\[[A-Z]+-\d+\]/
+                ];
+                
+                // キーワードマッチング
+                const hasKeyword = ivKeywords.some(keyword => {
+                  if (keyword instanceof RegExp) {
+                    return keyword.test(video.title);
+                  }
+                  return titleLower.includes(keyword) || urlLower.includes(keyword);
+                });
+                
+                // IDパターンが含まれている場合はIVと判断
+                const hasIdPattern = /\[[A-Z]+-\d+\]/.test(video.title);
+                
+                return hasKeyword || hasIdPattern;
+              });
+              
+              console.log(`🔍 Mat6tube検索結果をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
+              allVideos.push(...ivFilteredVideos);
+            }
+          });
+        }
+      }
     } else if (type === 'jav') {
       // JAV動画: Javmix.TV、JPdmv、PPP.Porn、Mat6tubeから取得
       const javSearches = [
