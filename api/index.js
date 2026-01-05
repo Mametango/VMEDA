@@ -5994,18 +5994,6 @@ async function searchFC2Video(query, strictMode = true) {
       `https://fc2video.org/search/${encodedQuery}`
     ];
     
-    const encodedQuery = query ? encodeURIComponent(query) : '';
-    // 複数のURLパターンを試す
-    const urls = (!query || query.trim().length === 0) ? [
-      'https://fc2video.org/',
-      'https://fc2video.org/videos',
-      'https://fc2video.org/recent'
-    ] : [
-      `https://fc2video.org/search?q=${encodedQuery}`,
-      `https://fc2video.org/?q=${encodedQuery}`,
-      `https://fc2video.org/search/${encodedQuery}`
-    ];
-    
     let videos = [];
     
     for (const url of urls) {
