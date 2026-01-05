@@ -1577,6 +1577,70 @@ searchInput.addEventListener('keypress', (e) => {
   }
 });
 
+// IVランダム動画取得
+async function getRandomIV() {
+  console.log('🎲 IVランダム動画取得開始');
+  loadingDiv.classList.remove('hidden');
+  resultsDiv.innerHTML = '';
+  
+  try {
+    const response = await fetch('/api/random?type=iv');
+    if (!response.ok) {
+      throw new Error('Failed to fetch random IV videos');
+    }
+    
+    const data = await response.json();
+    const videos = data.results || [];
+    currentVideos = videos;
+    currentPage = 1;
+    totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
+    displayResults(videos, 'IV Random');
+    
+    if (videos.length > 0) {
+      sortContainer.classList.remove('hidden');
+    } else {
+      sortContainer.classList.add('hidden');
+    }
+  } catch (error) {
+    console.error('❌ IVランダム動画取得エラー:', error);
+    resultsDiv.innerHTML = `<p class="error">Failed to load random IV videos. Please try again.</p>`;
+  } finally {
+    loadingDiv.classList.add('hidden');
+  }
+}
+
+// JAVランダム動画取得
+async function getRandomJAV() {
+  console.log('🎲 JAVランダム動画取得開始');
+  loadingDiv.classList.remove('hidden');
+  resultsDiv.innerHTML = '';
+  
+  try {
+    const response = await fetch('/api/random?type=jav');
+    if (!response.ok) {
+      throw new Error('Failed to fetch random JAV videos');
+    }
+    
+    const data = await response.json();
+    const videos = data.results || [];
+    currentVideos = videos;
+    currentPage = 1;
+    totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
+    displayResults(videos, 'JAV Random');
+    
+    if (videos.length > 0) {
+      sortContainer.classList.remove('hidden');
+    } else {
+      sortContainer.classList.add('hidden');
+    }
+  } catch (error) {
+    console.error('❌ JAVランダム動画取得エラー:', error);
+    resultsDiv.innerHTML = `<p class="error">Failed to load random JAV videos. Please try again.</p>`;
+  } finally {
+    loadingDiv.classList.add('hidden');
+  }
+}
+
 // IVランダムボタン
 if (ivRandomBtn) {
   ivRandomBtn.addEventListener('click', () => {

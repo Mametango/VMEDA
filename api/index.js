@@ -2328,9 +2328,12 @@ async function searchBilibili(query, strictMode = true) {
         const duration = extractDurationFromHtml($, $item);
         
         if (title && title.length > 3) {
-          // 検索クエリとタイトルの関連性をチェック
-          if (!isTitleRelevant(title, query)) {
-            return; // 関連性がない場合はスキップ
+          // 空のクエリの場合は関連性チェックをスキップ
+          if (query && query.trim().length > 0) {
+            // 検索クエリとタイトルの関連性をチェック
+            if (!isTitleRelevant(title, query, strictMode)) {
+              return; // 関連性がない場合はスキップ
+            }
           }
           
           const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
@@ -5978,9 +5981,26 @@ async function searchMat6tube(query, strictMode = true) {
 async function searchFC2Video(query, strictMode = true) {
   try {
     console.log(`🔍 FC2Video.org検索開始: "${query}" (strictMode: ${strictMode})`);
-    const encodedQuery = encodeURIComponent(query);
+    
+    // 空のクエリの場合は、ホームページから動画を取得
+    const encodedQuery = query ? encodeURIComponent(query) : '';
+    const urls = (!query || query.trim().length === 0) ? [
+      'https://fc2video.org/',
+      'https://fc2video.org/videos',
+      'https://fc2video.org/recent'
+    ] : [
+      `https://fc2video.org/search?q=${encodedQuery}`,
+      `https://fc2video.org/?q=${encodedQuery}`,
+      `https://fc2video.org/search/${encodedQuery}`
+    ];
+    
+    const encodedQuery = query ? encodeURIComponent(query) : '';
     // 複数のURLパターンを試す
-    const urls = [
+    const urls = (!query || query.trim().length === 0) ? [
+      'https://fc2video.org/',
+      'https://fc2video.org/videos',
+      'https://fc2video.org/recent'
+    ] : [
       `https://fc2video.org/search?q=${encodedQuery}`,
       `https://fc2video.org/?q=${encodedQuery}`,
       `https://fc2video.org/search/${encodedQuery}`
@@ -6091,25 +6111,39 @@ async function searchFC2Video(query, strictMode = true) {
             
             // タイトルがあれば追加（より積極的に）
             if (finalTitle && finalTitle.length > 3) {
-              // 検索クエリとタイトルの関連性をチェック
-              // strictMode=falseの場合は、より緩和した条件でマッチング
-              if (!isTitleRelevant(finalTitle, query, strictMode)) {
-                // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
-                // タイトルが10文字以上あれば、関連性チェックを緩和
-                if (strictMode || finalTitle.length < 10) {
-                  return; // 関連性がない場合はスキップ
+              // 空のクエリの場合は関連性チェックをスキップ
+              if (!query || query.trim().length === 0) {
+                // 空のクエリの場合は、すべての動画を追加
+                videos.push({
+                  id: `fc2video-${Date.now()}-${index}`,
+                  title: finalTitle.substring(0, 200),
+                  thumbnail: thumbnail || '',
+                  duration: duration || '',
+                  url: fullUrl,
+                  embedUrl: fullUrl,
+                  source: 'fc2video'
+                });
+              } else {
+                // 検索クエリとタイトルの関連性をチェック
+                // strictMode=falseの場合は、より緩和した条件でマッチング
+                if (!isTitleRelevant(finalTitle, query, strictMode)) {
+                  // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
+                  // タイトルが10文字以上あれば、関連性チェックを緩和
+                  if (strictMode || finalTitle.length < 10) {
+                    return; // 関連性がない場合はスキップ
+                  }
                 }
+                
+                videos.push({
+                  id: `fc2video-${Date.now()}-${index}`,
+                  title: finalTitle.substring(0, 200),
+                  thumbnail: thumbnail || '',
+                  duration: duration || '',
+                  url: fullUrl,
+                  embedUrl: fullUrl,
+                  source: 'fc2video'
+                });
               }
-              
-              videos.push({
-                id: `fc2video-${Date.now()}-${index}`,
-                title: finalTitle.substring(0, 200),
-                thumbnail: thumbnail || '',
-                duration: duration || '',
-                url: fullUrl,
-                embedUrl: fullUrl,
-                source: 'fc2video'
-              });
             } else if (fullUrl && fullUrl.includes('fc2video.org')) {
               // タイトルがなくても、URLが有効な場合は追加（フォールバック）
               const fallbackTitle = fullUrl.match(/\/([^\/]+)$/)?.[1] || '動画';
