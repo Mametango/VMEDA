@@ -1262,20 +1262,6 @@ app.get('/api/random', async (req, res) => {
           allVideos.push(...result.value);
         }
       });
-      
-      // IV動画を優先順位付け：IMDB風のタイトル（IDパターンや作品情報を含む）を優先
-      // IDパターン [XXX-XXX] や [XXX-XXXX] を含む動画を優先
-      allVideos.sort((a, b) => {
-        const aHasIdPattern = a.title && /\[[A-Z]+-\d+\]/.test(a.title);
-        const bHasIdPattern = b.title && /\[[A-Z]+-\d+\]/.test(b.title);
-        
-        // IDパターンがある動画を優先
-        if (aHasIdPattern && !bHasIdPattern) return -1;
-        if (!aHasIdPattern && bHasIdPattern) return 1;
-        
-        // 両方ともIDパターンがある、または両方ともない場合はランダムに
-        return Math.random() - 0.5;
-      });
     } else if (type === 'jav') {
       // JAV動画: Javmix.TV、JPdmv、PPP.Porn、Mat6tubeから取得
       const javSearches = [
