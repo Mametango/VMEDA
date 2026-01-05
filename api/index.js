@@ -1249,11 +1249,10 @@ app.get('/api/random', async (req, res) => {
     let allVideos = [];
     
     if (type === 'iv') {
-      // IV動画: IVFree、FC2Video.org、Bilibiliから取得
+      // IV動画: IVFree、FC2Video.orgから取得（Bilibiliは除外）
       const ivSearches = [
         searchIVFree('', false), // 空のクエリで全件取得
-        searchFC2Video('', false),
-        searchBilibili('', false) // Bilibiliも追加
+        searchFC2Video('', false)
       ];
       
       const ivResults = await Promise.allSettled(ivSearches);
