@@ -261,13 +261,37 @@ function displayResults(videos, searchQuery) {
       }
     }
     
-    // IVFreeの場合は、サムネイルがなくてもデフォルト画像を表示
-    if (!thumbnail && video.source === 'ivfree') {
-      // IVFreeのデフォルトサムネイル（タイトルからIDを抽出）
-      const idMatch = video.title.match(/\[([A-Z]+-\d+)\]/);
-      if (idMatch) {
-        const id = idMatch[1].toLowerCase();
-        thumbnail = `http://ivfree.asia/images/${id}.jpg`;
+    // サムネイルが取得されていない場合のフォールバック処理
+    if (!thumbnail || thumbnail.length === 0) {
+      // IVFreeの場合は、タイトルからIDを抽出してデフォルト画像を表示
+      if (video.source === 'ivfree') {
+        const idMatch = video.title.match(/\[([A-Z]+-\d+)\]/);
+        if (idMatch) {
+          const id = idMatch[1].toLowerCase();
+          thumbnail = `http://ivfree.asia/images/${id}.jpg`;
+        }
+      }
+      // その他のサイトでも、URLからサムネイルを推測
+      if (!thumbnail && video.url) {
+        // URLから画像パスを推測（一般的なパターン）
+        const urlMatch = video.url.match(/(https?:\/\/[^\/]+)/);
+        if (urlMatch) {
+          const baseUrl = urlMatch[1];
+          // 一般的なサムネイルパスを試す
+          const possiblePaths = [
+            '/thumb.jpg',
+            '/thumbnail.jpg',
+            '/cover.jpg',
+            '/poster.jpg',
+            '/image.jpg'
+          ];
+          // デフォルト画像として、プレースホルダー画像を使用
+          thumbnail = `https://via.placeholder.com/640x360/667eea/ffffff?text=${encodeURIComponent(video.title.substring(0, 20))}`;
+        }
+      }
+      // それでもサムネイルがない場合は、プレースホルダー画像を使用
+      if (!thumbnail || thumbnail.length === 0) {
+        thumbnail = `https://via.placeholder.com/640x360/667eea/ffffff?text=${encodeURIComponent(video.title.substring(0, 20))}`;
       }
     }
     
