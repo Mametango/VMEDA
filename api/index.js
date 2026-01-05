@@ -1263,10 +1263,28 @@ app.get('/api/random', async (req, res) => {
           // BilibiliとMat6tubeの結果はIV関連の動画のみをフィルタリング
           if (index === 2 || index === 3) { // searchBilibiliは3番目（index 2）、searchMat6tubeは4番目（index 3）
             const ivFilteredVideos = result.value.filter(video => {
+              const urlLower = (video.url || '').toLowerCase();
+              
+              // URLにIV関連のパスが含まれている場合は、タイトルがなくても追加
+              const hasIVPath = urlLower.includes('/video/imbd') || 
+                                urlLower.includes('/video/imdb') ||
+                                urlLower.includes('/video/kuromiya') ||
+                                urlLower.includes('/video/imog') ||
+                                urlLower.includes('/video/tl') ||
+                                urlLower.includes('/video/iv') ||
+                                urlLower.includes('/video/mmr') ||
+                                urlLower.includes('/video/cpsky') ||
+                                urlLower.includes('/video/icdv');
+              
+              // URLにIV関連のパスが含まれている場合は追加
+              if (hasIVPath) {
+                return true;
+              }
+              
+              // タイトルがない場合は除外
               if (!video.title) return false;
               
               const titleLower = video.title.toLowerCase();
-              const urlLower = (video.url || '').toLowerCase();
               
               // IV関連のキーワードをチェック
               const ivKeywords = [
@@ -1280,17 +1298,6 @@ app.get('/api/random', async (req, res) => {
                 /\[[A-Z]+-\d+\]/
               ];
               
-              // URLにIV関連のパスが含まれているかチェック
-              const hasIVPath = urlLower.includes('/video/imbd') || 
-                                urlLower.includes('/video/imdb') ||
-                                urlLower.includes('/video/kuromiya') ||
-                                urlLower.includes('/video/imog') ||
-                                urlLower.includes('/video/tl') ||
-                                urlLower.includes('/video/iv') ||
-                                urlLower.includes('/video/mmr') ||
-                                urlLower.includes('/video/cpsky') ||
-                                urlLower.includes('/video/icdv');
-              
               // キーワードマッチング
               const hasKeyword = ivKeywords.some(keyword => {
                 if (keyword instanceof RegExp) {
@@ -1302,7 +1309,7 @@ app.get('/api/random', async (req, res) => {
               // IDパターンが含まれている場合はIVと判断
               const hasIdPattern = /\[[A-Z]+-\d+\]/.test(video.title);
               
-              return hasKeyword || hasIdPattern || hasIVPath;
+              return hasKeyword || hasIdPattern;
             });
             
             const siteName = index === 2 ? 'Bilibili' : 'Mat6tube';
