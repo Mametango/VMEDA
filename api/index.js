@@ -1335,14 +1335,30 @@ app.get('/api/random', async (req, res) => {
         
         // IVFreeとBilibiliのタイトルからシリーズ名（例: IMOG）を抽出
         const seriesNames = new Set();
-        allSourceVideos.forEach(video => {
+        
+        // IVFreeの動画からシリーズ名を抽出
+        ivFreeVideos.forEach(video => {
           if (video.title) {
-            // IDパターン [XXX-XXX] からシリーズ名（XXX部分）を抽出
             const idMatch = video.title.match(/\[([A-Z]+)-\d+\]/);
             if (idMatch) {
-              const seriesName = idMatch[1]; // 例: "IMOG"（"IMOG-182"から"IMOG"を抽出）
+              const seriesName = idMatch[1];
               if (seriesName.length >= 2 && seriesName.length <= 10) {
                 seriesNames.add(seriesName.toLowerCase());
+                console.log(`🔍 IVFreeからシリーズ名を抽出: "${video.title}" → "${seriesName}"`);
+              }
+            }
+          }
+        });
+        
+        // Bilibiliの動画からシリーズ名を抽出
+        bilibiliVideos.forEach(video => {
+          if (video.title) {
+            const idMatch = video.title.match(/\[([A-Z]+)-\d+\]/);
+            if (idMatch) {
+              const seriesName = idMatch[1];
+              if (seriesName.length >= 2 && seriesName.length <= 10) {
+                seriesNames.add(seriesName.toLowerCase());
+                console.log(`🔍 Bilibiliからシリーズ名を抽出: "${video.title}" → "${seriesName}"`);
               }
             }
           }
@@ -1476,14 +1492,30 @@ app.get('/api/random', async (req, res) => {
         
         // IVFreeとBilibiliのタイトルからシリーズ名（例: IMOG）を抽出
         const seriesNames = new Set();
-        allSourceVideos.forEach(video => {
+        
+        // IVFreeの動画からシリーズ名を抽出
+        ivFreeVideos.forEach(video => {
           if (video.title) {
-            // IDパターン [XXX-XXX] からシリーズ名（XXX部分）を抽出
             const idMatch = video.title.match(/\[([A-Z]+)-\d+\]/);
             if (idMatch) {
-              const seriesName = idMatch[1]; // 例: "IMOG"（"IMOG-182"から"IMOG"を抽出）
+              const seriesName = idMatch[1];
               if (seriesName.length >= 2 && seriesName.length <= 10) {
                 seriesNames.add(seriesName.toLowerCase());
+                console.log(`🔍 IVFreeからシリーズ名を抽出: "${video.title}" → "${seriesName}"`);
+              }
+            }
+          }
+        });
+        
+        // Bilibiliの動画からシリーズ名を抽出
+        bilibiliVideos.forEach(video => {
+          if (video.title) {
+            const idMatch = video.title.match(/\[([A-Z]+)-\d+\]/);
+            if (idMatch) {
+              const seriesName = idMatch[1];
+              if (seriesName.length >= 2 && seriesName.length <= 10) {
+                seriesNames.add(seriesName.toLowerCase());
+                console.log(`🔍 Bilibiliからシリーズ名を抽出: "${video.title}" → "${seriesName}"`);
               }
             }
           }
