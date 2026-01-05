@@ -3529,7 +3529,7 @@ async function searchIVFree(query, strictMode = true) {
     
     for (const selector of selectors) {
       $(selector).each((index, elem) => {
-        if (videos.length >= 50) return false;
+        // 制限なしで全件取得
         
         const $item = $(elem);
         let titleText = '';
@@ -6055,7 +6055,7 @@ async function searchFC2Video(query, strictMode = true) {
         
         selectors.forEach(selector => {
           $(selector).each((index, elem) => {
-            if (videos.length >= 200) return false;
+            // 制限なしで全件取得
             
             foundCount++;
             
