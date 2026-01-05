@@ -1249,16 +1249,49 @@ app.get('/api/random', async (req, res) => {
     let allVideos = [];
     
     if (type === 'iv') {
-      // IV動画: IVFree、FC2Video.orgから取得（Bilibiliは除外）
+      // IV動画: IVFree、FC2Video.org、Bilibiliから取得
       const ivSearches = [
         searchIVFree('', false), // 空のクエリで全件取得
-        searchFC2Video('', false)
+        searchFC2Video('', false),
+        searchBilibili('', false) // Bilibiliも追加
       ];
       
       const ivResults = await Promise.allSettled(ivSearches);
-      ivResults.forEach((result) => {
+      ivResults.forEach((result, index) => {
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-          allVideos.push(...result.value);
+          // Bilibiliの結果はIV関連の動画のみをフィルタリング
+          if (index === 2) { // searchBilibiliは3番目（index 2）
+            const ivFilteredVideos = result.value.filter(video => {
+              if (!video.title) return false;
+              
+              const titleLower = video.title.toLowerCase();
+              
+              // IV関連のキーワードをチェック
+              const ivKeywords = [
+                'iv', 'イメージビデオ', 'イメージ', 'image video',
+                // IDパターン [XXX-XXX] を含む（IV作品の特徴）
+                /\[[A-Z]+-\d+\]/
+              ];
+              
+              // キーワードマッチング
+              const hasKeyword = ivKeywords.some(keyword => {
+                if (keyword instanceof RegExp) {
+                  return keyword.test(video.title);
+                }
+                return titleLower.includes(keyword);
+              });
+              
+              // IDパターンが含まれている場合はIVと判断
+              const hasIdPattern = /\[[A-Z]+-\d+\]/.test(video.title);
+              
+              return hasKeyword || hasIdPattern;
+            });
+            
+            console.log(`🔍 BilibiliからIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
+            allVideos.push(...ivFilteredVideos);
+          } else {
+            allVideos.push(...result.value);
+          }
         }
       });
     } else if (type === 'jav') {
