@@ -8,22 +8,12 @@
   ],
   "routes": [
     {
-      "src": "/favicon.ico",
-      "dest": "/server.js"
-    },
-    {
       "src": "/api/(.*)",
       "dest": "/server.js"
     },
     {
       "src": "/(.*)",
       "dest": "/server.js"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/server.js"
     }
   ],
   "env": {
