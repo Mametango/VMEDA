@@ -5640,9 +5640,21 @@ app.get('/', (req, res) => {
 async function searchMat6tube(query, strictMode = true) {
   try {
     console.log(`🔍 Mat6tube検索開始: "${query}" (strictMode: ${strictMode})`);
-    const encodedQuery = encodeURIComponent(query);
-    // 複数のURLパターンを試す（/video/パスを最優先に）
-    const urls = [
+    
+    // 空のクエリの場合は、IV関連のパスから動画を取得
+    const encodedQuery = query ? encodeURIComponent(query) : '';
+    const urls = (!query || query.trim().length === 0) ? [
+      'https://mat6tube.com/video/imbd',
+      'https://mat6tube.com/video/imdb',
+      'https://mat6tube.com/video/kuromiya',
+      'https://mat6tube.com/video/mmr',
+      'https://mat6tube.com/video/cpsky',
+      'https://mat6tube.com/video/icdv',
+      'https://mat6tube.com/video/imog',
+      'https://mat6tube.com/video/tl',
+      'https://mat6tube.com/video/iv',
+      'https://mat6tube.com/recent'
+    ] : [
       `https://mat6tube.com/video/${encodedQuery}`, // 最優先：/video/パスで検索
       `https://mat6tube.com/video/${query}`, // エンコードなしも試す
       `https://mat6tube.com/video/`, // /video/パスで全動画を取得（クエリに関係なく）
@@ -5693,7 +5705,7 @@ async function searchMat6tube(query, strictMode = true) {
           console.log(`🔍 Mat6tube: /video/リンク数: ${videoLinks.length}`);
           
           videoLinks.each((index, elem) => {
-            if (videos.length >= 200) return false;
+            // 制限なしで全件取得
             
             const $link = $(elem);
             let href = $link.attr('href') || '';
