@@ -1289,29 +1289,11 @@ app.get('/api/random', async (req, res) => {
       }
     });
     
-    // ランダムに20件を選択
-    let randomVideos;
-    if (type === 'iv') {
-      // IV動画: IDパターン（[XXX-XXX]）を含むタイトルを優先的に選択
-      const idPatternVideos = uniqueVideos.filter(v => v.title && /\[[A-Z]+-\d+\]/.test(v.title));
-      const otherVideos = uniqueVideos.filter(v => !v.title || !/\[[A-Z]+-\d+\]/.test(v.title));
-      
-      // IDパターンを含む動画を優先（最大15件）、残りを他の動画からランダムに選択（最大5件）
-      const shuffledIdPattern = idPatternVideos.sort(() => 0.5 - Math.random());
-      const shuffledOther = otherVideos.sort(() => 0.5 - Math.random());
-      
-      const selectedIdPattern = shuffledIdPattern.slice(0, 15);
-      const remaining = 20 - selectedIdPattern.length;
-      const selectedOther = shuffledOther.slice(0, remaining);
-      randomVideos = [...selectedIdPattern, ...selectedOther].slice(0, 20);
-      
-      console.log(`✅ IVランダム動画取得完了: ${randomVideos.length}件 (IDパターン: ${selectedIdPattern.length}件, その他: ${selectedOther.length}件, 全${uniqueVideos.length}件から選択)`);
-    } else {
-      // JAV動画: 完全にランダム
-      const shuffled = uniqueVideos.sort(() => 0.5 - Math.random());
-      randomVideos = shuffled.slice(0, 20);
-      console.log(`✅ JAVランダム動画取得完了: ${randomVideos.length}件 (全${uniqueVideos.length}件から選択)`);
-    }
+    // ランダムに20件を選択（IVもJAVも完全にランダム）
+    const shuffled = uniqueVideos.sort(() => 0.5 - Math.random());
+    const randomVideos = shuffled.slice(0, 20);
+    
+    console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全${uniqueVideos.length}件から選択)`);
     
     res.json({ results: randomVideos });
   } catch (error) {
