@@ -1249,19 +1249,25 @@ app.get('/api/random', async (req, res) => {
     let allVideos = [];
     
     if (type === 'iv') {
-      // IV動画: IVFree、FC2Video.org、Bilibili、Mat6tubeから取得
+      // IV動画: IVFree、FC2Video.org、Bilibiliから取得
       const ivSearches = [
         searchIVFree('', false), // 空のクエリで全件取得
         searchFC2Video('', false),
-        searchBilibili('', false), // Bilibiliも追加
-        searchMat6tube('', false) // Mat6tubeも追加
+        searchBilibili('', false) // Bilibiliも追加
       ];
       
       const ivResults = await Promise.allSettled(ivSearches);
+      const ivFreeVideos = [];
+      
       ivResults.forEach((result, index) => {
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-          // BilibiliとMat6tubeの結果はIV関連の動画のみをフィルタリング
-          if (index === 2 || index === 3) { // searchBilibiliは3番目（index 2）、searchMat6tubeは4番目（index 3）
+          // IVFreeの結果を保存（後でMat6tube検索に使用）
+          if (index === 0) { // searchIVFreeは1番目（index 0）
+            ivFreeVideos.push(...result.value);
+          }
+          
+          // Bilibiliの結果はIV関連の動画のみをフィルタリング
+          if (index === 2) { // searchBilibiliは3番目（index 2）
             const ivFilteredVideos = result.value.filter(video => {
               const urlLower = (video.url || '').toLowerCase();
               
