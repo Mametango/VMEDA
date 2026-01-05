@@ -1321,9 +1321,9 @@ app.get('/api/random', async (req, res) => {
       }
     });
     
-    // ランダムに20件を選択（IVもJAVも完全にランダム）
+    // ランダムに50件を選択（IVもJAVも完全にランダム）
     const shuffled = uniqueVideos.sort(() => 0.5 - Math.random());
-    const randomVideos = shuffled.slice(0, 20);
+    const randomVideos = shuffled.slice(0, 50);
     
     console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全${uniqueVideos.length}件から選択)`);
     
