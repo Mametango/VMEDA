@@ -1330,35 +1330,26 @@ app.get('/api/random', async (req, res) => {
       if (ivFreeVideos.length > 0) {
         console.log(`🔍 IVFreeから取得した動画: ${ivFreeVideos.length}件、Mat6tube検索を開始`);
         
-        // IVFreeのタイトルからIDパターン（[XXX-XXX]）を抽出
-        const idPatterns = new Set();
+        // IVFreeのタイトルからシリーズ名（例: IMOG）を抽出
+        const seriesNames = new Set();
         ivFreeVideos.forEach(video => {
           if (video.title) {
-            // IDパターン [XXX-XXX] を抽出
-            const idMatch = video.title.match(/\[([A-Z]+-\d+)\]/);
+            // IDパターン [XXX-XXX] からシリーズ名（XXX部分）を抽出
+            const idMatch = video.title.match(/\[([A-Z]+)-\d+\]/);
             if (idMatch) {
-              const idPattern = idMatch[1]; // 例: "IMOG-182"
-              idPatterns.add(idPattern.toLowerCase());
-            }
-            
-            // タイトルの最初の部分（IDパターンやシリーズ名）を抽出
-            // 例: "[IMOG-182] まりあ 純真無垢" → "IMOG-182" または "IMOG"
-            const titleStart = video.title.trim();
-            if (titleStart.length > 0) {
-              // 最初の単語やIDパターンを抽出
-              const firstPart = titleStart.split(/\s+/)[0].replace(/[\[\]]/g, '');
-              if (firstPart.length > 2 && firstPart.length < 20) {
-                idPatterns.add(firstPart.toLowerCase());
+              const seriesName = idMatch[1]; // 例: "IMOG"（"IMOG-182"から"IMOG"を抽出）
+              if (seriesName.length >= 2 && seriesName.length <= 10) {
+                seriesNames.add(seriesName.toLowerCase());
               }
             }
           }
         });
         
-        console.log(`🔍 抽出したIDパターン/シリーズ名: ${Array.from(idPatterns).slice(0, 10).join(', ')}... (全${idPatterns.size}件)`);
+        console.log(`🔍 抽出したシリーズ名: ${Array.from(seriesNames).slice(0, 10).join(', ')}... (全${seriesNames.size}件)`);
         
-        // 各IDパターンでMat6tubeを検索（最大20件まで）
-        const mat6tubeSearches = Array.from(idPatterns).slice(0, 20).map(pattern => {
-          return searchMat6tube(pattern, false);
+        // 各シリーズ名でMat6tubeを検索（最大20件まで）
+        const mat6tubeSearches = Array.from(seriesNames).slice(0, 20).map(seriesName => {
+          return searchMat6tube(seriesName, false);
         });
         
         if (mat6tubeSearches.length > 0) {
