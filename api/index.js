@@ -5765,13 +5765,6 @@ async function searchMat6tube(query, strictMode = true) {
       `https://mat6tube.com/video/${encodedQuery}`, // 最優先：/video/パスで検索
       `https://mat6tube.com/video/${query}`, // エンコードなしも試す
       `https://mat6tube.com/video/`, // /video/パスで全動画を取得（クエリに関係なく）
-      `https://mat6tube.com/search?q=${encodedQuery}`,
-      `https://mat6tube.com/search/${encodedQuery}`,
-      `https://mat6tube.com/?q=${encodedQuery}`,
-      `https://mat6tube.com/?s=${encodedQuery}`,
-      `https://mat6tube.com/?search=${encodedQuery}`,
-      `https://mat6tube.com/search.php?q=${encodedQuery}`,
-      `https://mat6tube.com/index.php?q=${encodedQuery}`,
       `https://mat6tube.com/recent` // /recentページは検索クエリなしで最新動画を取得
     ];
     
@@ -6111,10 +6104,15 @@ async function searchMat6tube(query, strictMode = true) {
           console.log(`ℹ️ Mat6tube: このURLでは結果が見つかりませんでした（URL: ${url}）`);
         }
       } catch (urlError) {
-        // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
+        // 404や403エラーは予想される動作なので、警告を抑制（/search/パスは404が予想される）
         const urlIndex = urls.indexOf(url) + 1;
-        if (urlIndex === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
-          console.log(`ℹ️ Mat6tube: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
+        const isSearchPath = url.includes('/search/');
+        if (urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
+          // /search/パスの404は予想されるので、ログを出さない
+          if (!isSearchPath && urlIndex === 1) {
+            console.log(`ℹ️ Mat6tube: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
+          }
+          // /search/パスの404は無視（既に削除したが、念のため）
         } else if (urlError.response) {
           console.warn(`⚠️ Mat6tube URL試行エラー (${url}): Request failed with status code ${urlError.response.status}`);
         } else {
