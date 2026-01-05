@@ -1235,6 +1235,72 @@ app.post('/api/search', async (req, res) => {
   }
 });
 
+// ランダム動画取得API
+app.get('/api/random', async (req, res) => {
+  try {
+    const { type } = req.query;
+    
+    if (!type || (type !== 'iv' && type !== 'jav')) {
+      return res.status(400).json({ error: 'Invalid type. Use "iv" or "jav"' });
+    }
+    
+    console.log(`🎲 ランダム動画取得開始: type=${type}`);
+    
+    let allVideos = [];
+    
+    if (type === 'iv') {
+      // IV動画: IVFree、FC2Video.orgから取得
+      const ivSearches = [
+        searchIVFree('', false), // 空のクエリで全件取得
+        searchFC2Video('', false)
+      ];
+      
+      const ivResults = await Promise.allSettled(ivSearches);
+      ivResults.forEach((result) => {
+        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+          allVideos.push(...result.value);
+        }
+      });
+    } else if (type === 'jav') {
+      // JAV動画: Javmix.TV、JPdmv、PPP.Porn、Mat6tubeから取得
+      const javSearches = [
+        searchJavmix('', false),
+        searchJPdmv('', false),
+        searchPPP('', false),
+        searchMat6tube('', false)
+      ];
+      
+      const javResults = await Promise.allSettled(javSearches);
+      javResults.forEach((result) => {
+        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+          allVideos.push(...result.value);
+        }
+      });
+    }
+    
+    // 重複除去
+    const uniqueVideos = [];
+    const seenUrls = new Set();
+    allVideos.forEach(video => {
+      if (video && video.url && !seenUrls.has(video.url)) {
+        seenUrls.add(video.url);
+        uniqueVideos.push(video);
+      }
+    });
+    
+    // ランダムに20件を選択
+    const shuffled = uniqueVideos.sort(() => 0.5 - Math.random());
+    const randomVideos = shuffled.slice(0, 20);
+    
+    console.log(`✅ ランダム動画取得完了: ${randomVideos.length}件 (全${uniqueVideos.length}件から選択)`);
+    
+    res.json({ results: randomVideos });
+  } catch (error) {
+    console.error('❌ ランダム動画取得エラー:', error.message);
+    res.status(500).json({ error: 'Failed to fetch random videos' });
+  }
+});
+
 // Google検索
 async function searchGoogle(query) {
   try {
@@ -3460,49 +3526,55 @@ async function searchIVFree(query, strictMode = true) {
         
         foundCount++;
         
-        // 検索クエリとタイトルの関連性をチェック
-        // 検索語がタイトルに完全に含まれていることを必須とする（厳格なマッチング）
-        const titleLower = titleText.toLowerCase();
-        const queryLower = query.toLowerCase().trim();
-        
-        // クエリがIDパターンに含まれているか、タイトルに含まれているか
-        const idMatch = titleText.match(/\[([A-Z]+)-\d+\]/);
-        const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
-        const queryInTitle = titleLower.includes(queryLower);
-        
-        // 厳格なマッチングと緩和したマッチングを切り替え
-        let shouldMatch = false;
-        
-        if (strictMode) {
-          // 厳格なマッチング: 完全一致のみ
-          if (hasIdPattern) {
-            // IDパターンがある場合: IDパターンに完全一致、またはタイトルに完全一致のみ
-            shouldMatch = queryInId || queryInTitle;
-          } else {
-            // IDパターンがない場合: タイトルに完全一致のみを許可（非常に厳格）
-            shouldMatch = queryInTitle;
-          }
+        // 空のクエリの場合はすべての動画を取得
+        if (!query || query.trim().length === 0) {
+          // 空のクエリの場合は、すべての動画を追加（strictModeに関係なく）
+          matchedCount++;
         } else {
-          // 緩和したマッチング: 部分一致や文字単位の一致も許可
-          const queryChars = queryLower.split('').filter(c => c.trim().length > 0 && c !== ' ');
-          const allCharsInTitle = queryChars.length > 0 && queryChars.every(char => titleLower.includes(char));
-          const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
-          const halfCharsMatch = queryChars.length >= 2 && matchingChars >= Math.ceil(queryChars.length / 2);
+          // 検索クエリとタイトルの関連性をチェック
+          // 検索語がタイトルに完全に含まれていることを必須とする（厳格なマッチング）
+          const titleLower = titleText.toLowerCase();
+          const queryLower = query.toLowerCase().trim();
           
-          if (hasIdPattern) {
-            // IDパターンがある場合: IDパターンに完全一致、タイトルに完全一致、すべての文字がタイトルに含まれている、または50%以上の文字が一致している
-            shouldMatch = queryInId || queryInTitle || allCharsInTitle || halfCharsMatch;
+          // クエリがIDパターンに含まれているか、タイトルに含まれているか
+          const idMatch = titleText.match(/\[([A-Z]+)-\d+\]/);
+          const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
+          const queryInTitle = titleLower.includes(queryLower);
+          
+          // 厳格なマッチングと緩和したマッチングを切り替え
+          let shouldMatch = false;
+          
+          if (strictMode) {
+            // 厳格なマッチング: 完全一致のみ
+            if (hasIdPattern) {
+              // IDパターンがある場合: IDパターンに完全一致、またはタイトルに完全一致のみ
+              shouldMatch = queryInId || queryInTitle;
+            } else {
+              // IDパターンがない場合: タイトルに完全一致のみを許可（非常に厳格）
+              shouldMatch = queryInTitle;
+            }
           } else {
-            // IDパターンがない場合: タイトルに完全一致、すべての文字がタイトルに含まれている、または50%以上の文字が一致している
-            shouldMatch = queryInTitle || allCharsInTitle || halfCharsMatch;
+            // 緩和したマッチング: 部分一致や文字単位の一致も許可
+            const queryChars = queryLower.split('').filter(c => c.trim().length > 0 && c !== ' ');
+            const allCharsInTitle = queryChars.length > 0 && queryChars.every(char => titleLower.includes(char));
+            const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
+            const halfCharsMatch = queryChars.length >= 2 && matchingChars >= Math.ceil(queryChars.length / 2);
+            
+            if (hasIdPattern) {
+              // IDパターンがある場合: IDパターンに完全一致、タイトルに完全一致、すべての文字がタイトルに含まれている、または50%以上の文字が一致している
+              shouldMatch = queryInId || queryInTitle || allCharsInTitle || halfCharsMatch;
+            } else {
+              // IDパターンがない場合: タイトルに完全一致、すべての文字がタイトルに含まれている、または50%以上の文字が一致している
+              shouldMatch = queryInTitle || allCharsInTitle || halfCharsMatch;
+            }
           }
+          
+          if (!shouldMatch) {
+            return; // 検索語が含まれていない場合はスキップ
+          }
+          
+          matchedCount++;
         }
-        
-        if (!shouldMatch) {
-          return; // 検索語が含まれていない場合はスキップ
-        }
-        
-        matchedCount++;
         
         // リンクが見つからない場合は、親要素から探す
         if (!href) {

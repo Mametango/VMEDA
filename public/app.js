@@ -110,6 +110,8 @@ const recentSearchesDiv = document.getElementById('recent-searches');
 const recentSearchesList = document.getElementById('recent-searches-list');
 const sortContainer = document.getElementById('sort-container');
 const sortSelect = document.getElementById('sort-select');
+const ivRandomBtn = document.getElementById('iv-random-btn');
+const javRandomBtn = document.getElementById('jav-random-btn');
 
 // 現在の検索結果を保持
 let currentVideos = [];
@@ -1574,6 +1576,20 @@ searchInput.addEventListener('keypress', (e) => {
     searchVideos(searchInput.value);
   }
 });
+
+// IVランダムボタン
+if (ivRandomBtn) {
+  ivRandomBtn.addEventListener('click', () => {
+    getRandomIV();
+  });
+}
+
+// JAVランダムボタン
+if (javRandomBtn) {
+  javRandomBtn.addEventListener('click', () => {
+    getRandomJAV();
+  });
+}
 
 // 広告の読み込み（環境変数または設定から）
 async function loadAds() {
