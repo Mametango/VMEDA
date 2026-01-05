@@ -289,6 +289,19 @@ try {
   }
 }
 
+// favicon.icoのリクエストを処理（404エラーを防ぐ）
+app.get('/favicon.ico', (req, res) => {
+  // SVG faviconを返す
+  const faviconPath = path.join(publicPath, 'favicon.svg');
+  if (fs.existsSync(faviconPath)) {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.sendFile(faviconPath);
+  } else {
+    // favicon.svgが存在しない場合は204 No Contentを返す
+    res.status(204).end();
+  }
+});
+
 try {
   app.use(express.static(publicPath, {
     maxAge: '1d', // キャッシュ1日
@@ -301,6 +314,8 @@ try {
         res.setHeader('Content-Type', 'text/css');
       } else if (filePath.endsWith('.html')) {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      } else if (filePath.endsWith('.svg')) {
+        res.setHeader('Content-Type', 'image/svg+xml');
       }
     }
   }));
