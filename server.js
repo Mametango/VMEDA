@@ -5502,24 +5502,6 @@ app.get('/', (req, res) => {
   }
 });
 
-// Favicon
-app.get('/favicon.ico', (req, res) => {
-  try {
-    // SVG faviconを返す
-    const faviconPath = path.join(publicPath, 'favicon.svg');
-    if (fs.existsSync(faviconPath)) {
-      res.setHeader('Content-Type', 'image/svg+xml');
-      res.sendFile(faviconPath);
-    } else {
-      // favicon.svgが存在しない場合は204 No Contentを返す
-      res.status(204).end();
-    }
-  } catch (error) {
-    console.error('❌ Faviconエラー:', error.message);
-    res.status(204).end(); // エラー時も204を返して404を防ぐ
-  }
-});
-
 // Mat6tube検索（アプローチ変更：より積極的に動画を取得）
 async function searchMat6tube(query, strictMode = true) {
   try {
