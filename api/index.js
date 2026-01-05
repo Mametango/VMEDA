@@ -1321,11 +1321,11 @@ app.get('/api/random', async (req, res) => {
       }
     });
     
-    // ランダムに50件を選択（IVもJAVも完全にランダム）
+    // ランダムに全件を選択（IVもJAVも完全にランダム、制限なし）
     const shuffled = uniqueVideos.sort(() => 0.5 - Math.random());
-    const randomVideos = shuffled.slice(0, 50);
+    const randomVideos = shuffled; // 制限なしで全件返す
     
-    console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全${uniqueVideos.length}件から選択)`);
+    console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件表示)`);
     
     res.json({ results: randomVideos });
   } catch (error) {
