@@ -1273,6 +1273,9 @@ app.get('/api/random', async (req, res) => {
                 'iv', 'イメージビデオ', 'イメージ', 'image video',
                 'imbd', 'imdb', // IMBD/IMDBシリーズはIV作品
                 'kuromiya', // 黒宮れい関連もIV
+                'mmr', // MMRシリーズはIV作品
+                'cpsky', // CPSKYシリーズはIV作品
+                'icdv', // ICDVシリーズはIV作品
                 // IDパターン [XXX-XXX] を含む（IV作品の特徴）
                 /\[[A-Z]+-\d+\]/
               ];
@@ -1283,7 +1286,10 @@ app.get('/api/random', async (req, res) => {
                                 urlLower.includes('/video/kuromiya') ||
                                 urlLower.includes('/video/imog') ||
                                 urlLower.includes('/video/tl') ||
-                                urlLower.includes('/video/iv');
+                                urlLower.includes('/video/iv') ||
+                                urlLower.includes('/video/mmr') ||
+                                urlLower.includes('/video/cpsky') ||
+                                urlLower.includes('/video/icdv');
               
               // キーワードマッチング
               const hasKeyword = ivKeywords.some(keyword => {
