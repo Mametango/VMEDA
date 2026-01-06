@@ -4215,28 +4215,35 @@ async function searchIVFree(query, strictMode = true) {
         }
         
         // タイトルが空または短い場合、URLからタイトルを生成
-        if (!titleText || titleText.trim().length < 1) {
+        // 3文字未満のタイトルは、URLから再生成を試みる（動画が見れない可能性が高いため）
+        if (!titleText || titleText.trim().length < 3) {
           // URLからタイトルを抽出を試みる
           if (href) {
             const urlMatch = href.match(/\/([^\/]+)$/);
             if (urlMatch) {
-              titleText = decodeURIComponent(urlMatch[1])
+              const urlTitle = decodeURIComponent(urlMatch[1])
                 .replace(/[-_]/g, ' ')
                 .replace(/\.html?$/i, '')
                 .trim();
+              
+              // URLから抽出したタイトルが3文字以上の場合、それを使用
+              if (urlTitle && urlTitle.length >= 3) {
+                titleText = urlTitle;
+              }
             }
           }
           
-          // それでもタイトルがない場合、IDパターンからタイトルを生成
-          if (!titleText || titleText.trim().length < 1) {
+          // それでもタイトルが3文字未満の場合、IDパターンからタイトルを生成
+          if (!titleText || titleText.trim().length < 3) {
             const idMatch = href.match(/([A-Z]+-\d+)/);
             if (idMatch) {
               titleText = `[${idMatch[1]}]`;
             }
           }
           
-          // それでもタイトルがない場合はスキップ（1文字未満の場合のみ）
-          if (!titleText || titleText.trim().length < 1) {
+          // タイトルが3文字未満の場合はスキップ（動画が見れない可能性が高いため）
+          if (!titleText || titleText.trim().length < 3) {
+            console.log(`⚠️ IVFree: タイトルが短すぎるためスキップ: "${titleText}" (URL: ${href})`);
             return;
           }
         }
