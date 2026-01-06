@@ -1523,17 +1523,18 @@ app.get('/api/random', async (req, res) => {
     
     res.json({ results: randomVideos });
   } catch (error) {
-    console.error('❌ ランダム動画取得エラー:', error.message);
-    console.error('❌ スタックトレース:', error.stack);
+    console.error('❌ ランダム動画取得エラー:', error);
+    console.error('❌ エラーメッセージ:', error.message);
+    console.error('❌ スタックトレース:', error.stack ? error.stack.substring(0, 1000) : 'No stack trace');
     console.error('❌ エラー詳細:', {
       name: error.name,
       message: error.message,
-      stack: error.stack
+      stack: error.stack ? error.stack.substring(0, 500) : 'No stack trace'
     });
-    res.status(500).json({ 
-      error: 'Failed to fetch random videos',
-      message: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    // エラーが発生した場合は空の配列を返す（サイトが動作し続けるように）
+    res.status(200).json({ 
+      results: [],
+      error: 'Failed to fetch random videos. Please try again later.'
     });
   }
 });
@@ -4737,19 +4738,21 @@ async function searchRou(query) {
 // 検索履歴を取得するAPI（このサイトを通して検索したワードを最新20個返す）
 app.get('/api/recent-searches', async (req, res) => {
   try {
+    console.log('📋 /api/recent-searches リクエスト受信');
     // キャッシュ付きで検索履歴を取得（高速化）
     const allSearches = await getRecentSearchesCached();
     
     // このサイトを通して検索したワードを最新20個返す
     // 自分の検索も他の人の検索も含めて、すべての検索ワードを履歴として表示
     // 検索ワードのみを返す（時間情報は不要）
-    const searches = allSearches
+    const searches = (allSearches || [])
       .slice(0, MAX_RECENT_SEARCHES) // 最新20件
       .map(entry => ({
-        query: entry.query
-      }));
+        query: entry && entry.query ? entry.query : ''
+      }))
+      .filter(entry => entry.query && entry.query.trim().length > 0);
     
-    console.log(`📋 検索履歴取得: ${searches.length}件 (全検索: ${allSearches.length}件)`);
+    console.log(`📋 検索履歴取得: ${searches.length}件 (全検索: ${allSearches ? allSearches.length : 0}件)`);
     if (searches.length > 0) {
       console.log(`📋 検索履歴サンプル: ${searches.slice(0, 3).map(s => s.query).join(', ')}`);
     }
@@ -4768,13 +4771,10 @@ app.get('/api/recent-searches', async (req, res) => {
     console.error('❌ エラー詳細:', {
       name: error.name,
       message: error.message,
-      stack: error.stack
+      stack: error.stack ? error.stack.substring(0, 500) : 'No stack trace'
     });
-    res.status(500).json({ 
-      error: 'Failed to retrieve search history',
-      message: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    // エラーが発生した場合は空の配列を返す（サイトが動作し続けるように）
+    res.status(200).json({ searches: [] });
   }
 });
 
