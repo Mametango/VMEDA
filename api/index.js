@@ -5659,7 +5659,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       
       // CSPを完全に無効化（外部動画サイトのリソースをすべて許可）
       // metaタグのCSPはframe-ancestorsを無視するため、レスポンスヘッダーでも設定
-      const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; media-src * blob:; frame-src *; object-src 'none'; base-uri *; form-action *;`;
+      const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com; style-src * 'unsafe-inline'; img-src * data: blob:; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data:;`;
       
       // 新しいCSPを追加（metaタグ）
       $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${cspContent}">`);
@@ -5806,7 +5806,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       res.setHeader('X-Frame-Options', 'SAMEORIGIN');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       // レスポンスヘッダーでもCSPを設定（frame-ancestorsを含む）
-      res.setHeader('Content-Security-Policy', `${cspContent} frame-ancestors 'self';`);
+      res.setHeader('Content-Security-Policy', `${cspContent} frame-ancestors *;`);
       
       console.log('✅ 外部動画サイトをプロキシ経由で返送');
       res.send(html);
@@ -6253,6 +6253,9 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    // CSPをさらに緩和（レスポンスヘッダーでも設定）
+    const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com; style-src * 'unsafe-inline'; img-src * data: blob:; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data:;`;
+    res.setHeader('Content-Security-Policy', `${cspContent} frame-ancestors *;`);
     
     console.log('✅ IVFreeプロキシレスポンス送信');
     res.send(html);
