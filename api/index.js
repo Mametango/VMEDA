@@ -1469,8 +1469,11 @@ app.get('/api/random', async (req, res) => {
     }
     const randomVideos = shuffled; // 制限なしで全件返す
     
+    // デバッグ: 最初の5件のソースを確認
+    const firstFiveSources = randomVideos.slice(0, 5).map(v => v.source).join(', ');
     console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件ランダム順)`);
     console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件, Bilibili=${uniqueVideos.filter(v => v.source === 'bilibili').length}件, FC2Video=${uniqueVideos.filter(v => v.source === 'fc2video').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件`);
+    console.log(`🎲 ランダム順の最初の5件のソース: ${firstFiveSources}`);
     
     res.json({ results: randomVideos });
   } catch (error) {

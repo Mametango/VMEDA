@@ -1609,7 +1609,14 @@ async function getRandomIV() {
     currentPage = 1;
     totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
     
+    // ランダム表示の場合はソートを「デフォルト」にリセット（ランダム順を維持）
+    if (sortSelect) {
+      sortSelect.value = 'default';
+    }
+    
     if (videos.length > 0) {
+      // サーバー側でランダムにシャッフルされた順序をそのまま表示
+      console.log('🎲 ランダム順で表示（ソートなし）');
       displayResults(videos, 'IV Random');
       if (sortContainer) {
         sortContainer.classList.remove('hidden');
@@ -1667,7 +1674,14 @@ async function getRandomJAV() {
     currentPage = 1;
     totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
     
+    // ランダム表示の場合はソートを「デフォルト」にリセット（ランダム順を維持）
+    if (sortSelect) {
+      sortSelect.value = 'default';
+    }
+    
     if (videos.length > 0) {
+      // サーバー側でランダムにシャッフルされた順序をそのまま表示
+      console.log('🎲 ランダム順で表示（ソートなし）');
       displayResults(videos, 'JAV Random');
       if (sortContainer) {
         sortContainer.classList.remove('hidden');
