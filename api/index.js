@@ -6140,7 +6140,6 @@ async function searchMat6tube(query, strictMode = true) {
               }
             }
           });
-        }
         
         console.log(`🔍 Mat6tube: 見つかった要素: ${foundCount}件、マッチした要素: ${matchedCount}件、動画: ${videos.length}件`);
         
