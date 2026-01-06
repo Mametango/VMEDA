@@ -1250,12 +1250,14 @@ app.get('/api/random', async (req, res) => {
       const ivSearches = [
         searchIVFree('', false), // 空のクエリで全件取得
         searchFC2Video('', false),
+        searchPizjav('', false), // Pizjavからも取得
         // Bilibiliを複数のシリーズで検索
         ...ivSeries.map(series => searchBilibili(series, false))
       ];
       
       const ivResults = await Promise.allSettled(ivSearches);
       const ivFreeVideos = [];
+      const pizjavVideos = [];
       const bilibiliVideos = [];
       
       ivResults.forEach((result, index) => {
@@ -1268,8 +1270,13 @@ app.get('/api/random', async (req, res) => {
           else if (index === 1) { // searchFC2Videoは2番目（index 1）
             allVideos.push(...result.value);
           }
-          // Bilibiliの結果（index 2以降はBilibiliのシリーズ検索結果）
-          else if (index >= 2) {
+          // Pizjavの結果を追加
+          else if (index === 2) { // searchPizjavは3番目（index 2）
+            pizjavVideos.push(...result.value);
+            allVideos.push(...result.value);
+          }
+          // Bilibiliの結果（index 3以降はBilibiliのシリーズ検索結果）
+          else if (index >= 3) {
             // Bilibiliの結果はIV関連の動画のみをフィルタリング
             const ivFilteredVideos = result.value.filter(video => {
               const urlLower = (video.url || '').toLowerCase();
@@ -1321,17 +1328,17 @@ app.get('/api/random', async (req, res) => {
               return hasKeyword || hasIdPattern;
             });
             
-            console.log(`🔍 Bilibili (${ivSeries[index - 2]})からIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
+            console.log(`🔍 Bilibili (${ivSeries[index - 3]})からIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
             bilibiliVideos.push(...ivFilteredVideos);
             allVideos.push(...ivFilteredVideos);
           }
         }
       });
       
-      // IVFreeとBilibiliのタイトルからシリーズ名を抽出してMat6tubeで検索
-      const allSourceVideos = [...ivFreeVideos, ...bilibiliVideos];
+      // IVFree、Pizjav、Bilibiliのタイトルからシリーズ名を抽出してMat6tubeで検索
+      const allSourceVideos = [...ivFreeVideos, ...pizjavVideos, ...bilibiliVideos];
       if (allSourceVideos.length > 0) {
-        console.log(`🔍 IVFreeから取得した動画: ${ivFreeVideos.length}件、Bilibiliから取得した動画: ${bilibiliVideos.length}件、Mat6tube検索を開始`);
+        console.log(`🔍 IVFreeから取得した動画: ${ivFreeVideos.length}件、Pizjavから取得した動画: ${pizjavVideos.length}件、Bilibiliから取得した動画: ${bilibiliVideos.length}件、Mat6tube検索を開始`);
         
         // IVFreeとBilibiliのタイトルからシリーズ名（例: IMOG）を抽出
         const seriesNames = new Set();
@@ -1466,7 +1473,7 @@ app.get('/api/random', async (req, res) => {
     // デバッグ: 最初の5件のソースを確認
     const firstFiveSources = randomVideos.slice(0, 5).map(v => v.source).join(', ');
     console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件ランダム順)`);
-    console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件, Bilibili=${uniqueVideos.filter(v => v.source === 'bilibili').length}件, FC2Video=${uniqueVideos.filter(v => v.source === 'fc2video').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件`);
+    console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件, Pizjav=${uniqueVideos.filter(v => v.source === 'pizjav').length}件, Bilibili=${uniqueVideos.filter(v => v.source === 'bilibili').length}件, FC2Video=${uniqueVideos.filter(v => v.source === 'fc2video').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件`);
     console.log(`🎲 ランダム順の最初の5件のソース: ${firstFiveSources}`);
     
     res.json({ results: randomVideos });
@@ -3701,6 +3708,174 @@ async function searchPPP(query, strictMode = true) {
       console.warn('⚠️ PPP.Porn検索: ページが見つかりません（404）');
     } else {
       console.error('❌ PPP.Porn検索エラー:', error.message);
+    }
+    return [];
+  }
+}
+
+// Pizjav検索（v.pizjav.com）
+// strictMode: true = 厳格なマッチング, false = 緩和したマッチング
+async function searchPizjav(query, strictMode = false) {
+  try {
+    // クエリがnull/undefinedの場合は空文字列に変換
+    query = query || '';
+    console.log(`🔍 Pizjav検索開始: "${query}" (strictMode: ${strictMode})`);
+    const startTime = Date.now();
+    const queryLower = query.toLowerCase().trim();
+    
+    // トップページから全件取得してフィルタリング
+    const url = `https://v.pizjav.com/`;
+    
+    console.log(`🔍 Pizjav: URL取得開始: ${url}`);
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Referer': 'https://v.pizjav.com/',
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000,
+      validateStatus: function (status) {
+        return status >= 200 && status < 400;
+      }
+    });
+    
+    console.log(`🔍 Pizjav: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
+    
+    const $ = cheerio.load(response.data);
+    const videos = [];
+    const seenUrls = new Set();
+    
+    console.log(`🔍 Pizjav: HTML取得完了、パース開始`);
+    
+    // 複数のセレクタを試す
+    const selectors = [
+      'article h2 a',
+      'article h1 a',
+      'h2 a',
+      'h1 a',
+      'article a',
+      '.entry-title a',
+      '.post-title a',
+      'a[href*="pizjav.com"]'
+    ];
+    
+    let foundCount = 0;
+    let matchedCount = 0;
+    
+    for (const selector of selectors) {
+      $(selector).each((index, elem) => {
+        const $item = $(elem);
+        let titleText = $item.text().trim() || $item.attr('title') || '';
+        let href = $item.attr('href') || '';
+        
+        // タイトルが空の場合はスキップ（2文字以上に緩和）
+        if (!titleText || titleText.trim().length < 2) {
+          return;
+        }
+        
+        foundCount++;
+        
+        // 空のクエリの場合はすべての動画を取得
+        if (!query || query.trim().length === 0) {
+          matchedCount++;
+        } else {
+          // 検索クエリとタイトルの関連性をチェック
+          const titleLower = titleText.toLowerCase();
+          
+          // クエリがIDパターンに含まれているか、タイトルに含まれているか
+          const idMatch = titleText.match(/\[([A-Z]+[-\d]+)\]/);
+          const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
+          const queryInTitle = titleLower.includes(queryLower);
+          
+          // 緩和したマッチング: 部分一致や文字単位の一致も許可（より積極的に）
+          const queryChars = queryLower.split('').filter(c => c.trim().length > 0 && c !== ' ');
+          const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
+          const oneCharMatch = queryChars.length > 0 && matchingChars > 0;
+          
+          const shouldMatch = queryInId || queryInTitle || oneCharMatch;
+          
+          if (!shouldMatch) {
+            return; // 検索語が含まれていない場合はスキップ
+          }
+          
+          matchedCount++;
+        }
+        
+        // 相対URLを絶対URLに変換
+        let fullUrl = href;
+        if (href) {
+          if (href.startsWith('//')) {
+            fullUrl = 'https:' + href;
+          } else if (href.startsWith('/')) {
+            fullUrl = `https://v.pizjav.com${href}`;
+          } else if (href.startsWith('./')) {
+            fullUrl = `https://v.pizjav.com/${href.substring(2)}`;
+          } else if (!href.startsWith('http')) {
+            fullUrl = `https://v.pizjav.com/${href}`;
+          }
+        } else {
+          return; // リンクが見つからない場合はスキップ
+        }
+        
+        // pizjav.comのドメイン内のリンクのみを対象
+        if (!fullUrl.includes('pizjav.com')) return;
+        
+        // 重複チェック
+        if (seenUrls.has(fullUrl)) return;
+        seenUrls.add(fullUrl);
+        
+        // サムネイルを取得
+        let thumbnail = extractThumbnail($, $item);
+        
+        // サムネイルが見つからない場合、親要素から探す
+        if (!thumbnail) {
+          const $parent = $item.parent();
+          thumbnail = extractThumbnail($, $parent);
+        }
+        
+        // さらに上の親要素から探す
+        if (!thumbnail) {
+          const $grandParent = $item.parent().parent();
+          thumbnail = extractThumbnail($, $grandParent);
+        }
+        
+        const duration = extractDurationFromHtml($, $item);
+        
+        videos.push({
+          id: `pizjav-${Date.now()}-${index}`,
+          title: titleText.substring(0, 200),
+          thumbnail: thumbnail || '',
+          duration: duration || '',
+          url: fullUrl,
+          embedUrl: fullUrl,
+          source: 'pizjav'
+        });
+      });
+    }
+    
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    console.log(`🔍 Pizjav: 見つかった動画: ${foundCount}件、マッチした動画: ${matchedCount}件、最終結果: ${videos.length}件`);
+    console.log(`✅ Pizjav: ${videos.length}件の動画を取得（実行時間: ${duration}ms）`);
+    
+    // デバッグ情報: 最初の5件のタイトルを表示
+    if (videos.length > 0) {
+      console.log(`🔍 Pizjav デバッグ: 取得した動画のサンプル:`);
+      videos.slice(0, 5).forEach((video, idx) => {
+        console.log(`  ${idx + 1}. ${video.title.substring(0, 50)}... (URL: ${video.url.substring(0, 60)}...)`);
+      });
+    } else {
+      console.log(`⚠️ Pizjav: 動画が見つかりませんでした（検索クエリ: "${query}", strictMode: ${strictMode}）`);
+    }
+    
+    return videos;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ Pizjav検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ Pizjav検索エラー:', error.message);
     }
     return [];
   }
