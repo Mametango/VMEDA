@@ -1580,79 +1580,139 @@ searchInput.addEventListener('keypress', (e) => {
 // IVランダム動画取得
 async function getRandomIV() {
   console.log('🎲 IVランダム動画取得開始');
+  if (!loadingDiv) {
+    console.error('❌ loadingDivが見つかりません');
+    return;
+  }
   loadingDiv.classList.remove('hidden');
-  resultsDiv.innerHTML = '';
+  if (resultsDiv) {
+    resultsDiv.innerHTML = '';
+  }
   
   try {
+    console.log('🔍 /api/random?type=iv にリクエスト送信');
     const response = await fetch('/api/random?type=iv');
+    console.log('📡 レスポンス受信:', response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error('Failed to fetch random IV videos');
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('❌ エラーレスポンス:', errorData);
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
     
     const data = await response.json();
+    console.log('📊 ランダム動画データ受信:', data);
     const videos = data.results || [];
+    console.log(`✅ ${videos.length}件のIVランダム動画を取得`);
+    
     currentVideos = videos;
     currentPage = 1;
     totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
-    displayResults(videos, 'IV Random');
     
     if (videos.length > 0) {
-      sortContainer.classList.remove('hidden');
+      displayResults(videos, 'IV Random');
+      if (sortContainer) {
+        sortContainer.classList.remove('hidden');
+      }
     } else {
-      sortContainer.classList.add('hidden');
+      if (resultsDiv) {
+        resultsDiv.innerHTML = `<p class="error-message">No IV random videos found. Please try again later.</p>`;
+      }
+      if (sortContainer) {
+        sortContainer.classList.add('hidden');
+      }
     }
   } catch (error) {
     console.error('❌ IVランダム動画取得エラー:', error);
-    resultsDiv.innerHTML = `<p class="error">Failed to load random IV videos. Please try again.</p>`;
+    console.error('❌ エラー詳細:', error.message, error.stack);
+    if (resultsDiv) {
+      resultsDiv.innerHTML = `<p class="error-message">Failed to load random IV videos: ${error.message}. Please try again.</p>`;
+    }
   } finally {
-    loadingDiv.classList.add('hidden');
+    if (loadingDiv) {
+      loadingDiv.classList.add('hidden');
+    }
   }
 }
 
 // JAVランダム動画取得
 async function getRandomJAV() {
   console.log('🎲 JAVランダム動画取得開始');
+  if (!loadingDiv) {
+    console.error('❌ loadingDivが見つかりません');
+    return;
+  }
   loadingDiv.classList.remove('hidden');
-  resultsDiv.innerHTML = '';
+  if (resultsDiv) {
+    resultsDiv.innerHTML = '';
+  }
   
   try {
+    console.log('🔍 /api/random?type=jav にリクエスト送信');
     const response = await fetch('/api/random?type=jav');
+    console.log('📡 レスポンス受信:', response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error('Failed to fetch random JAV videos');
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('❌ エラーレスポンス:', errorData);
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
     
     const data = await response.json();
+    console.log('📊 ランダム動画データ受信:', data);
     const videos = data.results || [];
+    console.log(`✅ ${videos.length}件のJAVランダム動画を取得`);
+    
     currentVideos = videos;
     currentPage = 1;
     totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
-    displayResults(videos, 'JAV Random');
     
     if (videos.length > 0) {
-      sortContainer.classList.remove('hidden');
+      displayResults(videos, 'JAV Random');
+      if (sortContainer) {
+        sortContainer.classList.remove('hidden');
+      }
     } else {
-      sortContainer.classList.add('hidden');
+      if (resultsDiv) {
+        resultsDiv.innerHTML = `<p class="error-message">No JAV random videos found. Please try again later.</p>`;
+      }
+      if (sortContainer) {
+        sortContainer.classList.add('hidden');
+      }
     }
   } catch (error) {
     console.error('❌ JAVランダム動画取得エラー:', error);
-    resultsDiv.innerHTML = `<p class="error">Failed to load random JAV videos. Please try again.</p>`;
+    console.error('❌ エラー詳細:', error.message, error.stack);
+    if (resultsDiv) {
+      resultsDiv.innerHTML = `<p class="error-message">Failed to load random JAV videos: ${error.message}. Please try again.</p>`;
+    }
   } finally {
-    loadingDiv.classList.add('hidden');
+    if (loadingDiv) {
+      loadingDiv.classList.add('hidden');
+    }
   }
 }
 
 // IVランダムボタン
 if (ivRandomBtn) {
+  console.log('✅ IVランダムボタンが見つかりました');
   ivRandomBtn.addEventListener('click', () => {
+    console.log('🎬 IVランダムボタンがクリックされました');
     getRandomIV();
   });
+} else {
+  console.error('❌ IVランダムボタンが見つかりません');
 }
 
 // JAVランダムボタン
 if (javRandomBtn) {
+  console.log('✅ JAVランダムボタンが見つかりました');
   javRandomBtn.addEventListener('click', () => {
+    console.log('🎥 JAVランダムボタンがクリックされました');
     getRandomJAV();
   });
+} else {
+  console.error('❌ JAVランダムボタンが見つかりません');
 }
 
 // 広告の読み込み（環境変数または設定から）
