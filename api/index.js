@@ -779,9 +779,16 @@ function isTitleRelevant(title, query, strictMode = true) {
       return titleLower.includes(queryWords[0]);
     }
     
-    // クエリが複数単語の場合は、30%以上の単語がタイトルに含まれているかチェック（緩和）
+    // クエリが複数単語の場合は、10%以上の単語がタイトルに含まれているかチェック（さらに緩和）
     const matchingWords = queryWords.filter(word => titleLower.includes(word)).length;
-    const minRequiredWords = Math.ceil(queryWords.length / 3); // 30%以上
+    const minRequiredWords = Math.max(1, Math.ceil(queryWords.length / 10)); // 10%以上（最低1単語）
+    
+    // さらに緩和: クエリの文字がタイトルに含まれているかもチェック
+    const queryChars = queryLower.split('').filter(c => c.trim().length > 0 && c !== ' ');
+    const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
+    const minRequiredChars = Math.max(1, Math.ceil(queryChars.length / 5)); // 20%以上の文字が一致
+    
+    return matchingWords >= minRequiredWords || matchingChars >= minRequiredChars;
     return matchingWords >= minRequiredWords;
   }
 }
@@ -1739,13 +1746,19 @@ async function searchJPdmv(query, strictMode = true) {
             }
             
             // タイトルがあれば追加（より積極的に）
-            if (finalTitle && finalTitle.length > 3) {
+            if (finalTitle && finalTitle.length > 2) { // 2文字以上に緩和
               // 検索クエリとタイトルの関連性をチェック
-              // strictMode=falseの場合は、より緩和した条件でマッチング
-              if (!isTitleRelevant(finalTitle, query, strictMode)) {
-                // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
-                if (strictMode || finalTitle.length < 10) {
+              // strictMode=falseの場合は、関連性チェックを大幅に緩和またはスキップ
+              if (strictMode) {
+                // 厳格モードの場合のみ関連性チェック
+                if (!isTitleRelevant(finalTitle, query, strictMode)) {
                   return; // 関連性がない場合はスキップ
+                }
+              } else {
+                // 緩和モードの場合、タイトルがあれば基本的に追加（関連性チェックをスキップ）
+                // タイトルが1文字以下の場合のみスキップ
+                if (finalTitle.length < 2) {
+                  return;
                 }
               }
               
@@ -2535,12 +2548,22 @@ async function searchBilibili(query, strictMode = true) {
           }
         }
         
-        if (title && title.length > 3) {
+        if (title && title.length > 2) { // 2文字以上に緩和
           // 空のクエリの場合は関連性チェックをスキップ
           if (query && query.trim().length > 0) {
             // 検索クエリとタイトルの関連性をチェック
-            if (!isTitleRelevant(title, query, strictMode)) {
-              return; // 関連性がない場合はスキップ
+            // strictMode=falseの場合は、関連性チェックを大幅に緩和またはスキップ
+            if (strictMode) {
+              // 厳格モードの場合のみ関連性チェック
+              if (!isTitleRelevant(title, query, strictMode)) {
+                return; // 関連性がない場合はスキップ
+              }
+            } else {
+              // 緩和モードの場合、タイトルがあれば基本的に追加（関連性チェックをスキップ）
+              // タイトルが1文字以下の場合のみスキップ
+              if (title.length < 2) {
+                return;
+              }
             }
           }
           
@@ -3386,13 +3409,19 @@ async function searchJavmix(query, strictMode = true) {
             }
             
             // タイトルがあれば追加（より積極的に）
-            if (finalTitle && finalTitle.length > 3) {
+            if (finalTitle && finalTitle.length > 2) { // 2文字以上に緩和
               // 検索クエリとタイトルの関連性をチェック
-              // strictMode=falseの場合は、より緩和した条件でマッチング
-              if (!isTitleRelevant(finalTitle, query, strictMode)) {
-                // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
-                if (strictMode || finalTitle.length < 10) {
+              // strictMode=falseの場合は、関連性チェックを大幅に緩和またはスキップ
+              if (strictMode) {
+                // 厳格モードの場合のみ関連性チェック
+                if (!isTitleRelevant(finalTitle, query, strictMode)) {
                   return; // 関連性がない場合はスキップ
+                }
+              } else {
+                // 緩和モードの場合、タイトルがあれば基本的に追加（関連性チェックをスキップ）
+                // タイトルが1文字以下の場合のみスキップ
+                if (finalTitle.length < 2) {
+                  return;
                 }
               }
               
@@ -3612,19 +3641,19 @@ async function searchPPP(query, strictMode = true) {
             }
             
             // タイトルがあれば追加（より積極的に）
-            if (finalTitle && finalTitle.length > 3) {
+            if (finalTitle && finalTitle.length > 2) { // 2文字以上に緩和
               // 検索クエリとタイトルの関連性をチェック
-              // strictMode=falseの場合は、より柔軟にマッチング
+              // strictMode=falseの場合は、関連性チェックを大幅に緩和またはスキップ
               if (strictMode) {
                 // 厳格モードの場合のみ関連性チェック
                 if (!isTitleRelevant(finalTitle, query, strictMode)) {
                   return; // 関連性がない場合はスキップ
                 }
               } else {
-                // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
-                // タイトルが10文字以上あれば、関連性チェックを緩和
-                if (!isTitleRelevant(finalTitle, query, strictMode) && finalTitle.length < 10) {
-                  return; // タイトルが短く、完全に無関係な場合はスキップ
+                // 緩和モードの場合、タイトルがあれば基本的に追加（関連性チェックをスキップ）
+                // タイトルが1文字以下の場合のみスキップ
+                if (finalTitle.length < 2) {
+                  return;
                 }
               }
               
@@ -3773,8 +3802,8 @@ async function searchIVFree(query, strictMode = true) {
           }
         }
         
-        // タイトルが空の場合はスキップ
-        if (!titleText || titleText.trim().length < 3) {
+        // タイトルが空の場合はスキップ（2文字以上に緩和）
+        if (!titleText || titleText.trim().length < 2) {
           return;
         }
         
@@ -5975,7 +6004,7 @@ async function searchMat6tube(query, strictMode = true) {
             
             // /video/パスで検索した場合、タイトルがあれば基本的に追加（より積極的に）
             // タイトルが空でも、URLが有効な場合は追加
-            if (title && title.length > 3) {
+            if (title && title.length > 2) { // 2文字以上に緩和
               videos.push({
                 id: `mat6tube-${Date.now()}-${index}`,
                 title: title.substring(0, 200),
@@ -6129,7 +6158,7 @@ async function searchMat6tube(query, strictMode = true) {
             const thumbnail = extractThumbnail($, $item);
             const duration = extractDurationFromHtml($, $item);
             
-            if (title && title.length > 3) {
+            if (title && title.length > 2) { // 2文字以上に緩和
               // /recentページの場合は、検索クエリとの関連性チェックをスキップ（最新動画を取得）
               const isRecentPage = url.includes('/recent') && !url.includes('?q=');
               
@@ -6205,8 +6234,8 @@ async function searchMat6tube(query, strictMode = true) {
             const thumbnail = extractThumbnail($, $link);
             const duration = extractDurationFromHtml($, $link);
             
-            if (title && title.length > 3) {
-              // strictMode=falseの場合は、タイトルがあれば基本的に追加
+            if (title && title.length > 2) { // 2文字以上に緩和
+              // strictMode=falseの場合は、タイトルがあれば基本的に追加（関連性チェックをスキップ）
               if (!strictMode || isTitleRelevant(title, query, strictMode)) {
                 videos.push({
                   id: `mat6tube-${Date.now()}-${index}`,
@@ -6382,7 +6411,7 @@ async function searchFC2Video(query, strictMode = true) {
             }
             
             // タイトルがあれば追加（より積極的に）
-            if (finalTitle && finalTitle.length > 3) {
+            if (finalTitle && finalTitle.length > 2) { // 2文字以上に緩和
               // 空のクエリの場合は関連性チェックをスキップ
               if (!query || query.trim().length === 0) {
                 // 空のクエリの場合は、すべての動画を追加
@@ -6397,12 +6426,17 @@ async function searchFC2Video(query, strictMode = true) {
                 });
               } else {
                 // 検索クエリとタイトルの関連性をチェック
-                // strictMode=falseの場合は、より緩和した条件でマッチング
-                if (!isTitleRelevant(finalTitle, query, strictMode)) {
-                  // 緩和モードの場合、タイトルが長ければ追加（より柔軟に）
-                  // タイトルが10文字以上あれば、関連性チェックを緩和
-                  if (strictMode || finalTitle.length < 10) {
+                // strictMode=falseの場合は、関連性チェックを大幅に緩和またはスキップ
+                if (strictMode) {
+                  // 厳格モードの場合のみ関連性チェック
+                  if (!isTitleRelevant(finalTitle, query, strictMode)) {
                     return; // 関連性がない場合はスキップ
+                  }
+                } else {
+                  // 緩和モードの場合、タイトルがあれば基本的に追加（関連性チェックをスキップ）
+                  // タイトルが1文字以下の場合のみスキップ
+                  if (finalTitle.length < 2) {
+                    return;
                   }
                 }
                 
