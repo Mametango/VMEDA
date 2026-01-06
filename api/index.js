@@ -1611,6 +1611,8 @@ async function searchGoogle(query) {
 // JPdmv検索
 async function searchJPdmv(query, strictMode = true) {
   try {
+    // クエリがnull/undefinedの場合は空文字列に変換
+    query = query || '';
     console.log(`🔍 JPdmv検索開始: "${query}" (strictMode: ${strictMode})`);
     const startTime = Date.now();
     const encodedQuery = encodeURIComponent(query);
@@ -2440,6 +2442,8 @@ async function searchAkibaAbv(query) {
 // 注意: Bilibiliはスクレイピング対策を講じている可能性があります
 async function searchBilibili(query, strictMode = true) {
   try {
+    // クエリがnull/undefinedの場合は空文字列に変換
+    query = query || '';
     const encodedQuery = encodeURIComponent(query);
     const url = `https://search.bilibili.com/all?keyword=${encodedQuery}`;
     
@@ -3221,6 +3225,8 @@ async function searchMadou(query) {
 // Javmix.TV検索
 async function searchJavmix(query, strictMode = true) {
   try {
+    // クエリがnull/undefinedの場合は空文字列に変換
+    query = query || '';
     console.log(`🔍 Javmix.TV検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
     // 複数のURLパターンを試す
@@ -3406,6 +3412,8 @@ async function searchJavmix(query, strictMode = true) {
 // PPP.Porn検索
 async function searchPPP(query, strictMode = true) {
   try {
+    // クエリがnull/undefinedの場合は空文字列に変換
+    query = query || '';
     const encodedQuery = encodeURIComponent(query);
     // 複数のURLパターンを試す
     const urls = [
@@ -3626,6 +3634,8 @@ async function searchPPP(query, strictMode = true) {
 // strictMode: true = 厳格なマッチング, false = 緩和したマッチング
 async function searchIVFree(query, strictMode = true) {
   try {
+    // クエリがnull/undefinedの場合は空文字列に変換
+    query = query || '';
     console.log(`🔍 IVFree検索開始: "${query}" (strictMode: ${strictMode})`);
     const startTime = Date.now();
     const queryLower = query.toLowerCase().trim();
@@ -5788,6 +5798,8 @@ app.get('/', (req, res) => {
 // Mat6tube検索（アプローチ変更：より積極的に動画を取得）
 async function searchMat6tube(query, strictMode = true) {
   try {
+    // クエリがnull/undefinedの場合は空文字列に変換
+    query = query || '';
     console.log(`🔍 Mat6tube検索開始: "${query}" (strictMode: ${strictMode})`);
     
     // 空のクエリの場合は、IV関連のパスから動画を取得
