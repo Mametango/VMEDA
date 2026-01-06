@@ -1460,11 +1460,17 @@ app.get('/api/random', async (req, res) => {
       }
     });
     
-    // ランダムに全件を選択（IVもJAVも完全にランダム、制限なし）
-    const shuffled = uniqueVideos.sort(() => 0.5 - Math.random());
+    // Fisher-Yatesシャッフルアルゴリズムで完全にランダムに並び替え
+    // Bilibili、IVFree、FC2Video.org、Mat6tubeなど全ての検索結果をランダム順にする
+    const shuffled = [...uniqueVideos];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
     const randomVideos = shuffled; // 制限なしで全件返す
     
-    console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件表示)`);
+    console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件ランダム順)`);
+    console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件, Bilibili=${uniqueVideos.filter(v => v.source === 'bilibili').length}件, FC2Video=${uniqueVideos.filter(v => v.source === 'fc2video').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件`);
     
     res.json({ results: randomVideos });
   } catch (error) {
