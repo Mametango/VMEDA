@@ -6052,10 +6052,10 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     $('head meta[http-equiv="csp"]').remove();
     
     // CSPを完全に緩和（IVFreeのリソースをすべて許可）
-    const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com https://ivfree.asia http://ivfree.asia https://fonts.googleapis.com; style-src * 'unsafe-inline' https://fonts.googleapis.com https://ivfree.asia http://ivfree.asia; img-src * data: blob: https://ivfree.asia http://ivfree.asia; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data: https://fonts.gstatic.com;`;
+    const ivfreeCspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com https://ivfree.asia http://ivfree.asia https://fonts.googleapis.com; style-src * 'unsafe-inline' https://fonts.googleapis.com https://ivfree.asia http://ivfree.asia; img-src * data: blob: https://ivfree.asia http://ivfree.asia; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data: https://fonts.gstatic.com;`;
     
     // 新しいCSPを追加（metaタグ）
-    $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${cspContent}">`);
+    $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${ivfreeCspContent}">`);
     
     // jQueryを追加（jQueryが定義されていない場合に備えて）
     // IVFreeのjQueryが読み込めない場合に備えて、CDNからも読み込む（フォールバック）
