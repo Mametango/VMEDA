@@ -4213,9 +4213,31 @@ async function searchIVFree(query, strictMode = true) {
           }
         }
         
-        // タイトルが空の場合はスキップ（2文字以上に緩和）
+        // タイトルが空または短い場合、URLからタイトルを生成
         if (!titleText || titleText.trim().length < 2) {
-          return;
+          // URLからタイトルを抽出を試みる
+          if (href) {
+            const urlMatch = href.match(/\/([^\/]+)$/);
+            if (urlMatch) {
+              titleText = decodeURIComponent(urlMatch[1])
+                .replace(/[-_]/g, ' ')
+                .replace(/\.html?$/i, '')
+                .trim();
+            }
+          }
+          
+          // それでもタイトルがない場合、IDパターンからタイトルを生成
+          if (!titleText || titleText.trim().length < 2) {
+            const idMatch = href.match(/([A-Z]+-\d+)/);
+            if (idMatch) {
+              titleText = `[${idMatch[1]}]`;
+            }
+          }
+          
+          // それでもタイトルがない場合はスキップ
+          if (!titleText || titleText.trim().length < 1) {
+            return;
+          }
         }
         
         // タイトルにIDパターン [XXX-XXX] が含まれているか確認
