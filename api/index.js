@@ -3931,8 +3931,8 @@ async function searchIVFree(query, strictMode = true) {
         });
       });
       
-      // 結果が見つかったらループを抜ける
-      if (videos.length > 0) break;
+      // より多くの結果を取得するため、すべてのセレクタを試す（breakを削除）
+      // if (videos.length > 0) break; // コメントアウト: より多くの結果を取得するため
     }
     
     const endTime = Date.now();
