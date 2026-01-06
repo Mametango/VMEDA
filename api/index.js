@@ -1019,6 +1019,22 @@ app.post('/api/search', async (req, res) => {
             return;
           }
           
+          // MongoDB URIを除外（タイトルやURLにMongoDB URIが含まれている場合）
+          const hasMongoUri = (video.title && (
+            video.title.includes('mongodb://') ||
+            video.title.includes('mongodb+srv://') ||
+            video.title.includes('MONGODB_URI') ||
+            video.title.toLowerCase().includes('mongodb uri')
+          )) || (video.url && (
+            video.url.includes('mongodb://') ||
+            video.url.includes('mongodb+srv://')
+          ));
+          
+          if (hasMongoUri) {
+            console.log(`⚠️ MongoDB URIを含む検索結果を除外: ${video.title || video.url}`);
+            return;
+          }
+          
           // 重複チェック（URL正規化 + タイトル類似度）
           if (!isVideoDuplicate(video, uniqueVideos)) {
             uniqueVideos.push(video);
@@ -1063,7 +1079,20 @@ app.post('/api/search', async (req, res) => {
         // 厳格なマッチング結果に含まれていない動画のみを追加
         result.value.forEach(video => {
           if (video && video.url && !strictMatchUrls.has(video.url)) {
-            relatedVideos.push(video);
+            // MongoDB URIを除外
+            const hasMongoUri = (video.title && (
+              video.title.includes('mongodb://') ||
+              video.title.includes('mongodb+srv://') ||
+              video.title.includes('MONGODB_URI') ||
+              video.title.toLowerCase().includes('mongodb uri')
+            )) || (video.url && (
+              video.url.includes('mongodb://') ||
+              video.url.includes('mongodb+srv://')
+            ));
+            
+            if (!hasMongoUri) {
+              relatedVideos.push(video);
+            }
           }
         });
       }
