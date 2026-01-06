@@ -3654,6 +3654,28 @@ async function searchIVFree(query, strictMode = true) {
       'h3',
       'article h2 a',
       'article h3 a',
+      'a[href*="ivfree.asia"]',
+      // より広範囲なセレクタを追加
+      'a[href*="/imog/"]',
+      'a[href*="/imbd/"]',
+      'a[href*="/imdb/"]',
+      'a[href*="/kuromiya/"]',
+      'a[href*="/mmr/"]',
+      'a[href*="/cpsky/"]',
+      'a[href*="/icdv/"]',
+      'a[href*="/tl/"]',
+      'a[href*="/iv/"]',
+      '.entry-title a',
+      '.post-title a',
+      '.title a',
+      'article a',
+      'li a',
+      'div a',
+      '.content a',
+      '.main a',
+      '.container a',
+      '.wrapper a',
+      // すべてのリンク（最後の手段）
       'a[href*="ivfree.asia"]'
     ];
     
@@ -5769,6 +5791,7 @@ async function searchMat6tube(query, strictMode = true) {
     ];
     
     let videos = [];
+    const seenUrls = new Set(); // すべてのURLで共有する重複チェック用Set
     
     for (const url of urls) {
       try {
@@ -5918,8 +5941,6 @@ async function searchMat6tube(query, strictMode = true) {
           // すべてのリンク（最後の手段）
           'a[href*="mat6tube.com"]'
         ];
-        
-        const seenUrls = new Set();
         let foundCount = 0;
         let matchedCount = 0;
         
@@ -6034,7 +6055,7 @@ async function searchMat6tube(query, strictMode = true) {
           console.log(`🔍 Mat6tube: 見つかったリンク総数: ${allLinks.length}`);
           
           allLinks.each((index, elem) => {
-            if (videos.length >= 200) return false;
+            // 制限を削除して全件取得
             
             const $link = $(elem);
             let href = $link.attr('href') || '';
