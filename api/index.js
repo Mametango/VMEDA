@@ -20,16 +20,9 @@ const { MongoClient } = require('mongodb');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// このサイトを通して検索したワードを保存（MongoDB Atlasに永続化、最新20個を保持）
-// 重複を避けるため、同じ検索ワードは最新のもののみ残す
-// 20個を超えると古いものから自動的に削除される
-// 自分の検索も含めて、すべての検索ワードを履歴として残す
-const MAX_RECENT_SEARCHES = 20; // 最新20個だけ保持
-
-// MongoDB接続設定
+// MongoDB接続設定（アクセスログ用のみ）
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'vmeda';
-const COLLECTION_NAME = 'recent_searches';
 const ACCESS_LOG_COLLECTION_NAME = 'access_logs';
 
 let mongoClient = null;
@@ -58,56 +51,6 @@ async function connectToMongoDB() {
   }
 }
 
-// 検索履歴をMongoDBから読み込む
-async function loadRecentSearchesFromMongoDB() {
-  try {
-    const db = await connectToMongoDB();
-    if (!db) {
-      console.log('⚠️ MongoDBに接続できません。空の配列を返します。');
-      return [];
-    }
-
-    const collection = db.collection(COLLECTION_NAME);
-    const result = await collection.findOne({ _id: 'searches' });
-    if (result && Array.isArray(result.searches)) {
-      console.log(`📂 MongoDBから検索履歴を読み込み: ${result.searches.length}件`);
-      return result.searches;
-    }
-    
-    return [];
-  } catch (error) {
-    console.error('❌ MongoDBからの読み込みエラー:', error.message);
-    return [];
-  }
-}
-
-// 検索履歴をMongoDBに保存
-async function saveRecentSearchesToMongoDB(searches) {
-  const db = await connectToMongoDB();
-  if (!db) {
-    // MongoDBが利用できない場合はメモリ内に保存
-    return;
-  }
-
-  try {
-    const collection = db.collection(COLLECTION_NAME);
-    const searchesToSave = searches.slice(0, MAX_RECENT_SEARCHES);
-    
-    // プライバシー保護のため、検索ワードのみを保存（個人情報は含めない）
-    await collection.updateOne(
-      { _id: 'searches' },
-      { 
-        $set: { 
-          searches: searchesToSave
-        } 
-      },
-      { upsert: true }
-    );
-    console.log(`💾 MongoDBに検索履歴を保存: ${searchesToSave.length}件`);
-  } catch (error) {
-    console.error('❌ MongoDBへの保存エラー:', error.message);
-  }
-}
 
 // アクセスログをMongoDBに保存（一般的なサイトと同じようにIPアドレスを記録）
 async function saveAccessLogToMongoDB(logData) {
@@ -127,76 +70,6 @@ async function saveAccessLogToMongoDB(logData) {
   }
 }
 
-// ファイルシステムのフォールバック関数（Vercel KVが利用できない場合）
-const SEARCHES_FILE = path.join(__dirname, 'data', 'recent-searches.json');
-
-function loadRecentSearchesFromFile() {
-  try {
-    if (fs.existsSync(SEARCHES_FILE)) {
-      const data = fs.readFileSync(SEARCHES_FILE, 'utf8');
-      const searches = JSON.parse(data);
-      console.log(`📂 検索履歴をファイルから読み込み: ${searches.length}件`);
-      return Array.isArray(searches) ? searches : [];
-    }
-  } catch (error) {
-    console.error('❌ 検索履歴の読み込みエラー:', error);
-  }
-  return [];
-}
-
-function saveRecentSearchesToFile(searches) {
-  try {
-    const dataDir = path.dirname(SEARCHES_FILE);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    const searchesToSave = searches.slice(0, MAX_RECENT_SEARCHES);
-    fs.writeFileSync(SEARCHES_FILE, JSON.stringify(searchesToSave, null, 2), 'utf8');
-    console.log(`💾 検索履歴をファイルに保存: ${searchesToSave.length}件`);
-  } catch (error) {
-    console.error('❌ 検索履歴の保存エラー:', error);
-  }
-}
-
-// サーバー起動時に検索履歴を読み込む（MongoDB優先）
-let recentSearches = [];
-(async () => {
-  try {
-    recentSearches = await loadRecentSearchesFromMongoDB();
-  } catch (error) {
-    console.error('❌ 初期化時の検索履歴読み込みエラー:', error.message);
-    recentSearches = [];
-  }
-})();
-
-// 検索履歴のキャッシュ（高速化のため）
-let recentSearchesCache = null;
-let recentSearchesCacheTime = 0;
-const CACHE_DURATION = 5000; // 5秒間キャッシュ（MongoDBへの負荷を軽減）
-
-// キャッシュ付きで検索履歴を取得
-async function getRecentSearchesCached() {
-  const now = Date.now();
-  // キャッシュが有効な場合はキャッシュを返す
-  if (recentSearchesCache && (now - recentSearchesCacheTime) < CACHE_DURATION) {
-    console.log('📋 検索履歴をキャッシュから取得');
-    return recentSearchesCache;
-  }
-  
-  // キャッシュが無効な場合はMongoDBから取得
-  const searches = await loadRecentSearchesFromMongoDB();
-  recentSearchesCache = searches;
-  recentSearchesCacheTime = now;
-  console.log('📋 検索履歴をMongoDBから取得（キャッシュ更新）');
-  return searches;
-}
-
-// 検索履歴が更新されたときにキャッシュを無効化
-function invalidateRecentSearchesCache() {
-  recentSearchesCache = null;
-  recentSearchesCacheTime = 0;
-  console.log('📋 検索履歴キャッシュを無効化');
-}
 
 // Vercel環境ではプロキシの背後で動作するため、trust proxyを有効化
 // ただし、express-rate-limitの警告を避けるため、具体的なプロキシ数を指定
@@ -852,8 +725,6 @@ app.post('/api/search', async (req, res) => {
     const sanitizedQuery = validation.query;
     console.log(`🔍 検索開始: "${sanitizedQuery}"`);
     
-    // 検索履歴の保存は検索が成功した後に行う（検索処理の前に実行しない）
-    
     // 定義されている検索関数のみを使用（0件のサイトは削除）
     const allSearches = [];
     
@@ -1205,38 +1076,6 @@ app.post('/api/search', async (req, res) => {
         embedUrl: 'https://example.com/test',
         source: 'test'
       });
-    }
-    
-    // 検索履歴を保存（検索が成功した後）
-    try {
-      const currentSearches = await getRecentSearchesCached();
-      const searchEntry = { query: sanitizedQuery };
-      
-      // 同じ検索ワードが既にある場合は削除（重複を避ける）
-      const existingIndex = currentSearches.findIndex(entry => entry.query === sanitizedQuery);
-      if (existingIndex !== -1) {
-        currentSearches.splice(existingIndex, 1);
-      }
-      
-      // 最新の検索ワードを先頭に追加
-      currentSearches.unshift(searchEntry);
-      
-      // 最新20個だけを保持（古いものは自動的に削除）
-      if (currentSearches.length > MAX_RECENT_SEARCHES) {
-        currentSearches.splice(MAX_RECENT_SEARCHES); // 20個目以降を削除
-      }
-      
-      // MongoDBに保存（永続化）
-      await saveRecentSearchesToMongoDB(currentSearches);
-      
-      // キャッシュを更新（次回の取得を高速化）
-      recentSearchesCache = currentSearches;
-      recentSearchesCacheTime = Date.now();
-      
-      console.log(`💾 検索履歴に保存: "${sanitizedQuery}" (合計: ${currentSearches.length}件)`);
-    } catch (historyError) {
-      console.error('❌ 検索履歴の保存エラー:', historyError.message);
-      // 検索履歴の保存に失敗しても検索結果は返す
     }
     
     // 制限なしで全件返す（デバッグ情報も含む）
