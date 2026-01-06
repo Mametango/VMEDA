@@ -8,7 +8,8 @@ window.addEventListener('error', (event) => {
     event.target.tagName === 'IFRAME'
   )) {
     // SSL証明書エラー、DNS解決エラー、CORSエラーなどを抑制
-    if (
+    // event.messageが存在する場合のみチェック
+    if (event.message && (
       event.message.includes('ERR_CERT') ||
       event.message.includes('ERR_NAME_NOT_RESOLVED') ||
       event.message.includes('ERR_BLOCKED_BY_RESPONSE') ||
@@ -17,7 +18,7 @@ window.addEventListener('error', (event) => {
       event.message.includes('NotSameOrigin') ||
       event.message.includes('403') ||
       event.message.includes('400')
-    ) {
+    )) {
       event.preventDefault();
       event.stopPropagation();
       return false;
