@@ -2500,8 +2500,53 @@ async function searchBilibili(query, strictMode = true) {
         
         const fullUrl = href.startsWith('http') ? href : `https://www.bilibili.com${href}`;
         const title = extractTitle($, $item);
-        const thumbnail = extractThumbnail($, $item);
+        let thumbnail = extractThumbnail($, $item);
         const duration = extractDurationFromHtml($, $item);
+        
+        // Bilibili専用のサムネイル抽出を試す
+        if (!thumbnail) {
+          // Bilibiliの検索結果ページのサムネイルセレクタ
+          const bilibiliThumbSelectors = [
+            '.bili-video-card__cover img',
+            '.video-card__cover img',
+            '.video-item__cover img',
+            '.cover img',
+            '[class*="cover"] img',
+            '[class*="pic"] img',
+            'img[src*="hdslb.com"]',
+            'img[data-src*="hdslb.com"]',
+            'img[data-lazy-src*="hdslb.com"]'
+          ];
+          
+          for (const thumbSelector of bilibiliThumbSelectors) {
+            const $thumb = $item.find(thumbSelector).first();
+            if ($thumb.length > 0) {
+              thumbnail = $thumb.attr('src') || 
+                         $thumb.attr('data-src') || 
+                         $thumb.attr('data-lazy-src') || 
+                         $thumb.attr('data-original') || '';
+              if (thumbnail) {
+                // 相対URLを絶対URLに変換
+                if (thumbnail.startsWith('//')) {
+                  thumbnail = 'https:' + thumbnail;
+                } else if (thumbnail.startsWith('/')) {
+                  thumbnail = `https:${thumbnail}`;
+                }
+                break;
+              }
+            }
+          }
+        }
+        
+        // サムネイルが見つからない場合、BV番号からサムネイルURLを生成
+        if (!thumbnail) {
+          const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
+          if (bvid) {
+            // BilibiliのサムネイルURL形式（複数のサーバーを試す）
+            const thumbServers = ['i0', 'i1', 'i2'];
+            thumbnail = `https://${thumbServers[Math.floor(Math.random() * thumbServers.length)]}.hdslb.com/bfs/archive/${bvid[0]}.jpg`;
+          }
+        }
         
         if (title && title.length > 3) {
           // 空のクエリの場合は関連性チェックをスキップ
