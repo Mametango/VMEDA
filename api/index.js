@@ -5847,11 +5847,6 @@ async function searchMat6tube(query, strictMode = true) {
         // /video/パスが含まれている場合は、すべての/video/リンクを取得
         const isVideoPathSearch = url.includes('/video/');
         
-        // より積極的なアプローチ：すべてのリンクを確認
-        // まず、mat6tube.comドメイン内のすべてのリンクを取得
-        const allLinks = $('a[href]');
-        console.log(`🔍 Mat6tube: 見つかったリンク総数: ${allLinks.length}`);
-        
         // /video/パスで検索した場合、すべての/video/リンクを優先的に取得
         // /video/パスで検索した場合、すべての/video/リンクを直接取得（最優先処理）
         if (isVideoPathSearch) {
