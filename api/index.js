@@ -1250,10 +1250,14 @@ app.get('/api/random', async (req, res) => {
     
     if (type === 'iv') {
       // IV動画: IVFree、FC2Video.org、Bilibiliから取得
+      // BilibiliはMMR、IMDB、IMBD、Kuromiya、CPSKY、ICDVなどのシリーズで検索
+      const ivSeries = ['MMR', 'IMDB', 'IMBD', 'Kuromiya', 'CPSKY', 'ICDV', 'IMOG', 'TL', 'IV'];
+      
       const ivSearches = [
         searchIVFree('', false), // 空のクエリで全件取得
         searchFC2Video('', false),
-        searchBilibili('', false) // Bilibiliも追加
+        // Bilibiliを複数のシリーズで検索
+        ...ivSeries.map(series => searchBilibili(series, false))
       ];
       
       const ivResults = await Promise.allSettled(ivSearches);
@@ -1266,9 +1270,13 @@ app.get('/api/random', async (req, res) => {
           if (index === 0) { // searchIVFreeは1番目（index 0）
             ivFreeVideos.push(...result.value);
           }
-          
-          // Bilibiliの結果はIV関連の動画のみをフィルタリング
-          if (index === 2) { // searchBilibiliは3番目（index 2）
+          // FC2Video.orgの結果を追加
+          else if (index === 1) { // searchFC2Videoは2番目（index 1）
+            allVideos.push(...result.value);
+          }
+          // Bilibiliの結果（index 2以降はBilibiliのシリーズ検索結果）
+          else if (index >= 2) {
+            // Bilibiliの結果はIV関連の動画のみをフィルタリング
             const ivFilteredVideos = result.value.filter(video => {
               const urlLower = (video.url || '').toLowerCase();
               
@@ -1319,11 +1327,9 @@ app.get('/api/random', async (req, res) => {
               return hasKeyword || hasIdPattern;
             });
             
-            console.log(`🔍 BilibiliからIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
+            console.log(`🔍 Bilibili (${ivSeries[index - 2]})からIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
             bilibiliVideos.push(...ivFilteredVideos);
             allVideos.push(...ivFilteredVideos);
-          } else {
-            allVideos.push(...result.value);
           }
         }
       });
