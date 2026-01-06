@@ -7137,10 +7137,32 @@ app.get('/api/pizjav-proxy', async (req, res) => {
       }
     });
     
+      // jQueryを追加（jQueryが定義されていない場合に備えて）
+      if ($('script[src*="jquery"]').length === 0) {
+        $('head').prepend(`<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>`);
+      }
+      
       // 広告ブロッカー検出を回避するスクリプトを追加
       // ポップアップ広告を無効化するスクリプトも追加
       $('head').prepend(`
         <script>
+          // jQueryが読み込まれるまで待つ
+          (function() {
+            if (typeof jQuery === 'undefined') {
+              // jQueryがまだ読み込まれていない場合、少し待つ
+              setTimeout(arguments.callee, 50);
+              return;
+            }
+            
+            // jQueryが読み込まれたら、$とjQueryをグローバルに設定
+            if (typeof window.$ === 'undefined') {
+              window.$ = jQuery;
+            }
+            if (typeof window.jQuery === 'undefined') {
+              window.jQuery = jQuery;
+            }
+          })();
+          
           // 広告ブロッカー検出を回避
           // ポップアップ広告を無効化
           (function() {
@@ -7302,7 +7324,9 @@ app.get('/api/pizjav-proxy', async (req, res) => {
     });
     
     // CSPを緩和（動画再生に必要）
-    res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:; connect-src *; frame-src *; media-src *; object-src *;");
+    // CSPをさらに緩和（レスポンスヘッダーでも設定）
+    const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com; style-src * 'unsafe-inline'; img-src * data: blob:; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data:;`;
+    res.setHeader('Content-Security-Policy', `${cspContent} frame-ancestors *;`);
     res.setHeader('X-Frame-Options', 'ALLOWALL');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -7310,6 +7334,7 @@ app.get('/api/pizjav-proxy', async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     
+    console.log('✅ Pizjavプロキシレスポンス送信');
     res.send($.html());
   } catch (error) {
     console.error('❌ Pizjavプロキシエラー:', error.message);
