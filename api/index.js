@@ -1510,7 +1510,11 @@ app.get('/api/random', async (req, res) => {
     // デバッグ: 最初の5件のソースを確認
     const firstFiveSources = randomVideos.slice(0, 5).map(v => v.source).join(', ');
     console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件ランダム順)`);
-    console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件, Pizjav=${uniqueVideos.filter(v => v.source === 'pizjav').length}件, JPdmv=${uniqueVideos.filter(v => v.source === 'jpdmv').length}件, Bilibili=${uniqueVideos.filter(v => v.source === 'bilibili').length}件, FC2Video=${uniqueVideos.filter(v => v.source === 'fc2video').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件`);
+    if (type === 'iv') {
+      console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件, Pizjav=${uniqueVideos.filter(v => v.source === 'pizjav').length}件, JPdmv=${uniqueVideos.filter(v => v.source === 'jpdmv').length}件, Bilibili=${uniqueVideos.filter(v => v.source === 'bilibili').length}件, FC2Video=${uniqueVideos.filter(v => v.source === 'fc2video').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件`);
+    } else {
+      console.log(`📊 ソース別内訳: Javmix=${uniqueVideos.filter(v => v.source === 'javmix').length}件, JPdmv=${uniqueVideos.filter(v => v.source === 'jpdmv').length}件, PPP=${uniqueVideos.filter(v => v.source === 'ppp').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件, Japanhub=${uniqueVideos.filter(v => v.source === 'japanhub').length}件`);
+    }
     console.log(`🎲 ランダム順の最初の5件のソース: ${firstFiveSources}`);
     
     res.json({ results: randomVideos });
@@ -3745,6 +3749,197 @@ async function searchPPP(query, strictMode = true) {
       console.warn('⚠️ PPP.Porn検索: ページが見つかりません（404）');
     } else {
       console.error('❌ PPP.Porn検索エラー:', error.message);
+    }
+    return [];
+  }
+}
+
+// Japanhub検索（japanhub.net）
+// strictMode: true = 厳格なマッチング, false = 緩和したマッチング
+async function searchJapanhub(query, strictMode = false) {
+  try {
+    // クエリがnull/undefinedの場合は空文字列に変換
+    query = query || '';
+    console.log(`🔍 Japanhub検索開始: "${query}" (strictMode: ${strictMode})`);
+    const startTime = Date.now();
+    const queryLower = query.toLowerCase().trim();
+    
+    // 検索URLを構築
+    const urls = [];
+    if (query && query.trim().length > 0) {
+      const encodedQuery = encodeURIComponent(query);
+      urls.push(`https://japanhub.net/search?q=${encodedQuery}`);
+      urls.push(`https://japanhub.net/search/${encodedQuery}`);
+      urls.push(`https://japanhub.net/?s=${encodedQuery}`);
+    } else {
+      // 空のクエリの場合はトップページから取得
+      urls.push(`https://japanhub.net/`);
+    }
+    
+    const videos = [];
+    const seenUrls = new Set();
+    
+    for (const url of urls) {
+      try {
+        console.log(`🔍 Japanhub: URL取得開始: ${url}`);
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://japanhub.net/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000,
+          validateStatus: function (status) {
+            return status >= 200 && status < 400;
+          }
+        });
+        
+        console.log(`🔍 Japanhub: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
+        
+        const $ = cheerio.load(response.data);
+        console.log(`🔍 Japanhub: HTML取得完了、パース開始`);
+        
+        // 複数のセレクタを試す
+        const selectors = [
+          'article h2 a',
+          'article h1 a',
+          'h2 a',
+          'h1 a',
+          'article a',
+          '.entry-title a',
+          '.post-title a',
+          '.video-item a',
+          '.item a',
+          'a[href*="/video/"]',
+          'a[href*="/watch/"]',
+          'a[href*="japanhub.net"]'
+        ];
+        
+        let foundCount = 0;
+        let matchedCount = 0;
+        
+        for (const selector of selectors) {
+          $(selector).each((index, elem) => {
+            const $item = $(elem);
+            let titleText = $item.text().trim() || $item.attr('title') || '';
+            let href = $item.attr('href') || '';
+            
+            // タイトルが空の場合はスキップ（2文字以上に緩和）
+            if (!titleText || titleText.trim().length < 2) {
+              return;
+            }
+            
+            foundCount++;
+            
+            // 空のクエリの場合はすべての動画を取得
+            if (!query || query.trim().length === 0) {
+              matchedCount++;
+            } else {
+              // 検索クエリとタイトルの関連性をチェック
+              const titleLower = titleText.toLowerCase();
+              
+              // クエリがIDパターンに含まれているか、タイトルに含まれているか
+              const idMatch = titleText.match(/\[([A-Z]+[-\d]+)\]/);
+              const queryInId = idMatch && idMatch[1].toLowerCase().includes(queryLower);
+              const queryInTitle = titleLower.includes(queryLower);
+              
+              // 緩和したマッチング: 部分一致や文字単位の一致も許可（より積極的に）
+              const queryChars = queryLower.split('').filter(c => c.trim().length > 0 && c !== ' ');
+              const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
+              const oneCharMatch = queryChars.length > 0 && matchingChars > 0;
+              
+              const shouldMatch = queryInId || queryInTitle || oneCharMatch;
+              
+              if (!shouldMatch) {
+                return; // 検索語が含まれていない場合はスキップ
+              }
+              
+              matchedCount++;
+            }
+            
+            // 相対URLを絶対URLに変換
+            let fullUrl = href;
+            if (href) {
+              if (href.startsWith('//')) {
+                fullUrl = 'https:' + href;
+              } else if (href.startsWith('/')) {
+                fullUrl = `https://japanhub.net${href}`;
+              } else if (href.startsWith('./')) {
+                fullUrl = `https://japanhub.net/${href.substring(2)}`;
+              } else if (!href.startsWith('http')) {
+                fullUrl = `https://japanhub.net/${href}`;
+              }
+            } else {
+              return; // リンクが見つからない場合はスキップ
+            }
+            
+            // japanhub.netのドメイン内のリンクのみを対象
+            if (!fullUrl.includes('japanhub.net')) return;
+            
+            // 重複チェック
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            // サムネイルを取得
+            let thumbnail = extractThumbnail($, $item);
+            
+            // サムネイルが見つからない場合、親要素から探す
+            if (!thumbnail) {
+              const $parent = $item.parent();
+              thumbnail = extractThumbnail($, $parent);
+            }
+            
+            // さらに上の親要素から探す
+            if (!thumbnail) {
+              const $grandParent = $item.parent().parent();
+              thumbnail = extractThumbnail($, $grandParent);
+            }
+            
+            const duration = extractDurationFromHtml($, $item);
+            
+            videos.push({
+              id: `japanhub-${Date.now()}-${index}`,
+              title: titleText.substring(0, 200),
+              thumbnail: thumbnail || '',
+              duration: duration || '',
+              url: fullUrl,
+              embedUrl: fullUrl,
+              source: 'japanhub'
+            });
+          });
+        }
+        
+        // 結果が見つかったらループを抜ける
+        if (videos.length > 0) break;
+      } catch (urlError) {
+        console.warn(`⚠️ Japanhub URL試行エラー (${url}):`, urlError.message);
+        continue;
+      }
+    }
+    
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    console.log(`🔍 Japanhub: 見つかった動画: ${matchedCount}件、最終結果: ${videos.length}件`);
+    console.log(`✅ Japanhub: ${videos.length}件の動画を取得（実行時間: ${duration}ms）`);
+    
+    // デバッグ情報: 最初の5件のタイトルを表示
+    if (videos.length > 0) {
+      console.log(`🔍 Japanhub デバッグ: 取得した動画のサンプル:`);
+      videos.slice(0, 5).forEach((video, idx) => {
+        console.log(`  ${idx + 1}. ${video.title.substring(0, 50)}... (URL: ${video.url.substring(0, 60)}...)`);
+      });
+    } else {
+      console.log(`⚠️ Japanhub: 動画が見つかりませんでした（検索クエリ: "${query}", strictMode: ${strictMode}）`);
+    }
+    
+    return videos;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ Japanhub検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ Japanhub検索エラー:', error.message);
     }
     return [];
   }
