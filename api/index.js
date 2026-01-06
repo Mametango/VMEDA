@@ -7280,10 +7280,23 @@ app.get('/api/pizjav-proxy', async (req, res) => {
               });
             });
             
-            observer.observe(document.body, {
-              childList: true,
-              subtree: true
-            });
+            // document.bodyが存在するか確認してからobserveを呼び出す
+            function initObserver() {
+              if (document.body) {
+                observer.observe(document.body, {
+                  childList: true,
+                  subtree: true
+                });
+              } else {
+                // document.bodyがまだ存在しない場合は、DOMContentLoadedイベントを待つ
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', initObserver);
+                } else {
+                  setTimeout(initObserver, 100);
+                }
+              }
+            }
+            initObserver();
           })();
         </script>
       `);
