@@ -1463,7 +1463,17 @@ app.get('/api/random', async (req, res) => {
     res.json({ results: randomVideos });
   } catch (error) {
     console.error('❌ ランダム動画取得エラー:', error.message);
-    res.status(500).json({ error: 'Failed to fetch random videos' });
+    console.error('❌ スタックトレース:', error.stack);
+    console.error('❌ エラー詳細:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      error: 'Failed to fetch random videos',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -4202,7 +4212,17 @@ app.get('/api/recent-searches', async (req, res) => {
     res.json({ searches: searches });
   } catch (error) {
     console.error('❌ 検索履歴取得エラー:', error);
-    res.status(500).json({ error: 'Failed to retrieve search history' });
+    console.error('❌ スタックトレース:', error.stack);
+    console.error('❌ エラー詳細:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      error: 'Failed to retrieve search history',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
