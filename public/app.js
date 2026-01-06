@@ -1148,6 +1148,65 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   iframe.setAttribute('mozallowfullscreen', 'true');
   iframe.setAttribute('playsinline', 'false'); // iPhoneで全画面表示
   
+  // iframe内の広告ブロッカー検出メッセージを削除（iframe読み込み後に実行）
+  iframe.addEventListener('load', function() {
+    try {
+      // iframe内のドキュメントにアクセス（同一オリジンの場合のみ）
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (iframeDoc) {
+        // 広告ブロッカー検出メッセージを削除
+        const adBlockMessages = iframeDoc.querySelectorAll('*');
+        adBlockMessages.forEach(function(elem) {
+          const text = elem.textContent || elem.innerText || '';
+          if (text && (
+            text.includes('Please change your browser') ||
+            text.includes('disable AdBlock') ||
+            text.includes('disable UBlock') ||
+            text.includes('disable AdGuard') ||
+            text.includes('to watch this video') ||
+            text.includes('AdBlock / UBlock') ||
+            text.includes('AdBlock / AdGuard') ||
+            text.includes('change your browser or disable')
+          )) {
+            elem.remove();
+          }
+        });
+        
+        // MutationObserverで広告ブロッカー検出メッセージを監視して削除
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeType === 1) {
+                const text = node.textContent || node.innerText || '';
+                if (text && (
+                  text.includes('Please change your browser') ||
+                  text.includes('disable AdBlock') ||
+                  text.includes('disable UBlock') ||
+                  text.includes('disable AdGuard') ||
+                  text.includes('to watch this video') ||
+                  text.includes('AdBlock / UBlock') ||
+                  text.includes('AdBlock / AdGuard') ||
+                  text.includes('change your browser or disable')
+                )) {
+                  node.remove();
+                }
+              }
+            });
+          });
+        });
+        
+        if (iframeDoc.body) {
+          observer.observe(iframeDoc.body, {
+            childList: true,
+            subtree: true
+          });
+        }
+      }
+    } catch (e) {
+      // クロスオリジンの場合はアクセスできない（エラーは無視）
+    }
+  });
+  
   // douga4の場合は、動画ページから実際の動画URLを取得する準備（後でデバッグ情報を追加）
   let douga4DebugInfo = null;
   let douga4StatusText = '初期化中...';

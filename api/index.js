@@ -5330,7 +5330,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
             
             // 定期的に除去（念のため）
             setInterval(removePopupAds, 500);
-            // AdBlock検出を無効化
+            // AdBlock検出を無効化（より強化）
             if (typeof window.getComputedStyle === 'undefined') {
               window.getComputedStyle = function() { return {}; };
             }
@@ -5341,6 +5341,49 @@ app.get('/api/ivfree-proxy', async (req, res) => {
             // AdGuard検出を無効化
             if (typeof window.adblock === 'undefined') {
               window.adblock = false;
+            }
+            // より多くの広告ブロッカー検出を無効化
+            Object.defineProperty(window, 'adsbygoogle', {
+              value: [],
+              writable: false,
+              configurable: false
+            });
+            Object.defineProperty(window, 'adblock', {
+              value: false,
+              writable: false,
+              configurable: false
+            });
+            Object.defineProperty(window, 'uBlock', {
+              value: false,
+              writable: false,
+              configurable: false
+            });
+            Object.defineProperty(window, 'AdBlock', {
+              value: false,
+              writable: false,
+              configurable: false
+            });
+            Object.defineProperty(window, 'AdGuard', {
+              value: false,
+              writable: false,
+              configurable: false
+            });
+            // 広告ブロッカー検出関数を無効化
+            if (typeof window.getComputedStyle === 'function') {
+              const originalGetComputedStyle = window.getComputedStyle;
+              window.getComputedStyle = function(element, pseudoElement) {
+                try {
+                  return originalGetComputedStyle.call(window, element, pseudoElement);
+                } catch(e) {
+                  return {
+                    display: 'block',
+                    visibility: 'visible',
+                    opacity: '1',
+                    height: 'auto',
+                    width: 'auto'
+                  };
+                }
+              };
             }
             // サンドボックス検出を無効化
             Object.defineProperty(window, 'frameElement', {
@@ -5442,7 +5485,14 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                             text.includes('Verifying') ||
                             text.includes('Verification') ||
                             text.includes('CAPTCHA') ||
-                            text.includes('reCAPTCHA')) {
+                            text.includes('reCAPTCHA') ||
+                            text.includes('Please change your browser') ||
+                            text.includes('disable AdBlock') ||
+                            text.includes('disable UBlock') ||
+                            text.includes('disable AdGuard') ||
+                            text.includes('to watch this video') ||
+                            text.includes('AdBlock / UBlock') ||
+                            text.includes('AdBlock / AdGuard')) {
                           node.remove();
                         }
                         // ロボット検証の要素も除去
@@ -5511,7 +5561,11 @@ app.get('/api/ivfree-proxy', async (req, res) => {
           text.includes('Verifying') ||
           text.includes('Verification') ||
           text.includes('CAPTCHA') ||
-          text.includes('reCAPTCHA')
+          text.includes('reCAPTCHA') ||
+          text.includes('to watch this video') ||
+          text.includes('AdBlock / UBlock') ||
+          text.includes('AdBlock / AdGuard') ||
+          text.includes('change your browser or disable')
         )) {
           $elem.remove();
         }
@@ -7058,73 +7112,154 @@ app.get('/api/pizjav-proxy', async (req, res) => {
       }
     });
     
-    // 広告ブロッカー検出を回避するスクリプトを追加
-    // ポップアップ広告を無効化するスクリプトも追加
-    $('head').prepend(`
-      <script>
-        // 広告ブロッカー検出を回避
-        // ポップアップ広告を無効化
-        (function() {
-          // window.openを完全に無効化
-          const originalOpen = window.open;
-          Object.defineProperty(window, 'open', {
-            value: function() {
-              console.log('🚫 ポップアップがブロックされました');
-              return null;
-            },
-            writable: false,
-            configurable: false
-          });
-          
-          // showModalDialogも無効化
-          if (window.showModalDialog) {
-            window.showModalDialog = function() {
-              return null;
-            };
-          }
-          
-          // grecaptchaを無効化
-          if (typeof grecaptcha !== 'undefined') {
-            grecaptcha.execute = function() { return Promise.resolve(''); };
-            grecaptcha.render = function() { return ''; };
-            grecaptcha.reset = function() {};
-            grecaptcha.getResponse = function() { return ''; };
-          }
-          
-          // MutationObserverでポップアップ要素を監視して削除
-          const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-              mutation.addedNodes.forEach(function(node) {
-                if (node.nodeType === 1) {
-                  // ポップアップ要素を削除
-                  if (node.classList && (
-                    node.classList.contains('popup') ||
-                    node.classList.contains('pop-up') ||
-                    node.classList.contains('popunder') ||
-                    node.id && (node.id.includes('popup') || node.id.includes('pop-up') || node.id.includes('popunder'))
-                  )) {
-                    node.remove();
+      // 広告ブロッカー検出を回避するスクリプトを追加
+      // ポップアップ広告を無効化するスクリプトも追加
+      $('head').prepend(`
+        <script>
+          // 広告ブロッカー検出を回避
+          // ポップアップ広告を無効化
+          (function() {
+            // window.openを完全に無効化
+            const originalOpen = window.open;
+            Object.defineProperty(window, 'open', {
+              value: function() {
+                console.log('🚫 ポップアップがブロックされました');
+                return null;
+              },
+              writable: false,
+              configurable: false
+            });
+            
+            // showModalDialogも無効化
+            if (window.showModalDialog) {
+              window.showModalDialog = function() {
+                return null;
+              };
+            }
+            
+            // grecaptchaを無効化
+            if (typeof grecaptcha !== 'undefined') {
+              grecaptcha.execute = function() { return Promise.resolve(''); };
+              grecaptcha.render = function() { return ''; };
+              grecaptcha.reset = function() {};
+              grecaptcha.getResponse = function() { return ''; };
+            }
+            
+            // 広告ブロッカー検出を無効化（より強化）
+            Object.defineProperty(window, 'adsbygoogle', {
+              value: [],
+              writable: false,
+              configurable: false
+            });
+            Object.defineProperty(window, 'adblock', {
+              value: false,
+              writable: false,
+              configurable: false
+            });
+            Object.defineProperty(window, 'uBlock', {
+              value: false,
+              writable: false,
+              configurable: false
+            });
+            Object.defineProperty(window, 'AdBlock', {
+              value: false,
+              writable: false,
+              configurable: false
+            });
+            Object.defineProperty(window, 'AdGuard', {
+              value: false,
+              writable: false,
+              configurable: false
+            });
+            
+            // MutationObserverでポップアップ要素と広告ブロッカー検出メッセージを監視して削除
+            const observer = new MutationObserver(function(mutations) {
+              mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                  if (node.nodeType === 1) {
+                    // ポップアップ要素を削除
+                    if (node.classList && (
+                      node.classList.contains('popup') ||
+                      node.classList.contains('pop-up') ||
+                      node.classList.contains('popunder') ||
+                      node.id && (node.id.includes('popup') || node.id.includes('pop-up') || node.id.includes('popunder'))
+                    )) {
+                      node.remove();
+                    }
+                    
+                    // 広告ブロッカー検出メッセージを削除
+                    const text = node.textContent || node.innerText || '';
+                    if (text && (
+                      text.includes('Please change your browser') ||
+                      text.includes('disable AdBlock') ||
+                      text.includes('disable UBlock') ||
+                      text.includes('disable AdGuard') ||
+                      text.includes('to watch this video') ||
+                      text.includes('AdBlock / UBlock') ||
+                      text.includes('AdBlock / AdGuard') ||
+                      text.includes('change your browser or disable')
+                    )) {
+                      node.remove();
+                    }
+                    
+                    // 子要素もチェック
+                    const popups = node.querySelectorAll && node.querySelectorAll('.popup, .pop-up, .popunder, [id*="popup"], [id*="pop-up"], [id*="popunder"]');
+                    if (popups) {
+                      popups.forEach(function(popup) {
+                        popup.remove();
+                      });
+                    }
+                    
+                    // 広告ブロッカー検出メッセージの子要素も削除
+                    const adBlockMessages = node.querySelectorAll && node.querySelectorAll('*');
+                    if (adBlockMessages) {
+                      adBlockMessages.forEach(function(elem) {
+                        const elemText = elem.textContent || elem.innerText || '';
+                        if (elemText && (
+                          elemText.includes('Please change your browser') ||
+                          elemText.includes('disable AdBlock') ||
+                          elemText.includes('disable UBlock') ||
+                          elemText.includes('disable AdGuard') ||
+                          elemText.includes('to watch this video') ||
+                          elemText.includes('AdBlock / UBlock') ||
+                          elemText.includes('AdBlock / AdGuard')
+                        )) {
+                          elem.remove();
+                        }
+                      });
+                    }
                   }
-                  
-                  // 子要素もチェック
-                  const popups = node.querySelectorAll && node.querySelectorAll('.popup, .pop-up, .popunder, [id*="popup"], [id*="pop-up"], [id*="popunder"]');
-                  if (popups) {
-                    popups.forEach(function(popup) {
-                      popup.remove();
-                    });
-                  }
-                }
+                });
               });
             });
-          });
-          
-          observer.observe(document.body, {
-            childList: true,
-            subtree: true
-          });
-        })();
-      </script>
-    `);
+            
+            observer.observe(document.body, {
+              childList: true,
+              subtree: true
+            });
+          })();
+        </script>
+      `);
+    
+    // 広告ブロッカー検出メッセージを除去
+    $('body').find('*').each((index, elem) => {
+      const $elem = $(elem);
+      const text = $elem.text();
+      if (text && (
+        text.includes('Please change your browser') ||
+        text.includes('disable AdBlock') ||
+        text.includes('disable UBlock') ||
+        text.includes('disable AdGuard') ||
+        text.includes('to watch this video') ||
+        text.includes('AdBlock / UBlock') ||
+        text.includes('AdBlock / AdGuard') ||
+        text.includes('change your browser or disable') ||
+        text.includes('Streaming Blocked') ||
+        text.includes('AdBlock is enabled')
+      )) {
+        $elem.remove();
+      }
+    });
     
     // 相対URLを絶対URLに変換
     $('a[href], img[src], script[src], link[href], iframe[src]').each((index, elem) => {
