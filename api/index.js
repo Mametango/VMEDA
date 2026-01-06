@@ -1269,6 +1269,7 @@ app.get('/api/random', async (req, res) => {
           // IVFreeの結果を保存（後でMat6tube検索に使用）
           if (index === 0) { // searchIVFreeは1番目（index 0）
             ivFreeVideos.push(...result.value);
+            allVideos.push(...result.value); // allVideosにも追加（ランダム表示に必要）
           }
           // FC2Video.orgの結果を追加
           else if (index === 1) { // searchFC2Videoは2番目（index 1）
