@@ -5672,16 +5672,16 @@ app.get('/api/ivfree-proxy', async (req, res) => {
         });
       }
       
-      // 外部動画サイト用のCSPを設定（緩和版）
+      // IVFree内部ページ用のCSPを設定（緩和版）
       // すべてのCSPメタタグを削除（既存のCSPを確実に削除）
       $('head meta[http-equiv="Content-Security-Policy"]').remove();
       $('head meta[http-equiv="content-security-policy"]').remove();
       $('head meta[http-equiv="CSP"]').remove();
       $('head meta[http-equiv="csp"]').remove();
       
-      // CSPを完全に無効化（外部動画サイトのリソースをすべて許可）
+      // CSPを完全に緩和（IVFreeのリソースをすべて許可）
       // metaタグのCSPはframe-ancestorsを無視するため、レスポンスヘッダーでも設定
-      const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com; style-src * 'unsafe-inline'; img-src * data: blob:; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data:;`;
+      const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com https://ivfree.asia http://ivfree.asia https://fonts.googleapis.com; style-src * 'unsafe-inline' https://fonts.googleapis.com https://ivfree.asia http://ivfree.asia; img-src * data: blob: https://ivfree.asia http://ivfree.asia; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data: https://fonts.gstatic.com;`;
       
       // 新しいCSPを追加（metaタグ）
       $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${cspContent}">`);
