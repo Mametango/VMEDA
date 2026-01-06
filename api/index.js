@@ -899,7 +899,9 @@ app.post('/api/search', async (req, res) => {
       { fn: searchJavmix, name: 'Javmix.TV' },
       { fn: searchPPP, name: 'PPP.Porn' },
       { fn: searchMat6tube, name: 'Mat6tube' },
-      { fn: searchFC2Video, name: 'FC2Video.org' } // 常に追加
+      { fn: searchFC2Video, name: 'FC2Video.org' }, // 常に追加
+      { fn: searchPizjav, name: 'Pizjav' }, // IV検索用
+      { fn: searchJapanhub, name: 'Japanhub' } // JAV検索用
     ];
     
     console.log(`📋 検索関数リスト: ${searchFunctions.map(sf => sf.name).join(', ')} (全${searchFunctions.length}件)`);
@@ -1472,12 +1474,13 @@ app.get('/api/random', async (req, res) => {
         }
       }
     } else if (type === 'jav') {
-      // JAV動画: Javmix.TV、JPdmv、PPP.Porn、Mat6tubeから取得
+      // JAV動画: Javmix.TV、JPdmv、PPP.Porn、Mat6tube、Japanhubから取得
       const javSearches = [
         searchJavmix('', false),
         searchJPdmv('', false),
         searchPPP('', false),
-        searchMat6tube('', false)
+        searchMat6tube('', false),
+        searchJapanhub('', false) // Japanhubからも取得
       ];
       
       const javResults = await Promise.allSettled(javSearches);
