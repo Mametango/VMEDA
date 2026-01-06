@@ -5164,10 +5164,10 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       $('head').prepend(`
         <script>
           // jQueryが読み込まれるまで待つ
-          (function() {
+          (function waitForJQuery() {
             if (typeof jQuery === 'undefined') {
               // jQueryがまだ読み込まれていない場合、少し待つ
-              setTimeout(arguments.callee, 50);
+              setTimeout(waitForJQuery, 50);
               return;
             }
             
