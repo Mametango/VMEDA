@@ -5696,6 +5696,11 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       $('head').prepend(`
         <script>
           (function() {
+            // FastSearchなどの未定義関数を無効化（エラーを回避）
+            if (typeof window.FastSearch === 'undefined') {
+              window.FastSearch = function() {};
+            }
+            
             // iframeのsandbox属性を削除（親ウィンドウから制御）
             try {
               if (window.frameElement && window.frameElement.hasAttribute('sandbox')) {
