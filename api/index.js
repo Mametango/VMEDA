@@ -1157,7 +1157,6 @@ app.get('/api/random', async (req, res) => {
     });
     
     // Fisher-Yatesシャッフルアルゴリズムで完全にランダムに並び替え
-    // Bilibili、IVFree、FC2Video.org、Mat6tubeなど全ての検索結果をランダム順にする
     const shuffled = [...uniqueVideos];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -1169,7 +1168,7 @@ app.get('/api/random', async (req, res) => {
     const firstFiveSources = randomVideos.slice(0, 5).map(v => v.source).join(', ');
     console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件ランダム順)`);
     if (type === 'iv') {
-      console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件, Pizjav=${uniqueVideos.filter(v => v.source === 'pizjav').length}件, JPdmv=${uniqueVideos.filter(v => v.source === 'jpdmv').length}件, Bilibili=${uniqueVideos.filter(v => v.source === 'bilibili').length}件, FC2Video=${uniqueVideos.filter(v => v.source === 'fc2video').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件`);
+      console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件`);
     } else {
       console.log(`📊 ソース別内訳: Javmix=${uniqueVideos.filter(v => v.source === 'javmix').length}件, JPdmv=${uniqueVideos.filter(v => v.source === 'jpdmv').length}件, PPP=${uniqueVideos.filter(v => v.source === 'ppp').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件, Japanhub=${uniqueVideos.filter(v => v.source === 'japanhub').length}件`);
     }
