@@ -5853,41 +5853,74 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     const $ = cheerio.load(response.data);
     const baseUrl = new URL(videoUrl);
     
-    // 相対URLを絶対URLに変換する関数
+    // 相対URLを絶対URLに変換する関数（HTTPをHTTPSに変換）
     const toAbsoluteUrl = (url) => {
       if (!url) return url;
-      if (url.startsWith('http://') || url.startsWith('https://')) return url;
-      if (url.startsWith('//')) return `http:${url}`;
-      if (url.startsWith('/')) return `${baseUrl.protocol}//${baseUrl.host}${url}`;
-      return `${baseUrl.protocol}//${baseUrl.host}/${url}`;
+      if (url.startsWith('http://')) {
+        // HTTPをHTTPSに変換（Mixed Contentエラーを回避）
+        return url.replace('http://', 'https://');
+      }
+      if (url.startsWith('https://')) return url;
+      if (url.startsWith('//')) return `https:${url}`;
+      if (url.startsWith('/')) return `https://${baseUrl.host}${url}`;
+      return `https://${baseUrl.host}/${url}`;
     };
     
-    // 相対URLを絶対URLに変換
+    // 相対URLを絶対URLに変換（HTTPをHTTPSに変換）
     $('a[href]').each((index, elem) => {
       const href = $(elem).attr('href');
-      if (href && !href.startsWith('http') && !href.startsWith('//') && !href.startsWith('#')) {
-        $(elem).attr('href', toAbsoluteUrl(href));
+      if (href) {
+        if (href.startsWith('http://')) {
+          // HTTPをHTTPSに変換（Mixed Contentエラーを回避）
+          $(elem).attr('href', href.replace('http://', 'https://'));
+        } else if (!href.startsWith('http') && !href.startsWith('//') && !href.startsWith('#')) {
+          $(elem).attr('href', toAbsoluteUrl(href));
+        }
       }
     });
     
     $('img[src]').each((index, elem) => {
       const src = $(elem).attr('src');
-      if (src && !src.startsWith('http') && !src.startsWith('//') && !src.startsWith('data:')) {
-        $(elem).attr('src', toAbsoluteUrl(src));
+      if (src) {
+        if (src.startsWith('http://')) {
+          // HTTPをHTTPSに変換（Mixed Contentエラーを回避）
+          $(elem).attr('src', src.replace('http://', 'https://'));
+        } else if (!src.startsWith('http') && !src.startsWith('//') && !src.startsWith('data:')) {
+          $(elem).attr('src', toAbsoluteUrl(src));
+        }
       }
     });
     
     $('link[href]').each((index, elem) => {
       const href = $(elem).attr('href');
-      if (href && !href.startsWith('http') && !href.startsWith('//')) {
-        $(elem).attr('href', toAbsoluteUrl(href));
+      if (href) {
+        if (href.startsWith('http://')) {
+          // HTTPをHTTPSに変換（Mixed Contentエラーを回避）
+          $(elem).attr('href', href.replace('http://', 'https://'));
+        } else if (!href.startsWith('http') && !href.startsWith('//')) {
+          $(elem).attr('href', toAbsoluteUrl(href));
+        }
       }
     });
     
     $('script[src]').each((index, elem) => {
       const src = $(elem).attr('src');
-      if (src && !src.startsWith('http') && !src.startsWith('//')) {
-        $(elem).attr('src', toAbsoluteUrl(src));
+      if (src) {
+        if (src.startsWith('http://')) {
+          // HTTPをHTTPSに変換（Mixed Contentエラーを回避）
+          $(elem).attr('src', src.replace('http://', 'https://'));
+        } else if (!src.startsWith('http') && !src.startsWith('//')) {
+          $(elem).attr('src', toAbsoluteUrl(src));
+        }
+      }
+    });
+    
+    // iframe[src]も変換
+    $('iframe[src]').each((index, elem) => {
+      const src = $(elem).attr('src');
+      if (src && src.startsWith('http://')) {
+        // HTTPをHTTPSに変換（Mixed Contentエラーを回避）
+        $(elem).attr('src', src.replace('http://', 'https://'));
       }
     });
     
