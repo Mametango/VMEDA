@@ -6044,10 +6044,26 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       $('head').prepend(`<base href="${baseUrl.protocol}//${baseUrl.host}${baseUrl.pathname}">`);
     }
     
-    // Content Security Policyを追加してポップアップを制限（ただし、動画再生に必要なリソースは許可）
-    // base-uriも許可（baseタグを使用するため）
-    if ($('head meta[http-equiv="Content-Security-Policy"]').length === 0) {
-      $('head').prepend('<meta http-equiv="Content-Security-Policy" content="default-src \'self\' http://ivfree.asia https://ivfree.asia; script-src \'self\' http://ivfree.asia https://ivfree.asia \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' http://ivfree.asia https://ivfree.asia data:; media-src \'self\' http://ivfree.asia https://ivfree.asia *; frame-src \'self\' http://ivfree.asia https://ivfree.asia *; object-src \'none\'; base-uri \'self\' http://ivfree.asia https://ivfree.asia; form-action \'self\'; frame-ancestors \'self\'; upgrade-insecure-requests;">');
+    // Content Security Policyを緩和（IVFreeのリソースをすべて許可）
+    // すべてのCSPメタタグを削除（既存のCSPを確実に削除）
+    $('head meta[http-equiv="Content-Security-Policy"]').remove();
+    $('head meta[http-equiv="content-security-policy"]').remove();
+    $('head meta[http-equiv="CSP"]').remove();
+    $('head meta[http-equiv="csp"]').remove();
+    
+    // CSPを完全に緩和（IVFreeのリソースをすべて許可）
+    const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com https://ivfree.asia http://ivfree.asia https://fonts.googleapis.com; style-src * 'unsafe-inline' https://fonts.googleapis.com https://ivfree.asia http://ivfree.asia; img-src * data: blob: https://ivfree.asia http://ivfree.asia; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data: https://fonts.gstatic.com;`;
+    
+    // 新しいCSPを追加（metaタグ）
+    $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${cspContent}">`);
+    
+    // jQueryを追加（jQueryが定義されていない場合に備えて）
+    // IVFreeのjQueryが読み込めない場合に備えて、CDNからも読み込む（フォールバック）
+    if ($('script[src*="jquery"]').length === 0) {
+      $('head').prepend(`<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>`);
+    } else {
+      // IVFreeのjQueryが読み込めない場合に備えて、CDNからも読み込む（フォールバック）
+      $('head').prepend(`<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>`);
     }
     
     // window.openを無効化するスクリプトを追加（より強力に）
