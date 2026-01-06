@@ -1251,6 +1251,7 @@ app.get('/api/random', async (req, res) => {
         searchIVFree('', false), // 空のクエリで全件取得
         searchFC2Video('', false),
         searchPizjav('', false), // Pizjavからも取得
+        searchJPdmv('', false), // JPdmvからも取得
         // Bilibiliを複数のシリーズで検索
         ...ivSeries.map(series => searchBilibili(series, false))
       ];
@@ -1258,6 +1259,7 @@ app.get('/api/random', async (req, res) => {
       const ivResults = await Promise.allSettled(ivSearches);
       const ivFreeVideos = [];
       const pizjavVideos = [];
+      const jpdmvVideos = [];
       const bilibiliVideos = [];
       
       ivResults.forEach((result, index) => {
@@ -1328,17 +1330,17 @@ app.get('/api/random', async (req, res) => {
               return hasKeyword || hasIdPattern;
             });
             
-            console.log(`🔍 Bilibili (${ivSeries[index - 3]})からIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
+            console.log(`🔍 Bilibili (${ivSeries[index - 4]})からIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
             bilibiliVideos.push(...ivFilteredVideos);
             allVideos.push(...ivFilteredVideos);
           }
         }
       });
       
-      // IVFree、Pizjav、Bilibiliのタイトルからシリーズ名を抽出してMat6tubeで検索
-      const allSourceVideos = [...ivFreeVideos, ...pizjavVideos, ...bilibiliVideos];
+      // IVFree、Pizjav、JPdmv、Bilibiliのタイトルからシリーズ名を抽出してMat6tubeで検索
+      const allSourceVideos = [...ivFreeVideos, ...pizjavVideos, ...jpdmvVideos, ...bilibiliVideos];
       if (allSourceVideos.length > 0) {
-        console.log(`🔍 IVFreeから取得した動画: ${ivFreeVideos.length}件、Pizjavから取得した動画: ${pizjavVideos.length}件、Bilibiliから取得した動画: ${bilibiliVideos.length}件、Mat6tube検索を開始`);
+        console.log(`🔍 IVFreeから取得した動画: ${ivFreeVideos.length}件、Pizjavから取得した動画: ${pizjavVideos.length}件、JPdmvから取得した動画: ${jpdmvVideos.length}件、Bilibiliから取得した動画: ${bilibiliVideos.length}件、Mat6tube検索を開始`);
         
         // IVFreeとBilibiliのタイトルからシリーズ名（例: IMOG）を抽出
         const seriesNames = new Set();
@@ -1473,7 +1475,7 @@ app.get('/api/random', async (req, res) => {
     // デバッグ: 最初の5件のソースを確認
     const firstFiveSources = randomVideos.slice(0, 5).map(v => v.source).join(', ');
     console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件ランダム順)`);
-    console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件, Pizjav=${uniqueVideos.filter(v => v.source === 'pizjav').length}件, Bilibili=${uniqueVideos.filter(v => v.source === 'bilibili').length}件, FC2Video=${uniqueVideos.filter(v => v.source === 'fc2video').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件`);
+    console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件, Pizjav=${uniqueVideos.filter(v => v.source === 'pizjav').length}件, JPdmv=${uniqueVideos.filter(v => v.source === 'jpdmv').length}件, Bilibili=${uniqueVideos.filter(v => v.source === 'bilibili').length}件, FC2Video=${uniqueVideos.filter(v => v.source === 'fc2video').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件`);
     console.log(`🎲 ランダム順の最初の5件のソース: ${firstFiveSources}`);
     
     res.json({ results: randomVideos });
