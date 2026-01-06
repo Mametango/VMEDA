@@ -196,10 +196,6 @@ async function searchVideos(query) {
       sortContainer.classList.add('hidden');
     }
     
-    // 検索実行後、検索履歴を更新
-    setTimeout(() => {
-      loadRecentSearches();
-    }, 1000);
   } catch (error) {
     console.error('❌ 検索エラー:', error);
     resultsDiv.innerHTML = `<div class="error">検索エラー: ${error.message}</div>`;
