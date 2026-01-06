@@ -5180,6 +5180,11 @@ app.get('/api/ivfree-proxy', async (req, res) => {
             }
           })();
           
+          // FastSearchなどの未定義関数を無効化（エラーを回避）
+          if (typeof window.FastSearch === 'undefined') {
+            window.FastSearch = function() {};
+          }
+          
           // 広告ブロッカー検出を回避
           // ポップアップ広告を無効化
           (function() {
@@ -6072,9 +6077,17 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       }
     });
     
-    // baseタグを追加して相対URLを正しく解決
+    // baseタグを追加して相対URLを正しく解決（HTTPをHTTPSに変換）
     if ($('head base').length === 0) {
-      $('head').prepend(`<base href="${baseUrl.protocol}//${baseUrl.host}${baseUrl.pathname}">`);
+      $('head').prepend(`<base href="https://${baseUrl.host}${baseUrl.pathname}">`);
+    } else {
+      // 既存のbaseタグのhrefもHTTPSに変換
+      $('head base').each((index, elem) => {
+        const href = $(elem).attr('href');
+        if (href && href.startsWith('http://')) {
+          $(elem).attr('href', href.replace('http://', 'https://'));
+        }
+      });
     }
     
     // Content Security Policyを緩和（IVFreeのリソースをすべて許可）
