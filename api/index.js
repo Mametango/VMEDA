@@ -3469,7 +3469,7 @@ async function searchPPP(query, strictMode = true) {
         
         selectors.forEach(selector => {
           $(selector).each((index, elem) => {
-            if (videos.length >= 200) return false;
+            // 制限を削除して全件取得
             
             foundCount++;
             
@@ -5958,7 +5958,7 @@ async function searchMat6tube(query, strictMode = true) {
         
         selectors.forEach(selector => {
           $(selector).each((index, elem) => {
-            if (videos.length >= 200) return false;
+            // 制限を削除して全件取得
             
             foundCount++;
             
