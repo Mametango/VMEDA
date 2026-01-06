@@ -6713,5 +6713,236 @@ async function searchFC2Video(query, strictMode = true) {
   }
 }
 
+// Pizjav動画ページプロキシエンドポイント（広告除去版）
+app.get('/api/pizjav-proxy', async (req, res) => {
+  // OPTIONSリクエスト（CORS preflight）を処理
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24時間
+    return res.status(200).end();
+  }
+  
+  try {
+    const videoUrl = req.query.url;
+    if (!videoUrl) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+    
+    // Pizjavの動画ページのURLを許可
+    const isPizjavUrl = videoUrl.includes('pizjav.com');
+    
+    if (!isPizjavUrl) {
+      return res.status(400).json({ error: 'Pizjav URL is required' });
+    }
+    
+    console.log('📺 Pizjav動画ページをプロキシ経由で取得:', videoUrl);
+    
+    const response = await axios.get(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://v.pizjav.com/',
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000,
+      maxRedirects: 5
+    });
+    
+    const $ = cheerio.load(response.data);
+    const baseUrl = new URL(videoUrl);
+    
+    // ポップアップ広告を生成するスクリプトを除去（ただし、動画プレイヤーに必要なスクリプトは保持）
+    $('script').each((index, elem) => {
+      const scriptContent = $(elem).html() || '';
+      const scriptSrc = $(elem).attr('src') || '';
+      
+      // 動画プレイヤー関連のスクリプトは保護（削除しない）
+      const isPlayerScript = scriptSrc.includes('jwplayer') || 
+                            scriptSrc.includes('video.js') || 
+                            scriptSrc.includes('player') ||
+                            scriptSrc.includes('video') ||
+                            scriptContent.includes('jwplayer') ||
+                            scriptContent.includes('video.js') ||
+                            scriptContent.includes('JWPlayer') ||
+                            scriptContent.includes('VideoJS');
+      
+      if (isPlayerScript) {
+        return; // 動画プレイヤーのスクリプトは削除しない
+      }
+      
+      // ロボット検証（CAPTCHA/reCAPTCHA）のスクリプトを除去
+      if (
+        scriptSrc.includes('recaptcha') ||
+        scriptSrc.includes('captcha') ||
+        scriptSrc.includes('google.com/recaptcha') ||
+        scriptSrc.includes('gstatic.com/recaptcha') ||
+        scriptContent.includes('recaptcha') ||
+        scriptContent.includes('grecaptcha') ||
+        scriptContent.includes('captcha') ||
+        scriptSrc.includes('cloudflare') ||
+        scriptContent.includes('cloudflare') ||
+        scriptContent.includes('challenge-platform') ||
+        scriptContent.includes('cf-browser-verification')
+      ) {
+        $(elem).remove();
+        return;
+      }
+      
+      if (
+        (scriptContent.includes('window.open') && !scriptContent.includes('video') && !scriptContent.includes('player')) ||
+        scriptContent.includes('popup') ||
+        scriptContent.includes('popunder') ||
+        scriptContent.includes('pop-up') ||
+        scriptContent.includes('pop_up') ||
+        (scriptSrc.includes('advertisement') || scriptSrc.includes('advert') || scriptSrc.includes('adsbygoogle') || scriptSrc.includes('googlesyndication') || scriptSrc.includes('doubleclick')) ||
+        scriptSrc.includes('popup') ||
+        scriptSrc.includes('popunder')
+      ) {
+        $(elem).remove();
+      }
+    });
+    
+    // ポップアップ広告を生成するaタグやボタンを除去
+    $('a[onclick], button[onclick], div[onclick]').each((index, elem) => {
+      const onclick = $(elem).attr('onclick') || '';
+      if (onclick.includes('window.open') || onclick.includes('popup') || onclick.includes('popunder')) {
+        $(elem).remove();
+      }
+    });
+    
+    // target="_blank"のaタグで広告関連のURLを除去
+    $('a[target="_blank"]').each((index, elem) => {
+      const href = $(elem).attr('href') || '';
+      if (href.includes('ad') || href.includes('popup') || href.includes('popunder')) {
+        $(elem).remove();
+      }
+    });
+    
+    // ロボット検証（CAPTCHA/reCAPTCHA）のiframeを除去
+    $('iframe').each((index, elem) => {
+      const src = $(elem).attr('src') || '';
+      const id = $(elem).attr('id') || '';
+      const classAttr = $(elem).attr('class') || '';
+      if (
+        (src.includes('recaptcha') || src.includes('captcha') || src.includes('google.com/recaptcha') || src.includes('gstatic.com/recaptcha') ||
+         id.includes('recaptcha') || id.includes('captcha') ||
+         classAttr.includes('recaptcha') || classAttr.includes('captcha')) &&
+        !src.includes('video') && !src.includes('player')
+      ) {
+        $(elem).remove();
+      }
+    });
+    
+    // 広告ブロッカー検出を回避するスクリプトを追加
+    // ポップアップ広告を無効化するスクリプトも追加
+    $('head').prepend(`
+      <script>
+        // 広告ブロッカー検出を回避
+        // ポップアップ広告を無効化
+        (function() {
+          // window.openを完全に無効化
+          const originalOpen = window.open;
+          Object.defineProperty(window, 'open', {
+            value: function() {
+              console.log('🚫 ポップアップがブロックされました');
+              return null;
+            },
+            writable: false,
+            configurable: false
+          });
+          
+          // showModalDialogも無効化
+          if (window.showModalDialog) {
+            window.showModalDialog = function() {
+              return null;
+            };
+          }
+          
+          // grecaptchaを無効化
+          if (typeof grecaptcha !== 'undefined') {
+            grecaptcha.execute = function() { return Promise.resolve(''); };
+            grecaptcha.render = function() { return ''; };
+            grecaptcha.reset = function() {};
+            grecaptcha.getResponse = function() { return ''; };
+          }
+          
+          // MutationObserverでポップアップ要素を監視して削除
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) {
+                  // ポップアップ要素を削除
+                  if (node.classList && (
+                    node.classList.contains('popup') ||
+                    node.classList.contains('pop-up') ||
+                    node.classList.contains('popunder') ||
+                    node.id && (node.id.includes('popup') || node.id.includes('pop-up') || node.id.includes('popunder'))
+                  )) {
+                    node.remove();
+                  }
+                  
+                  // 子要素もチェック
+                  const popups = node.querySelectorAll && node.querySelectorAll('.popup, .pop-up, .popunder, [id*="popup"], [id*="pop-up"], [id*="popunder"]');
+                  if (popups) {
+                    popups.forEach(function(popup) {
+                      popup.remove();
+                    });
+                  }
+                }
+              });
+            });
+          });
+          
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+        })();
+      </script>
+    `);
+    
+    // 相対URLを絶対URLに変換
+    $('a[href], img[src], script[src], link[href], iframe[src]').each((index, elem) => {
+      const $elem = $(elem);
+      ['href', 'src'].forEach(attr => {
+        const url = $elem.attr(attr);
+        if (url && !url.startsWith('http') && !url.startsWith('//') && !url.startsWith('data:') && !url.startsWith('javascript:')) {
+          if (url.startsWith('/')) {
+            $elem.attr(attr, `${baseUrl.protocol}//${baseUrl.host}${url}`);
+          } else {
+            $elem.attr(attr, `${baseUrl.protocol}//${baseUrl.host}/${url}`);
+          }
+        }
+      });
+    });
+    
+    // CSPを緩和（動画再生に必要）
+    res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:; connect-src *; frame-src *; media-src *; object-src *;");
+    res.setHeader('X-Frame-Options', 'ALLOWALL');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    
+    res.send($.html());
+  } catch (error) {
+    console.error('❌ Pizjavプロキシエラー:', error.message);
+    res.status(500).send(`
+      <html>
+        <head><title>Error</title></head>
+        <body>
+          <h1>Failed to load video</h1>
+          <p>Error: ${error.message}</p>
+        </body>
+      </html>
+    `);
+  }
+});
+
 // Vercel用にエクスポート
 module.exports = app;
