@@ -4214,7 +4214,7 @@ async function searchIVFree(query, strictMode = true) {
         }
         
         // タイトルが空または短い場合、URLからタイトルを生成
-        if (!titleText || titleText.trim().length < 2) {
+        if (!titleText || titleText.trim().length < 1) {
           // URLからタイトルを抽出を試みる
           if (href) {
             const urlMatch = href.match(/\/([^\/]+)$/);
@@ -4227,14 +4227,14 @@ async function searchIVFree(query, strictMode = true) {
           }
           
           // それでもタイトルがない場合、IDパターンからタイトルを生成
-          if (!titleText || titleText.trim().length < 2) {
+          if (!titleText || titleText.trim().length < 1) {
             const idMatch = href.match(/([A-Z]+-\d+)/);
             if (idMatch) {
               titleText = `[${idMatch[1]}]`;
             }
           }
           
-          // それでもタイトルがない場合はスキップ
+          // それでもタイトルがない場合はスキップ（1文字未満の場合のみ）
           if (!titleText || titleText.trim().length < 1) {
             return;
           }
@@ -5154,10 +5154,32 @@ app.get('/api/ivfree-proxy', async (req, res) => {
         }
       });
       
+      // jQueryを追加（jQueryが定義されていない場合に備えて）
+      if ($('script[src*="jquery"]').length === 0) {
+        $('head').prepend(`<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>`);
+      }
+      
       // 広告ブロッカー検出を回避するスクリプトを追加
       // ポップアップ広告を無効化するスクリプトも追加
       $('head').prepend(`
         <script>
+          // jQueryが読み込まれるまで待つ
+          (function() {
+            if (typeof jQuery === 'undefined') {
+              // jQueryがまだ読み込まれていない場合、少し待つ
+              setTimeout(arguments.callee, 50);
+              return;
+            }
+            
+            // jQueryが読み込まれたら、$とjQueryをグローバルに設定
+            if (typeof window.$ === 'undefined') {
+              window.$ = jQuery;
+            }
+            if (typeof window.jQuery === 'undefined') {
+              window.jQuery = jQuery;
+            }
+          })();
+          
           // 広告ブロッカー検出を回避
           // ポップアップ広告を無効化
           (function() {
