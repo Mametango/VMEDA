@@ -7214,10 +7214,10 @@ app.get('/api/pizjav-proxy', async (req, res) => {
       $('head').prepend(`
         <script>
           // jQueryが読み込まれるまで待つ
-          (function() {
+          (function waitForJQuery() {
             if (typeof jQuery === 'undefined') {
               // jQueryがまだ読み込まれていない場合、少し待つ
-              setTimeout(arguments.callee, 50);
+              setTimeout(waitForJQuery, 50);
               return;
             }
             
@@ -7229,6 +7229,11 @@ app.get('/api/pizjav-proxy', async (req, res) => {
               window.jQuery = jQuery;
             }
           })();
+          
+          // FastSearchなどの未定義関数を無効化（エラーを回避）
+          if (typeof window.FastSearch === 'undefined') {
+            window.FastSearch = function() {};
+          }
           
           // 広告ブロッカー検出を回避
           // ポップアップ広告を無効化
