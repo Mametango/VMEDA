@@ -4359,6 +4359,36 @@ async function searchIVFree(query, strictMode = true) {
         // ivfree.asiaのドメイン内のリンクのみを対象
         if (!fullUrl.includes('ivfree.asia')) return;
         
+        // タイトルが3文字未満の場合、URLからタイトルを再生成して確認
+        if (titleText && titleText.trim().length < 3 && fullUrl) {
+          try {
+            const urlObj = new URL(fullUrl);
+            const urlPath = urlObj.pathname;
+            const urlSegments = urlPath.split('/').filter(Boolean);
+            if (urlSegments.length > 0) {
+              const lastSegment = urlSegments[urlSegments.length - 1];
+              const urlTitle = decodeURIComponent(lastSegment)
+                .replace(/[-_]/g, ' ')
+                .replace(/\.html?$/i, '')
+                .trim();
+              
+              // URLから抽出したタイトルが3文字以上の場合、それを使用
+              if (urlTitle && urlTitle.length >= 3) {
+                titleText = urlTitle;
+                console.log(`🔍 IVFree: URLからタイトルを再生成: "${titleText}" (URL: ${fullUrl})`);
+              } else {
+                // それでも3文字未満の場合はスキップ（動画が見れない可能性が高いため）
+                console.log(`⚠️ IVFree: タイトルが短すぎるためスキップ: "${titleText}" (URL: ${fullUrl})`);
+                return;
+              }
+            }
+          } catch (e) {
+            // URL解析エラーの場合もスキップ
+            console.log(`⚠️ IVFree: URL解析エラーのためスキップ: "${titleText}" (URL: ${fullUrl})`);
+            return;
+          }
+        }
+        
         // 重複チェック
         if (seenUrls.has(fullUrl)) return;
         seenUrls.add(fullUrl);
