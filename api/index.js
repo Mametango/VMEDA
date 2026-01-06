@@ -1277,8 +1277,43 @@ app.get('/api/random', async (req, res) => {
             pizjavVideos.push(...result.value);
             allVideos.push(...result.value);
           }
-          // Bilibiliの結果（index 3以降はBilibiliのシリーズ検索結果）
-          else if (index >= 3) {
+          // JPdmvの結果を追加（IV関連の動画のみをフィルタリング）
+          else if (index === 3) { // searchJPdmvは4番目（index 3）
+            const ivFilteredVideos = result.value.filter(video => {
+              const titleLower = (video.title || '').toLowerCase();
+              const urlLower = (video.url || '').toLowerCase();
+              
+              // IV関連のキーワードをチェック
+              const ivKeywords = [
+                'iv', 'イメージビデオ', 'イメージ', 'image video',
+                'imbd', 'imdb', // IMBD/IMDBシリーズはIV作品
+                'kuromiya', // 黒宮れい関連もIV
+                'mmr', // MMRシリーズはIV作品
+                'cpsky', // CPSKYシリーズはIV作品
+                'icdv', // ICDVシリーズはIV作品
+                'imog', // IMOGシリーズはIV作品
+                'tl', // TLシリーズはIV作品
+                'graphis', // GraphisシリーズはIV作品
+                'imouto', // imouto.tvはIV作品
+              ];
+              
+              // キーワードマッチング
+              const hasKeyword = ivKeywords.some(keyword => {
+                return titleLower.includes(keyword) || urlLower.includes(keyword);
+              });
+              
+              // IDパターンが含まれている場合はIVと判断（例: [MMR-XXX], [IMOG-XXX]など）
+              const hasIdPattern = /\[[A-Z]+[-\d]+\]/.test(video.title);
+              
+              return hasKeyword || hasIdPattern;
+            });
+            
+            console.log(`🔍 JPdmvからIV動画をフィルタリング: ${result.value.length}件 → ${ivFilteredVideos.length}件`);
+            jpdmvVideos.push(...ivFilteredVideos);
+            allVideos.push(...ivFilteredVideos);
+          }
+          // Bilibiliの結果（index 4以降はBilibiliのシリーズ検索結果）
+          else if (index >= 4) {
             // Bilibiliの結果はIV関連の動画のみをフィルタリング
             const ivFilteredVideos = result.value.filter(video => {
               const urlLower = (video.url || '').toLowerCase();
