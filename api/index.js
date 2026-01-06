@@ -892,8 +892,7 @@ app.post('/api/search', async (req, res) => {
     }
     
     const searchFunctions = [
-      // IVFreeはランダム表示のみに使用（通常の検索結果から除外）
-      // { fn: searchIVFree, name: 'IVFree' }, // ランダム表示のみ
+      { fn: searchIVFree, name: 'IVFree' }, // 必須：IVFreeは検索結果に含める
       { fn: searchJPdmv, name: 'JPdmv' }, // 優先順位: 高
       { fn: searchBilibili, name: 'Bilibili' },
       { fn: searchDouga4, name: 'Douga4' },
