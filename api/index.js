@@ -6049,15 +6049,15 @@ async function searchMat6tube(query, strictMode = true) {
         });
         
         // アプローチ2: セレクタで見つからない場合、すべてのmat6tube.comリンクを直接確認
-        if (videos.length === 0) {
-          console.log(`🔍 Mat6tube: セレクタで見つからなかったため、すべてのリンクを直接確認します`);
-          const allLinks = $('a[href]');
-          console.log(`🔍 Mat6tube: 見つかったリンク総数: ${allLinks.length}`);
+        // 常にすべてのリンクを確認（videos.length === 0の条件を削除）
+        console.log(`🔍 Mat6tube: すべてのリンクを直接確認します`);
+        const allLinks = $('a[href]');
+        console.log(`🔍 Mat6tube: 見つかったリンク総数: ${allLinks.length}`);
+        
+        allLinks.each((index, elem) => {
+          // 制限を削除して全件取得
           
-          allLinks.each((index, elem) => {
-            // 制限を削除して全件取得
-            
-            const $link = $(elem);
+          const $link = $(elem);
             let href = $link.attr('href') || '';
             
             if (!href) return;
