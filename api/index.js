@@ -3868,8 +3868,8 @@ async function searchIVFree(query, strictMode = true) {
         }
         
         // タイトルが空または短い場合、URLからタイトルを生成
-        // 3文字未満のタイトルは、URLから再生成を試みる（動画が見れない可能性が高いため）
-        if (!titleText || titleText.trim().length < 3) {
+        // 5文字以下のタイトルは、URLから再生成を試みる（動画が見れない可能性が高いため）
+        if (!titleText || titleText.trim().length <= 5) {
           // URLからタイトルを抽出を試みる
           if (href) {
             const urlMatch = href.match(/\/([^\/]+)$/);
@@ -3879,23 +3879,23 @@ async function searchIVFree(query, strictMode = true) {
                 .replace(/\.html?$/i, '')
                 .trim();
               
-              // URLから抽出したタイトルが3文字以上の場合、それを使用
-              if (urlTitle && urlTitle.length >= 3) {
+              // URLから抽出したタイトルが6文字以上の場合、それを使用
+              if (urlTitle && urlTitle.length > 5) {
                 titleText = urlTitle;
               }
             }
           }
           
-          // それでもタイトルが3文字未満の場合、IDパターンからタイトルを生成
-          if (!titleText || titleText.trim().length < 3) {
+          // それでもタイトルが5文字以下の場合、IDパターンからタイトルを生成
+          if (!titleText || titleText.trim().length <= 5) {
             const idMatch = href.match(/([A-Z]+-\d+)/);
             if (idMatch) {
               titleText = `[${idMatch[1]}]`;
             }
           }
           
-          // タイトルが3文字未満の場合はスキップ（動画が見れない可能性が高いため）
-          if (!titleText || titleText.trim().length < 3) {
+          // タイトルが5文字以下の場合はスキップ（動画が見れない可能性が高いため）
+          if (!titleText || titleText.trim().length <= 5) {
             console.log(`⚠️ IVFree: タイトルが短すぎるためスキップ: "${titleText}" (URL: ${href})`);
             return;
           }
@@ -4012,8 +4012,8 @@ async function searchIVFree(query, strictMode = true) {
         // ivfree.asiaのドメイン内のリンクのみを対象
         if (!fullUrl.includes('ivfree.asia')) return;
         
-        // タイトルが3文字未満の場合、URLからタイトルを再生成して確認
-        if (titleText && titleText.trim().length < 3 && fullUrl) {
+        // タイトルが5文字以下の場合、URLからタイトルを再生成して確認
+        if (titleText && titleText.trim().length <= 5 && fullUrl) {
           try {
             const urlObj = new URL(fullUrl);
             const urlPath = urlObj.pathname;
@@ -4025,12 +4025,12 @@ async function searchIVFree(query, strictMode = true) {
                 .replace(/\.html?$/i, '')
                 .trim();
               
-              // URLから抽出したタイトルが3文字以上の場合、それを使用
-              if (urlTitle && urlTitle.length >= 3) {
+              // URLから抽出したタイトルが6文字以上の場合、それを使用
+              if (urlTitle && urlTitle.length > 5) {
                 titleText = urlTitle;
                 console.log(`🔍 IVFree: URLからタイトルを再生成: "${titleText}" (URL: ${fullUrl})`);
               } else {
-                // それでも3文字未満の場合はスキップ（動画が見れない可能性が高いため）
+                // それでも5文字以下の場合はスキップ（動画が見れない可能性が高いため）
                 console.log(`⚠️ IVFree: タイトルが短すぎるためスキップ: "${titleText}" (URL: ${fullUrl})`);
                 return;
               }
