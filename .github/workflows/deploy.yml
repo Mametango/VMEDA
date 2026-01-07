@@ -1,10 +1,12 @@
 name: Deploy to Vercel
 
+# GitHub ActionsのVercelデプロイは無効化（vercel-tokenの設定が必要なため）
+# 代わりにVercel CLIで直接デプロイ: npx vercel --prod
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
+  # workflow_dispatch:
 
 jobs:
   deploy:
