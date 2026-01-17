@@ -24,6 +24,8 @@ const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'vmeda';
 const ACCESS_LOG_COLLECTION_NAME = 'access_logs';
+const COLLECTION_NAME = 'searches';
+const MAX_RECENT_SEARCHES = 20;
 
 let mongoClient = null;
 let mongoDb = null;
@@ -51,6 +53,86 @@ async function connectToMongoDB() {
   }
 }
 
+
+// 検索履歴をMongoDBから読み込む
+async function loadRecentSearchesFromMongoDB() {
+  try {
+    const db = await connectToMongoDB();
+    if (!db) {
+      console.log('⚠️ MongoDBに接続できません。空の配列を返します。');
+      return [];
+    }
+
+    const collection = db.collection(COLLECTION_NAME);
+    const result = await collection.findOne({ _id: 'searches' });
+    if (result && Array.isArray(result.searches)) {
+      console.log(`📂 MongoDBから検索履歴を読み込み: ${result.searches.length}件`);
+      return result.searches;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('❌ MongoDBからの読み込みエラー:', error.message);
+    return [];
+  }
+}
+
+// 検索履歴をMongoDBに保存
+async function saveRecentSearchesToMongoDB(searches) {
+  const db = await connectToMongoDB();
+  if (!db) {
+    // MongoDBが利用できない場合はメモリ内に保存
+    return;
+  }
+
+  try {
+    const collection = db.collection(COLLECTION_NAME);
+    const searchesToSave = searches.slice(0, MAX_RECENT_SEARCHES);
+    
+    // プライバシー保護のため、検索ワードのみを保存（個人情報は含めない）
+    await collection.updateOne(
+      { _id: 'searches' },
+      { 
+        $set: { 
+          searches: searchesToSave
+        } 
+      },
+      { upsert: true }
+    );
+    console.log(`💾 MongoDBに検索履歴を保存: ${searchesToSave.length}件`);
+  } catch (error) {
+    console.error('❌ MongoDBへの保存エラー:', error.message);
+  }
+}
+
+// 検索履歴のキャッシュ（高速化のため）
+let recentSearchesCache = null;
+let recentSearchesCacheTime = 0;
+const CACHE_DURATION = 5000; // 5秒間キャッシュ（MongoDBへの負荷を軽減）
+
+// キャッシュ付きで検索履歴を取得
+async function getRecentSearchesCached() {
+  const now = Date.now();
+  // キャッシュが有効な場合はキャッシュを返す
+  if (recentSearchesCache && (now - recentSearchesCacheTime) < CACHE_DURATION) {
+    console.log('📋 検索履歴をキャッシュから取得');
+    return recentSearchesCache;
+  }
+  
+  // キャッシュが無効な場合はMongoDBから取得
+  const searches = await loadRecentSearchesFromMongoDB();
+  recentSearchesCache = searches;
+  recentSearchesCacheTime = now;
+  console.log('📋 検索履歴をMongoDBから取得（キャッシュ更新）');
+  return searches;
+}
+
+// 検索履歴が更新されたときにキャッシュを無効化
+function invalidateRecentSearchesCache() {
+  recentSearchesCache = null;
+  recentSearchesCacheTime = 0;
+  console.log('📋 検索履歴キャッシュを無効化');
+}
 
 // アクセスログをMongoDBに保存（一般的なサイトと同じようにIPアドレスを記録）
 async function saveAccessLogToMongoDB(logData) {
