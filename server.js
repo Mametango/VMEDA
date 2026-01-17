@@ -1369,12 +1369,17 @@ async function searchJPdmv(query, strictMode = true) {
     console.log(`🔍 JPdmv検索開始: "${query}" (strictMode: ${strictMode})`);
     const startTime = Date.now();
     const encodedQuery = encodeURIComponent(query);
-    // 複数のURLパターンを試す
-    const urls = [
+    // 複数のURLパターンを試す（空のクエリの場合はトップページや最新動画ページから取得）
+    const urls = query && query.trim() ? [
       `https://jpdmv.com/search/${encodedQuery}`,
       `https://jpdmv.com/search?q=${encodedQuery}`,
       `https://jpdmv.com/?q=${encodedQuery}`,
       `https://jpdmv.com/?search=${encodedQuery}`
+    ] : [
+      `https://jpdmv.com/`, // トップページから最新動画を取得
+      `https://jpdmv.com/latest`, // 最新動画ページ
+      `https://jpdmv.com/videos`, // 動画一覧ページ
+      `https://jpdmv.com/recent` // 最近の動画ページ
     ];
     
     let videos = [];
@@ -1578,7 +1583,10 @@ async function searchJPdmv(query, strictMode = true) {
 async function searchDouga4(query, strictMode = true) {
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://av.douga4.top/kw/${encodedQuery}`;
+    // 空のクエリの場合はトップページや最新動画ページから取得
+    const url = query && query.trim() ? 
+      `https://av.douga4.top/kw/${encodedQuery}` :
+      `https://av.douga4.top/`; // トップページから最新動画を取得
     
     const response = await axios.get(url, {
       headers: {
@@ -1682,7 +1690,10 @@ async function searchSpankbang(query) {
 async function searchX1hub(query) {
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://x1hub.com/search/${encodedQuery}`;
+    // 空のクエリの場合はトップページや最新動画ページから取得
+    const url = query && query.trim() ? 
+      `https://x1hub.com/search/${encodedQuery}` :
+      `https://x1hub.com/`; // トップページから最新動画を取得
     
     const response = await axios.get(url, {
       headers: {
@@ -1908,7 +1919,10 @@ async function searchJavGuru(query) {
 async function searchJapanhub(query) {
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://japanhub.net/search/${encodedQuery}`;
+    // 空のクエリの場合はトップページや最新動画ページから取得
+    const url = query && query.trim() ? 
+      `https://japanhub.net/search/${encodedQuery}` :
+      `https://japanhub.net/`; // トップページから最新動画を取得
     
     const response = await axios.get(url, {
       headers: {
@@ -2196,7 +2210,10 @@ async function searchAkibaAbv(query) {
 async function searchBilibili(query, strictMode = true) {
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://search.bilibili.com/all?keyword=${encodedQuery}`;
+    // 空のクエリの場合はトップページや最新動画ページから取得
+    const url = query && query.trim() ? 
+      `https://search.bilibili.com/all?keyword=${encodedQuery}` :
+      `https://www.bilibili.com/`; // トップページから最新動画を取得
     
     const response = await axios.get(url, {
       headers: {
@@ -2975,11 +2992,15 @@ async function searchJavmix(query, strictMode = true) {
   try {
     console.log(`🔍 Javmix.TV検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
-    // 複数のURLパターンを試す
-    const urls = [
+    // 複数のURLパターンを試す（空のクエリの場合はトップページや最新動画ページから取得）
+    const urls = query && query.trim() ? [
       `https://javmix.tv/search?q=${encodedQuery}`,
       `https://javmix.tv/search/${encodedQuery}`,
       `https://javmix.tv/?q=${encodedQuery}`
+    ] : [
+      `https://javmix.tv/`, // トップページから最新動画を取得
+      `https://javmix.tv/latest`, // 最新動画ページ
+      `https://javmix.tv/videos` // 動画一覧ページ
     ];
     
     let videos = [];
@@ -3678,12 +3699,16 @@ async function searchIVFree(query, strictMode = true) {
 async function searchJable(query) {
   try {
     const encodedQuery = encodeURIComponent(query);
-    // 複数のURLパターンを試す
-    const urls = [
+    // 複数のURLパターンを試す（空のクエリの場合はトップページや最新動画ページから取得）
+    const urls = query && query.trim() ? [
       `https://jable.tv/search/${encodedQuery}`,
       `https://jable.tv/search?q=${encodedQuery}`,
       `https://jable.tv/?s=${encodedQuery}`,
       `https://jable.tv/videos/search/${encodedQuery}`
+    ] : [
+      `https://jable.tv/`, // トップページから最新動画を取得
+      `https://jable.tv/videos`, // 動画一覧ページ
+      `https://jable.tv/latest` // 最新動画ページ
     ];
     
     let videos = [];
@@ -5801,12 +5826,16 @@ async function searchAirav(query, strictMode = true) {
     console.log(`🔍 Airav検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
     
-    // 複数のURLパターンを試す
-    const urls = [
+    // 複数のURLパターンを試す（空のクエリの場合はトップページや最新動画ページから取得）
+    const urls = query && query.trim() ? [
       `https://airav.io/cn/search?q=${encodedQuery}`,
       `https://airav.io/cn/search/${encodedQuery}`,
       `https://airav.io/cn/videos/search?q=${encodedQuery}`,
       `https://airav.io/cn/?s=${encodedQuery}`
+    ] : [
+      `https://airav.io/cn/`, // トップページから最新動画を取得
+      `https://airav.io/cn/videos`, // 動画一覧ページ
+      `https://airav.io/cn/latest` // 最新動画ページ
     ];
     
     let videos = [];
@@ -5919,19 +5948,22 @@ async function searchMat6tube(query, strictMode = true) {
   try {
     console.log(`🔍 Mat6tube検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
-    // 複数のURLパターンを試す（/video/パスを最優先に）
-    const urls = [
+    // 複数のURLパターンを試す（空のクエリの場合はトップページや最新動画ページから取得）
+    const urls = query && query.trim() ? [
       `https://mat6tube.com/video/${encodedQuery}`, // 最優先：/video/パスで検索
       `https://mat6tube.com/video/${query}`, // エンコードなしも試す
-      `https://mat6tube.com/video/`, // /video/パスで全動画を取得（クエリに関係なく）
       `https://mat6tube.com/search?q=${encodedQuery}`,
       `https://mat6tube.com/search/${encodedQuery}`,
       `https://mat6tube.com/?q=${encodedQuery}`,
       `https://mat6tube.com/?s=${encodedQuery}`,
       `https://mat6tube.com/?search=${encodedQuery}`,
       `https://mat6tube.com/search.php?q=${encodedQuery}`,
-      `https://mat6tube.com/index.php?q=${encodedQuery}`,
-      `https://mat6tube.com/recent` // /recentページは検索クエリなしで最新動画を取得
+      `https://mat6tube.com/index.php?q=${encodedQuery}`
+    ] : [
+      `https://mat6tube.com/`, // トップページから最新動画を取得
+      `https://mat6tube.com/recent`, // /recentページは検索クエリなしで最新動画を取得
+      `https://mat6tube.com/video/`, // /video/パスで全動画を取得
+      `https://mat6tube.com/latest` // 最新動画ページ
     ];
     
     let videos = [];
@@ -6300,11 +6332,15 @@ async function searchFC2Video(query, strictMode = true) {
   try {
     console.log(`🔍 FC2Video.org検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
-    // 複数のURLパターンを試す
-    const urls = [
+    // 複数のURLパターンを試す（空のクエリの場合はトップページや最新動画ページから取得）
+    const urls = query && query.trim() ? [
       `https://fc2video.org/search?q=${encodedQuery}`,
       `https://fc2video.org/?q=${encodedQuery}`,
       `https://fc2video.org/search/${encodedQuery}`
+    ] : [
+      `https://fc2video.org/`, // トップページから最新動画を取得
+      `https://fc2video.org/latest`, // 最新動画ページ
+      `https://fc2video.org/videos` // 動画一覧ページ
     ];
     
     let videos = [];
