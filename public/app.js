@@ -1554,14 +1554,54 @@ async function getRandomJAV() {
       console.log(`🔍 [デバッグ] フィルタリング後: ${data.debug.totalAfterFilter}件`);
       console.log(`❌ [デバッグ] 最終結果のPPP動画数: ${data.debug.pppInFinal}件`);
       if (data.debug.sourceBreakdown) {
-        console.log(`📊 [デバッグ] ソース別内訳:`, JSON.stringify(data.debug.sourceBreakdown, null, 2));
-        if (data.debug.sourceBreakdown.ppp > 0) {
-          console.error(`❌ [デバッグ] エラー: ソース別内訳にPPP動画が${data.debug.sourceBreakdown.ppp}件含まれています！`);
+        console.log(`📊 [デバッグ] ソース別内訳:`);
+        const breakdown = data.debug.sourceBreakdown;
+        if (breakdown.javmix !== undefined) console.log(`  - Javmix: ${breakdown.javmix}件`);
+        if (breakdown.jpdmv !== undefined) console.log(`  - JPdmv: ${breakdown.jpdmv}件`);
+        if (breakdown.mat6tube !== undefined) console.log(`  - Mat6tube: ${breakdown.mat6tube}件`);
+        if (breakdown.japanhub !== undefined) console.log(`  - Japanhub: ${breakdown.japanhub}件`);
+        if (breakdown.douga4 !== undefined) console.log(`  - Douga4: ${breakdown.douga4}件`);
+        if (breakdown.fc2video !== undefined) console.log(`  - FC2Video: ${breakdown.fc2video}件`);
+        if (breakdown.bilibili !== undefined) console.log(`  - Bilibili: ${breakdown.bilibili}件`);
+        if (breakdown.jable !== undefined) console.log(`  - Jable: ${breakdown.jable}件`);
+        if (breakdown.x1hub !== undefined) console.log(`  - X1hub: ${breakdown.x1hub}件`);
+        if (breakdown.airav !== undefined) console.log(`  - Airav: ${breakdown.airav}件`);
+        if (breakdown.ivfree !== undefined) console.log(`  - IVFree: ${breakdown.ivfree}件`);
+        if (breakdown.ppp !== undefined && breakdown.ppp > 0) {
+          console.error(`  - PPP: ${breakdown.ppp}件 ❌ (エラー: PPP動画が含まれています！)`);
+        }
+        if (breakdown.other !== undefined && breakdown.other > 0) {
+          console.log(`  - その他: ${breakdown.other}件`);
+        }
+        
+        // 0件のソースを警告表示
+        const zeroSources = [];
+        if (breakdown.javmix === 0) zeroSources.push('Javmix');
+        if (breakdown.jpdmv === 0) zeroSources.push('JPdmv');
+        if (breakdown.mat6tube === 0) zeroSources.push('Mat6tube');
+        if (breakdown.japanhub === 0) zeroSources.push('Japanhub');
+        if (breakdown.douga4 === 0) zeroSources.push('Douga4');
+        if (breakdown.fc2video === 0) zeroSources.push('FC2Video');
+        if (breakdown.bilibili === 0) zeroSources.push('Bilibili');
+        if (breakdown.jable === 0) zeroSources.push('Jable');
+        if (breakdown.x1hub === 0) zeroSources.push('X1hub');
+        if (breakdown.airav === 0) zeroSources.push('Airav');
+        if (zeroSources.length > 0) {
+          console.warn(`⚠️ [デバッグ] 0件のソース: ${zeroSources.join(', ')}`);
         }
       }
     } else {
       console.warn('⚠️ [デバッグ] デバッグ情報がレスポンスに含まれていません');
     }
+    
+    // 実際に取得された動画のソースを確認
+    const actualSources = {};
+    videos.forEach(v => {
+      if (v && v.source) {
+        actualSources[v.source] = (actualSources[v.source] || 0) + 1;
+      }
+    });
+    console.log(`📊 [クライアント側] 実際に取得された動画のソース別内訳:`, actualSources);
     
     // クライアント側でPPP動画をチェック（より厳格に）
     const pppVideosInResults = videos.filter(v => {

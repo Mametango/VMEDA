@@ -1146,18 +1146,41 @@ app.get('/api/random', async (req, res) => {
       // デバッグ: 各検索関数の結果を確認
       const searchFunctionNames = ['searchJavmix', 'searchJPdmv', 'searchMat6tube', 'searchJapanhub', 'searchDouga4', 'searchFC2Video', 'searchBilibili', 'searchJable', 'searchX1hub', 'searchAirav'];
       javResults.forEach((result, index) => {
+        const functionName = searchFunctionNames[index];
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
           const videos = result.value;
+          console.log(`✅ [デバッグ] ${functionName}: ${videos.length}件の動画を取得`);
+          if (videos.length === 0) {
+            console.warn(`⚠️ [デバッグ] ${functionName}: 動画が0件です（空の結果）`);
+          } else {
+            // 最初の3件のソースを確認
+            const sources = [...new Set(videos.slice(0, 3).map(v => v.source))];
+            console.log(`📊 [デバッグ] ${functionName}: 最初の3件のソース: ${sources.join(', ')}`);
+          }
           const pppVideos = videos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn'))));
           if (pppVideos.length > 0) {
-            console.log(`⚠️ [デバッグ] ${searchFunctionNames[index]}からPPPの動画が${pppVideos.length}件検出されました`);
+            console.log(`⚠️ [デバッグ] ${functionName}からPPPの動画が${pppVideos.length}件検出されました`);
             pppVideos.slice(0, 3).forEach(v => {
               console.log(`  - PPP動画: source=${v.source}, url=${v.url ? v.url.substring(0, 80) : 'N/A'}`);
             });
           }
           allVideos.push(...videos);
         } else if (result.status === 'rejected') {
-          console.error(`❌ [デバッグ] ${searchFunctionNames[index]}でエラー:`, result.reason?.message || 'Unknown error');
+          console.error(`❌ [デバッグ] ${functionName}でエラー:`, result.reason?.message || 'Unknown error');
+          console.error(`❌ [デバッグ] ${functionName}エラー詳細:`, result.reason);
+        } else {
+          console.warn(`⚠️ [デバッグ] ${functionName}: 予期しない結果形式 (status: ${result.status})`);
+        }
+      });
+      
+      // 各検索関数からの取得数をサマリー表示
+      console.log(`📊 [デバッグ] 各検索関数からの取得数サマリー:`);
+      javResults.forEach((result, index) => {
+        const functionName = searchFunctionNames[index];
+        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+          console.log(`  - ${functionName}: ${result.value.length}件`);
+        } else {
+          console.log(`  - ${functionName}: エラーまたは未取得`);
         }
       });
       
