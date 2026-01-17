@@ -1203,10 +1203,37 @@ app.get('/api/random', async (req, res) => {
       
       const ivResults = await Promise.allSettled(ivSearches);
       
-      ivResults.forEach((result) => {
+      // デバッグ: 各検索関数の結果を確認
+      const ivSearchFunctionNames = ['searchIVFree', 'searchJPdmv', 'searchMat6tube', 'searchDouga4', 'searchFC2Video'];
+      ivResults.forEach((result, index) => {
+        const functionName = ivSearchFunctionNames[index];
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-          // すべてのサイトの結果を追加
-          allVideos.push(...result.value);
+          const videos = result.value;
+          console.log(`✅ [デバッグ] ${functionName}: ${videos.length}件の動画を取得`);
+          if (videos.length === 0) {
+            console.warn(`⚠️ [デバッグ] ${functionName}: 動画が0件です（空の結果）`);
+          } else {
+            // 最初の3件のソースを確認
+            const sources = [...new Set(videos.slice(0, 3).map(v => v.source))];
+            console.log(`📊 [デバッグ] ${functionName}: 最初の3件のソース: ${sources.join(', ')}`);
+          }
+          allVideos.push(...videos);
+        } else if (result.status === 'rejected') {
+          console.error(`❌ [デバッグ] ${functionName}でエラー:`, result.reason?.message || 'Unknown error');
+          console.error(`❌ [デバッグ] ${functionName}エラー詳細:`, result.reason);
+        } else {
+          console.warn(`⚠️ [デバッグ] ${functionName}: 予期しない結果形式 (status: ${result.status})`);
+        }
+      });
+      
+      // 各検索関数からの取得数をサマリー表示
+      console.log(`📊 [デバッグ] IVランダム: 各検索関数からの取得数サマリー:`);
+      ivResults.forEach((result, index) => {
+        const functionName = ivSearchFunctionNames[index];
+        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+          console.log(`  - ${functionName}: ${result.value.length}件`);
+        } else {
+          console.log(`  - ${functionName}: エラーまたは未取得`);
         }
       });
       
@@ -1877,9 +1904,12 @@ async function searchDouga4(query, strictMode = true) {
       const duration = extractDurationFromHtml($, $item);
       
       if (title && title.length > 3) {
-        // 検索クエリとタイトルの関連性をチェック
-        if (!isTitleRelevant(title, query)) {
-          return; // 関連性がない場合はスキップ
+        // 空のクエリの場合は関連性チェックをスキップ
+        if (query && query.trim()) {
+          // 検索クエリとタイトルの関連性をチェック
+          if (!isTitleRelevant(title, query)) {
+            return; // 関連性がない場合はスキップ
+          }
         }
         
         videos.push({
@@ -6634,9 +6664,17 @@ async function searchMat6tube(query, strictMode = true) {
             const thumbnail = extractThumbnail($, $link);
             const duration = extractDurationFromHtml($, $link);
             
+            // 空のクエリの場合は関連性チェックを完全にスキップ
             // /video/パスで検索した場合、タイトルがあれば基本的に追加（より積極的に）
             // タイトルが空でも、URLが有効な場合は追加
             if (title && title.length > 2) { // 2文字以上に緩和
+              // 空のクエリの場合は関連性チェックをスキップ
+              if (query && query.trim() && strictMode) {
+                if (!isTitleRelevant(title, query, strictMode)) {
+                  return; // 関連性がない場合はスキップ
+                }
+              }
+              
               videos.push({
                 id: `mat6tube-${Date.now()}-${index}`,
                 title: title.substring(0, 200),
@@ -6791,17 +6829,20 @@ async function searchMat6tube(query, strictMode = true) {
             const duration = extractDurationFromHtml($, $item);
             
             if (title && title.length > 2) { // 2文字以上に緩和
-              // /recentページの場合は、検索クエリとの関連性チェックをスキップ（最新動画を取得）
-              const isRecentPage = url.includes('/recent') && !url.includes('?q=');
-              
-              // より積極的なアプローチ：strictMode=falseの場合は関連性チェックを大幅に緩和
-              if (!isRecentPage && strictMode) {
-                // 厳格モードの場合のみ関連性チェック
-                if (!isTitleRelevant(title, query, strictMode)) {
-                  return; // 関連性がない場合はスキップ
+              // 空のクエリの場合は関連性チェックを完全にスキップ
+              if (query && query.trim()) {
+                // /recentページの場合は、検索クエリとの関連性チェックをスキップ（最新動画を取得）
+                const isRecentPage = url.includes('/recent') && !url.includes('?q=');
+                
+                // より積極的なアプローチ：strictMode=falseの場合は関連性チェックを大幅に緩和
+                if (!isRecentPage && strictMode) {
+                  // 厳格モードの場合のみ関連性チェック
+                  if (!isTitleRelevant(title, query, strictMode)) {
+                    return; // 関連性がない場合はスキップ
+                  }
                 }
               }
-              // strictMode=falseの場合は、タイトルがあれば基本的に追加（より積極的に）
+              // 空のクエリまたはstrictMode=falseの場合は、タイトルがあれば基本的に追加（より積極的に）
               
               videos.push({
                 id: `mat6tube-${Date.now()}-${index}`,
