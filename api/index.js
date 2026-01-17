@@ -1179,10 +1179,22 @@ app.get('/api/random', async (req, res) => {
         const functionName = searchFunctionNames[index];
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
           console.log(`  - ${functionName}: ${result.value.length}件`);
+          if (result.value.length === 0) {
+            console.warn(`    ⚠️ ${functionName}: 空のクエリでトップページから取得を試みましたが、0件でした`);
+          }
+        } else if (result.status === 'rejected') {
+          console.error(`  - ${functionName}: エラー - ${result.reason?.message || 'Unknown error'}`);
+          if (result.reason?.stack) {
+            console.error(`    スタックトレース: ${result.reason.stack.substring(0, 200)}`);
+          }
         } else {
-          console.log(`  - ${functionName}: エラーまたは未取得`);
+          console.warn(`  - ${functionName}: 予期しない状態 (status: ${result.status})`);
         }
       });
+      
+      // 全体のサマリー
+      const totalFromAllSearches = allVideos.length;
+      console.log(`📊 [デバッグ] 全検索関数からの合計取得数: ${totalFromAllSearches}件`);
       
       // デバッグ: フィルタリング前のPPP動画数を確認
       const pppCountBefore = allVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length;
