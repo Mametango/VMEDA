@@ -575,6 +575,45 @@ function sortVideos(videos, sortType) {
   console.log('ℹ️ ページ読み込み完了: 自動検索は実行されません');
 })();
 
+// 検索履歴を読み込んで表示する関数
+async function loadRecentSearches() {
+  try {
+    const response = await fetch('/api/recent-searches');
+    if (!response.ok) {
+      console.log('ℹ️ 検索履歴の取得に失敗しました');
+      return;
+    }
+    
+    const data = await response.json();
+    const searches = data.searches || [];
+    const recentSearchesList = document.getElementById('recent-searches-list');
+    
+    if (!recentSearchesList) {
+      return;
+    }
+    
+    if (searches.length === 0) {
+      recentSearchesList.innerHTML = '';
+      return;
+    }
+    
+    // 検索履歴を表示
+    recentSearchesList.innerHTML = searches
+      .slice(0, 10) // 最新10件のみ表示
+      .map(search => {
+        const query = escapeHtml(search.query || '');
+        return `<span class="recent-search-item" onclick="searchVideos('${query.replace(/'/g, "\\'")}')">${query}</span>`;
+      })
+      .join('');
+  } catch (error) {
+    // エラーは無視（検索履歴が取得できなくても動作は継続）
+    console.log('ℹ️ 検索履歴の読み込みエラー（無視）:', error.message);
+  }
+}
+
+// ページ読み込み時に検索履歴を読み込む
+loadRecentSearches();
+
 // 定期的に検索履歴を更新（10秒ごと、高速化のため間隔を短縮）
 // エラー時や空の場合は既存の表示を保持するため、検索履歴が消えることはありません
 setInterval(() => {
@@ -1501,8 +1540,74 @@ async function getRandomJAV() {
     
     const data = await response.json();
     console.log('📊 ランダム動画データ受信:', data);
+    console.log('📊 データ構造:', Object.keys(data));
+    console.log('📊 debug情報の有無:', data.debug ? 'あり' : 'なし');
+    
     const videos = data.results || [];
     console.log(`✅ ${videos.length}件のJAVランダム動画を取得`);
+    
+    // デバッグ情報を表示（常に表示）
+    if (data.debug) {
+      console.log('🔍 [デバッグ] サーバー側のデバッグ情報:', JSON.stringify(data.debug, null, 2));
+      console.log(`🔍 [デバッグ] フィルタリング前: ${data.debug.totalBeforeFilter}件`);
+      console.log(`🚫 [デバッグ] 除外されたPPP動画数: ${data.debug.pppFilteredCount}件`);
+      console.log(`🔍 [デバッグ] フィルタリング後: ${data.debug.totalAfterFilter}件`);
+      console.log(`❌ [デバッグ] 最終結果のPPP動画数: ${data.debug.pppInFinal}件`);
+      if (data.debug.sourceBreakdown) {
+        console.log(`📊 [デバッグ] ソース別内訳:`, JSON.stringify(data.debug.sourceBreakdown, null, 2));
+        if (data.debug.sourceBreakdown.ppp > 0) {
+          console.error(`❌ [デバッグ] エラー: ソース別内訳にPPP動画が${data.debug.sourceBreakdown.ppp}件含まれています！`);
+        }
+      }
+    } else {
+      console.warn('⚠️ [デバッグ] デバッグ情報がレスポンスに含まれていません');
+    }
+    
+    // クライアント側でPPP動画をチェック（より厳格に）
+    const pppVideosInResults = videos.filter(v => {
+      if (!v) return false;
+      const isPPP = v.source === 'ppp' || 
+                    v.source === 'PPP' ||
+                    (v.url && (
+                      v.url.includes('ppp.porn') ||
+                      v.url.includes('ppp-porn') ||
+                      v.url.toLowerCase().includes('ppp.porn') ||
+                      v.url.toLowerCase().includes('ppp-porn')
+                    ));
+      return isPPP;
+    });
+    
+    if (pppVideosInResults.length > 0) {
+      console.error(`❌ [クライアント側デバッグ] 警告: レスポンスにPPP動画が${pppVideosInResults.length}件含まれています！`);
+      pppVideosInResults.slice(0, 10).forEach((v, i) => {
+        console.error(`  ${i + 1}. source="${v.source}", url="${v.url ? v.url.substring(0, 100) : 'N/A'}", title="${v.title ? v.title.substring(0, 50) : 'N/A'}"`);
+      });
+      
+      // PPP動画をクライアント側で除外
+      const filteredVideos = videos.filter(v => {
+        if (!v) return false;
+        const isPPP = v.source === 'ppp' || 
+                      v.source === 'PPP' ||
+                      (v.url && (
+                        v.url.includes('ppp.porn') ||
+                        v.url.includes('ppp-porn') ||
+                        v.url.toLowerCase().includes('ppp.porn') ||
+                        v.url.toLowerCase().includes('ppp-porn')
+                      ));
+        return !isPPP;
+      });
+      console.log(`🚫 [クライアント側デバッグ] PPP動画を${pppVideosInResults.length}件除外しました（${videos.length}件 → ${filteredVideos.length}件）`);
+      currentVideos = filteredVideos;
+      currentPage = 1;
+      totalPages = Math.ceil(filteredVideos.length / VIDEOS_PER_PAGE);
+      displayResults(filteredVideos, 'JAV Random');
+      if (sortContainer) {
+        sortContainer.classList.remove('hidden');
+      }
+      return;
+    } else {
+      console.log('✅ [クライアント側デバッグ] PPP動画は検出されませんでした');
+    }
     
     currentVideos = videos;
     currentPage = 1;

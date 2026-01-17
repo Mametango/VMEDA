@@ -735,7 +735,6 @@ app.post('/api/search', async (req, res) => {
     const bilibiliType = typeof searchBilibili;
     const douga4Type = typeof searchDouga4;
     const javmixType = typeof searchJavmix;
-    const pppType = typeof searchPPP;
     const mat6tubeType = typeof searchMat6tube;
     const fc2videoType = typeof searchFC2Video;
     
@@ -744,7 +743,6 @@ app.post('/api/search', async (req, res) => {
     console.log(`  - searchBilibili: ${bilibiliType} ${bilibiliType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchDouga4: ${douga4Type} ${douga4Type === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchJavmix: ${javmixType} ${javmixType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
-    console.log(`  - searchPPP: ${pppType} ${pppType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchMat6tube: ${mat6tubeType} ${mat6tubeType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     console.log(`  - searchFC2Video: ${fc2videoType} ${fc2videoType === 'function' ? '✅ 定義済み' : '❌ 未定義'}`);
     
@@ -768,7 +766,6 @@ app.post('/api/search', async (req, res) => {
       { fn: searchBilibili, name: 'Bilibili' },
       { fn: searchDouga4, name: 'Douga4' },
       { fn: searchJavmix, name: 'Javmix.TV' },
-      { fn: searchPPP, name: 'PPP.Porn' },
       { fn: searchMat6tube, name: 'Mat6tube' },
       { fn: searchFC2Video, name: 'FC2Video.org' }, // 常に追加
       { fn: searchPizjav, name: 'Pizjav' }, // IV検索用
@@ -1129,32 +1126,136 @@ app.get('/api/random', async (req, res) => {
       
       console.log(`✅ IVFreeから${allVideos.length}件の動画を取得`);
     } else if (type === 'jav') {
-      // JAV動画: Javmix.TV、JPdmv、PPP.Porn、Mat6tube、Japanhubから取得
+      // JAV動画: Javmix.TV、JPdmv、Mat6tube、Japanhub、Douga4、FC2Video、Bilibiliから取得
       const javSearches = [
         searchJavmix('', false),
         searchJPdmv('', false),
-        searchPPP('', false),
         searchMat6tube('', false),
-        searchJapanhub('', false) // Japanhubからも取得
+        searchJapanhub('', false), // Japanhubからも取得
+        searchDouga4('', false), // Douga4からも取得
+        searchFC2Video('', false), // FC2Videoからも取得
+        searchBilibili('', false) // Bilibiliからも取得
       ];
       
       const javResults = await Promise.allSettled(javSearches);
-      javResults.forEach((result) => {
+      
+      // デバッグ: 各検索関数の結果を確認
+      const searchFunctionNames = ['searchJavmix', 'searchJPdmv', 'searchMat6tube', 'searchJapanhub', 'searchDouga4', 'searchFC2Video', 'searchBilibili'];
+      javResults.forEach((result, index) => {
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-          allVideos.push(...result.value);
+          const videos = result.value;
+          const pppVideos = videos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn'))));
+          if (pppVideos.length > 0) {
+            console.log(`⚠️ [デバッグ] ${searchFunctionNames[index]}からPPPの動画が${pppVideos.length}件検出されました`);
+            pppVideos.slice(0, 3).forEach(v => {
+              console.log(`  - PPP動画: source=${v.source}, url=${v.url ? v.url.substring(0, 80) : 'N/A'}`);
+            });
+          }
+          allVideos.push(...videos);
+        } else if (result.status === 'rejected') {
+          console.error(`❌ [デバッグ] ${searchFunctionNames[index]}でエラー:`, result.reason?.message || 'Unknown error');
         }
       });
+      
+      // デバッグ: フィルタリング前のPPP動画数を確認
+      const pppCountBefore = allVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length;
+      console.log(`🔍 [デバッグ] フィルタリング前のPPP動画数: ${pppCountBefore}件`);
+      if (pppCountBefore > 0) {
+        const pppVideos = allVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn'))));
+        console.log(`🔍 [デバッグ] PPP動画の詳細（最初の5件）:`);
+        pppVideos.slice(0, 5).forEach((v, i) => {
+          console.log(`  ${i + 1}. source="${v.source}", url="${v.url ? v.url.substring(0, 100) : 'N/A'}", title="${v.title ? v.title.substring(0, 50) : 'N/A'}"`);
+        });
+      }
     }
     
-    // 重複除去
+    // 重複除去とPPP除外（より厳格に）
     const uniqueVideos = [];
     const seenUrls = new Set();
+    let pppFilteredCount = 0;
     allVideos.forEach(video => {
-      if (video && video.url && !seenUrls.has(video.url)) {
+      if (!video || !video.url) return;
+      
+      // PPPの動画を除外（より厳格にチェック）
+      const isPPP = video.source === 'ppp' || 
+                    video.source === 'PPP' ||
+                    (video.url && (
+                      video.url.includes('ppp.porn') ||
+                      video.url.includes('ppp-porn') ||
+                      video.url.toLowerCase().includes('ppp.porn') ||
+                      video.url.toLowerCase().includes('ppp-porn')
+                    ));
+      
+      if (isPPP) {
+        pppFilteredCount++;
+        console.log(`🚫 [デバッグ] PPP動画を除外: source="${video.source}", url="${video.url.substring(0, 80)}"`);
+        return; // PPPの動画はスキップ
+      }
+      
+      if (!seenUrls.has(video.url)) {
         seenUrls.add(video.url);
         uniqueVideos.push(video);
       }
     });
+    
+    console.log(`🔍 [デバッグ] フィルタリングで除外したPPP動画数: ${pppFilteredCount}件`);
+    console.log(`🔍 [デバッグ] フィルタリング後の動画数: ${uniqueVideos.length}件`);
+    
+    // デバッグ: 最終結果にPPPが含まれていないか確認（より厳格に）
+    const pppInFinal = uniqueVideos.filter(v => {
+      if (!v) return false;
+      const isPPP = v.source === 'ppp' || 
+                    v.source === 'PPP' ||
+                    (v.url && (
+                      v.url.includes('ppp.porn') ||
+                      v.url.includes('ppp-porn') ||
+                      v.url.toLowerCase().includes('ppp.porn') ||
+                      v.url.toLowerCase().includes('ppp-porn')
+                    ));
+      return isPPP;
+    });
+    if (pppInFinal.length > 0) {
+      console.error(`❌ [デバッグ] 警告: 最終結果にPPP動画が${pppInFinal.length}件含まれています！`);
+      pppInFinal.slice(0, 10).forEach((v, i) => {
+        console.error(`  ${i + 1}. source="${v.source}", url="${v.url ? v.url.substring(0, 100) : 'N/A'}", title="${v.title ? v.title.substring(0, 50) : 'N/A'}"`);
+      });
+      
+      // PPP動画を最終結果から除外（念のため）
+      const finalVideos = uniqueVideos.filter(v => {
+        if (!v) return false;
+        const isPPP = v.source === 'ppp' || 
+                      v.source === 'PPP' ||
+                      (v.url && (
+                        v.url.includes('ppp.porn') ||
+                        v.url.includes('ppp-porn') ||
+                        v.url.toLowerCase().includes('ppp.porn') ||
+                        v.url.toLowerCase().includes('ppp-porn')
+                      ));
+        return !isPPP;
+      });
+      console.log(`🚫 [デバッグ] 最終結果からPPP動画を${pppInFinal.length}件除外しました（${uniqueVideos.length}件 → ${finalVideos.length}件）`);
+      uniqueVideos.length = 0;
+      uniqueVideos.push(...finalVideos);
+    }
+    
+    // デバッグ情報をレスポンスに含める（クライアント側でも確認可能）
+    const debugInfo = {
+      totalBeforeFilter: allVideos.length,
+      pppFilteredCount: pppFilteredCount,
+      totalAfterFilter: uniqueVideos.length,
+      pppInFinal: pppInFinal.length,
+      sourceBreakdown: type === 'jav' ? {
+        javmix: uniqueVideos.filter(v => v.source === 'javmix').length,
+        jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
+        mat6tube: uniqueVideos.filter(v => v.source === 'mat6tube').length,
+        japanhub: uniqueVideos.filter(v => v.source === 'japanhub').length,
+        douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
+        fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
+        bilibili: uniqueVideos.filter(v => v.source === 'bilibili').length,
+        ppp: uniqueVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length,
+        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'bilibili', 'ppp'].includes(v.source)).length
+      } : {}
+    };
     
     // Fisher-Yatesシャッフルアルゴリズムで完全にランダムに並び替え
     const shuffled = [...uniqueVideos];
@@ -1164,17 +1265,72 @@ app.get('/api/random', async (req, res) => {
     }
     const randomVideos = shuffled; // 制限なしで全件返す
     
+    // デバッグ: シャッフル後のPPP動画チェック（より厳格に）
+    const pppInShuffled = randomVideos.filter(v => {
+      if (!v) return false;
+      const isPPP = v.source === 'ppp' || 
+                    v.source === 'PPP' ||
+                    (v.url && (
+                      v.url.includes('ppp.porn') ||
+                      v.url.includes('ppp-porn') ||
+                      v.url.toLowerCase().includes('ppp.porn') ||
+                      v.url.toLowerCase().includes('ppp-porn')
+                    ));
+      return isPPP;
+    });
+    if (pppInShuffled.length > 0) {
+      console.error(`❌ [デバッグ] 警告: シャッフル後の結果にPPP動画が${pppInShuffled.length}件含まれています！`);
+      pppInShuffled.slice(0, 10).forEach((v, i) => {
+        console.error(`  ${i + 1}. source="${v.source}", url="${v.url ? v.url.substring(0, 100) : 'N/A'}", title="${v.title ? v.title.substring(0, 50) : 'N/A'}"`);
+      });
+      
+      // PPP動画をシャッフル後の結果から除外（念のため）
+      const finalShuffled = randomVideos.filter(v => {
+        if (!v) return false;
+        const isPPP = v.source === 'ppp' || 
+                      v.source === 'PPP' ||
+                      (v.url && (
+                        v.url.includes('ppp.porn') ||
+                        v.url.includes('ppp-porn') ||
+                        v.url.toLowerCase().includes('ppp.porn') ||
+                        v.url.toLowerCase().includes('ppp-porn')
+                      ));
+        return !isPPP;
+      });
+      console.log(`🚫 [デバッグ] シャッフル後の結果からPPP動画を${pppInShuffled.length}件除外しました（${randomVideos.length}件 → ${finalShuffled.length}件）`);
+      randomVideos.length = 0;
+      randomVideos.push(...finalShuffled);
+    }
+    
     // デバッグ: 最初の5件のソースを確認
     const firstFiveSources = randomVideos.slice(0, 5).map(v => v.source).join(', ');
     console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件ランダム順)`);
     if (type === 'iv') {
       console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件`);
     } else {
-      console.log(`📊 ソース別内訳: Javmix=${uniqueVideos.filter(v => v.source === 'javmix').length}件, JPdmv=${uniqueVideos.filter(v => v.source === 'jpdmv').length}件, PPP=${uniqueVideos.filter(v => v.source === 'ppp').length}件, Mat6tube=${uniqueVideos.filter(v => v.source === 'mat6tube').length}件, Japanhub=${uniqueVideos.filter(v => v.source === 'japanhub').length}件`);
+      const sourceCounts = {
+        javmix: uniqueVideos.filter(v => v.source === 'javmix').length,
+        jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
+        mat6tube: uniqueVideos.filter(v => v.source === 'mat6tube').length,
+        japanhub: uniqueVideos.filter(v => v.source === 'japanhub').length,
+        douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
+        fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
+        bilibili: uniqueVideos.filter(v => v.source === 'bilibili').length,
+        ppp: uniqueVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length,
+        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'bilibili', 'ppp'].includes(v.source)).length
+      };
+      console.log(`📊 ソース別内訳: Javmix=${sourceCounts.javmix}件, JPdmv=${sourceCounts.jpdmv}件, Mat6tube=${sourceCounts.mat6tube}件, Japanhub=${sourceCounts.japanhub}件, Douga4=${sourceCounts.douga4}件, FC2Video=${sourceCounts.fc2video}件, Bilibili=${sourceCounts.bilibili}件, PPP=${sourceCounts.ppp}件, その他=${sourceCounts.other}件`);
+      if (sourceCounts.ppp > 0) {
+        console.error(`❌ [デバッグ] エラー: 最終結果にPPP動画が${sourceCounts.ppp}件含まれています！`);
+      }
     }
     console.log(`🎲 ランダム順の最初の5件のソース: ${firstFiveSources}`);
     
-    res.json({ results: randomVideos });
+    // デバッグ情報をレスポンスに含める
+    res.json({ 
+      results: randomVideos,
+      debug: debugInfo
+    });
   } catch (error) {
     console.error('❌ ランダム動画取得エラー:', error);
     console.error('❌ エラーメッセージ:', error.message);

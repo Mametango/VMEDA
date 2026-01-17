@@ -278,21 +278,49 @@ body {
   background: #000;
   border-radius: 8px;
   overflow: hidden;
-  /* 動画プレイヤー周辺の広告を非表示 */
-  z-index: 10;
+  /* 動画プレイヤー周辺の広告を非表示 - z-indexを最大値にして広告の上に表示 */
+  z-index: 999999 !important;
+  isolation: isolate !important; /* 新しいスタッキングコンテキストを作成 */
+  /* 広告が上に表示されないようにする */
+  transform: translateZ(0) !important; /* ハードウェアアクセラレーション */
+  -webkit-transform: translateZ(0) !important;
+  will-change: z-index !important; /* パフォーマンス最適化 */
+  /* 広告が上に表示されないようにする */
+  pointer-events: auto !important;
 }
 
-/* 動画プレイヤーコンテナ内の広告を非表示 */
+/* 動画プレイヤーコンテナ内の広告を非表示（具体的なセレクタのみ） */
 .video-player-container .ad-container,
 .video-player-container .ad-in-content,
-.video-item .ad-container {
+.video-player-container ins.adsbygoogle,
+.video-player-container iframe[src*="adsbygoogle"],
+.video-player-container iframe[src*="doubleclick"],
+.video-player-container iframe[src*="googlesyndication"] {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
 }
 
-/* 動画プレイヤーが表示されている時、その周辺の広告を非表示 */
-.video-item:has(.video-player-container) .ad-container,
-.video-item:has(.video-player-container) .ad-in-content {
+/* 動画プレイヤーが表示されている時、その動画アイテム内の広告を非表示 */
+.video-item:has(.video-player-container iframe) .ad-container,
+.video-item:has(.video-player-container iframe) .ad-in-content,
+.video-item:has(.video-player-container iframe) ins.adsbygoogle {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+/* 動画プレイヤーの前後に表示される広告も非表示 */
+.video-item:has(.video-player-container iframe) + .ad-container,
+.video-item:has(.video-player-container iframe) + .ad-in-content {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .video-player {
@@ -312,6 +340,9 @@ body {
   transform: translateZ(0);
   /* タッチ操作を有効化 */
   touch-action: manipulation;
+  /* 広告の上に確実に表示されるように */
+  z-index: 999999 !important;
+  pointer-events: auto !important;
 }
 
 /* PPP.Pornの動画プレイヤー用の特別なスタイル（下側が切れないように） */
