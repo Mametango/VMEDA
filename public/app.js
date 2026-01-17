@@ -1567,6 +1567,10 @@ async function getRandomJAV() {
         if (breakdown.x1hub !== undefined) console.log(`  - X1hub: ${breakdown.x1hub}件`);
         if (breakdown.airav !== undefined) console.log(`  - Airav: ${breakdown.airav}件`);
         if (breakdown.ivfree !== undefined) console.log(`  - IVFree: ${breakdown.ivfree}件`);
+        if (breakdown.jpdmv !== undefined) console.log(`  - JPdmv: ${breakdown.jpdmv}件`);
+        if (breakdown.mat6tube !== undefined) console.log(`  - Mat6tube: ${breakdown.mat6tube}件`);
+        if (breakdown.douga4 !== undefined) console.log(`  - Douga4: ${breakdown.douga4}件`);
+        if (breakdown.fc2video !== undefined) console.log(`  - FC2Video: ${breakdown.fc2video}件`);
         if (breakdown.ppp !== undefined && breakdown.ppp > 0) {
           console.error(`  - PPP: ${breakdown.ppp}件 ❌ (エラー: PPP動画が含まれています！)`);
         }
