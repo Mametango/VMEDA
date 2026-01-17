@@ -3996,7 +3996,7 @@ app.get('/api/random', async (req, res) => {
       
       console.log(`✅ IVFreeとJPdmvから${allVideos.length}件の動画を取得`);
     } else if (type === 'jav') {
-      // JAV動画: Javmix.TV、JPdmv、Mat6tube、Japanhub、Douga4、FC2Video、Bilibili、Jable、X1hub、Airavから取得
+      // JAV動画: Javmix.TV、JPdmv、Mat6tube、Japanhub、Douga4、FC2Video、Jable、X1hub、Airavから取得
       const javSearches = [
         searchJavmix('', false),
         searchJPdmv('', false),
@@ -4004,7 +4004,6 @@ app.get('/api/random', async (req, res) => {
         searchJapanhub('', false), // Japanhubからも取得
         searchDouga4('', false), // Douga4からも取得
         searchFC2Video('', false), // FC2Videoからも取得
-        searchBilibili('', false), // Bilibiliからも取得
         searchJable('', false), // Jableからも取得
         searchX1hub('', false), // X1hubからも取得
         searchAirav('', false) // Airavからも取得
@@ -4013,7 +4012,7 @@ app.get('/api/random', async (req, res) => {
       const javResults = await Promise.allSettled(javSearches);
       
       // デバッグ: 各検索関数の結果を確認
-      const searchFunctionNames = ['searchJavmix', 'searchJPdmv', 'searchMat6tube', 'searchJapanhub', 'searchDouga4', 'searchFC2Video', 'searchBilibili', 'searchJable', 'searchX1hub', 'searchAirav'];
+      const searchFunctionNames = ['searchJavmix', 'searchJPdmv', 'searchMat6tube', 'searchJapanhub', 'searchDouga4', 'searchFC2Video', 'searchJable', 'searchX1hub', 'searchAirav'];
       javResults.forEach((result, index) => {
         const functionName = searchFunctionNames[index];
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
@@ -4163,12 +4162,11 @@ app.get('/api/random', async (req, res) => {
         japanhub: uniqueVideos.filter(v => v.source === 'japanhub').length,
         douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
         fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
-        bilibili: uniqueVideos.filter(v => v.source === 'bilibili').length,
         jable: uniqueVideos.filter(v => v.source === 'jable').length,
         x1hub: uniqueVideos.filter(v => v.source === 'x1hub').length,
         airav: uniqueVideos.filter(v => v.source === 'airav').length,
         ppp: uniqueVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length,
-        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'bilibili', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
       } : {}
     };
     
@@ -4235,14 +4233,13 @@ app.get('/api/random', async (req, res) => {
         japanhub: uniqueVideos.filter(v => v.source === 'japanhub').length,
         douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
         fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
-        bilibili: uniqueVideos.filter(v => v.source === 'bilibili').length,
         jable: uniqueVideos.filter(v => v.source === 'jable').length,
         x1hub: uniqueVideos.filter(v => v.source === 'x1hub').length,
         airav: uniqueVideos.filter(v => v.source === 'airav').length,
         ppp: uniqueVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length,
-        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'bilibili', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
       };
-      console.log(`📊 ソース別内訳: Javmix=${sourceCounts.javmix}件, JPdmv=${sourceCounts.jpdmv}件, Mat6tube=${sourceCounts.mat6tube}件, Japanhub=${sourceCounts.japanhub}件, Douga4=${sourceCounts.douga4}件, FC2Video=${sourceCounts.fc2video}件, Bilibili=${sourceCounts.bilibili}件, Jable=${sourceCounts.jable}件, X1hub=${sourceCounts.x1hub}件, Airav=${sourceCounts.airav}件, PPP=${sourceCounts.ppp}件, その他=${sourceCounts.other}件`);
+      console.log(`📊 ソース別内訳: Javmix=${sourceCounts.javmix}件, JPdmv=${sourceCounts.jpdmv}件, Mat6tube=${sourceCounts.mat6tube}件, Japanhub=${sourceCounts.japanhub}件, Douga4=${sourceCounts.douga4}件, FC2Video=${sourceCounts.fc2video}件, Jable=${sourceCounts.jable}件, X1hub=${sourceCounts.x1hub}件, Airav=${sourceCounts.airav}件, PPP=${sourceCounts.ppp}件, その他=${sourceCounts.other}件`);
       if (sourceCounts.ppp > 0) {
         console.error(`❌ [デバッグ] エラー: 最終結果にPPP動画が${sourceCounts.ppp}件含まれています！`);
       }
