@@ -6908,18 +6908,23 @@ async function searchMat6tube(query, strictMode = true) {
             const duration = extractDurationFromHtml($, $link);
             
             if (title && title.length > 2) { // 2文字以上に緩和
-              // strictMode=falseの場合は、タイトルがあれば基本的に追加（関連性チェックをスキップ）
-              if (!strictMode || isTitleRelevant(title, query, strictMode)) {
-                videos.push({
-                  id: `mat6tube-${Date.now()}-${index}`,
-                  title: title.substring(0, 200),
-                  thumbnail: thumbnail || '',
-                  duration: duration || '',
-                  url: href,
-                  embedUrl: href,
-                  source: 'mat6tube'
-                });
+              // 空のクエリの場合は関連性チェックを完全にスキップ
+              if (query && query.trim() && strictMode) {
+                if (!isTitleRelevant(title, query, strictMode)) {
+                  return; // 関連性がない場合はスキップ
+                }
               }
+              // 空のクエリまたはstrictMode=falseの場合は、タイトルがあれば基本的に追加
+              
+              videos.push({
+                id: `mat6tube-${Date.now()}-${index}`,
+                title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: href,
+                embedUrl: href,
+                source: 'mat6tube'
+              });
             }
           });
         
