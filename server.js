@@ -3954,23 +3954,24 @@ app.get('/api/random', async (req, res) => {
     let allVideos = [];
     
     if (type === 'iv') {
-      // IV動画: IVFreeの動画のみをランダムに表示
+      // IV動画: IVFree、JPdmvからランダムに表示
       const ivSearches = [
-        searchIVFree('', false) // 空のクエリで全件取得
+        searchIVFree('', false), // 空のクエリで全件取得
+        searchJPdmv('', false) // JPdmvからも取得
       ];
       
       const ivResults = await Promise.allSettled(ivSearches);
       
       ivResults.forEach((result) => {
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-          // IVFreeの結果のみを追加
+          // IVFreeとJPdmvの結果を追加
           allVideos.push(...result.value);
         }
       });
       
-      console.log(`✅ IVFreeから${allVideos.length}件の動画を取得`);
+      console.log(`✅ IVFreeとJPdmvから${allVideos.length}件の動画を取得`);
     } else if (type === 'jav') {
-      // JAV動画: Javmix.TV、JPdmv、Mat6tube、Japanhub、Douga4、FC2Video、Bilibiliから取得
+      // JAV動画: Javmix.TV、JPdmv、Mat6tube、Japanhub、Douga4、FC2Video、Bilibili、Jable、X1hub、Airavから取得
       const javSearches = [
         searchJavmix('', false),
         searchJPdmv('', false),
@@ -3978,13 +3979,16 @@ app.get('/api/random', async (req, res) => {
         searchJapanhub('', false), // Japanhubからも取得
         searchDouga4('', false), // Douga4からも取得
         searchFC2Video('', false), // FC2Videoからも取得
-        searchBilibili('', false) // Bilibiliからも取得
+        searchBilibili('', false), // Bilibiliからも取得
+        searchJable('', false), // Jableからも取得
+        searchX1hub('', false), // X1hubからも取得
+        searchAirav('', false) // Airavからも取得
       ];
       
       const javResults = await Promise.allSettled(javSearches);
       
       // デバッグ: 各検索関数の結果を確認
-      const searchFunctionNames = ['searchJavmix', 'searchJPdmv', 'searchMat6tube', 'searchJapanhub', 'searchDouga4', 'searchFC2Video', 'searchBilibili'];
+      const searchFunctionNames = ['searchJavmix', 'searchJPdmv', 'searchMat6tube', 'searchJapanhub', 'searchDouga4', 'searchFC2Video', 'searchBilibili', 'searchJable', 'searchX1hub', 'searchAirav'];
       javResults.forEach((result, index) => {
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
           const videos = result.value;
@@ -4088,7 +4092,11 @@ app.get('/api/random', async (req, res) => {
       pppFilteredCount: pppFilteredCount,
       totalAfterFilter: uniqueVideos.length,
       pppInFinal: pppInFinal.length,
-      sourceBreakdown: type === 'jav' ? {
+      sourceBreakdown: type === 'iv' ? {
+        ivfree: uniqueVideos.filter(v => v.source === 'ivfree').length,
+        jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
+        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv'].includes(v.source)).length
+      } : type === 'jav' ? {
         javmix: uniqueVideos.filter(v => v.source === 'javmix').length,
         jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
         mat6tube: uniqueVideos.filter(v => v.source === 'mat6tube').length,
@@ -4096,8 +4104,11 @@ app.get('/api/random', async (req, res) => {
         douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
         fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
         bilibili: uniqueVideos.filter(v => v.source === 'bilibili').length,
+        jable: uniqueVideos.filter(v => v.source === 'jable').length,
+        x1hub: uniqueVideos.filter(v => v.source === 'x1hub').length,
+        airav: uniqueVideos.filter(v => v.source === 'airav').length,
         ppp: uniqueVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length,
-        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'bilibili', 'ppp'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'bilibili', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
       } : {}
     };
     
@@ -4150,7 +4161,12 @@ app.get('/api/random', async (req, res) => {
     const firstFiveSources = randomVideos.slice(0, 5).map(v => v.source).join(', ');
     console.log(`✅ ${type.toUpperCase()}ランダム動画取得完了: ${randomVideos.length}件 (全件ランダム順)`);
     if (type === 'iv') {
-      console.log(`📊 ソース別内訳: IVFree=${uniqueVideos.filter(v => v.source === 'ivfree').length}件`);
+      const ivSourceCounts = {
+        ivfree: uniqueVideos.filter(v => v.source === 'ivfree').length,
+        jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
+        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv'].includes(v.source)).length
+      };
+      console.log(`📊 ソース別内訳: IVFree=${ivSourceCounts.ivfree}件, JPdmv=${ivSourceCounts.jpdmv}件, その他=${ivSourceCounts.other}件`);
     } else {
       const sourceCounts = {
         javmix: uniqueVideos.filter(v => v.source === 'javmix').length,
@@ -4160,10 +4176,13 @@ app.get('/api/random', async (req, res) => {
         douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
         fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
         bilibili: uniqueVideos.filter(v => v.source === 'bilibili').length,
+        jable: uniqueVideos.filter(v => v.source === 'jable').length,
+        x1hub: uniqueVideos.filter(v => v.source === 'x1hub').length,
+        airav: uniqueVideos.filter(v => v.source === 'airav').length,
         ppp: uniqueVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length,
-        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'bilibili', 'ppp'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'bilibili', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
       };
-      console.log(`📊 ソース別内訳: Javmix=${sourceCounts.javmix}件, JPdmv=${sourceCounts.jpdmv}件, Mat6tube=${sourceCounts.mat6tube}件, Japanhub=${sourceCounts.japanhub}件, Douga4=${sourceCounts.douga4}件, FC2Video=${sourceCounts.fc2video}件, Bilibili=${sourceCounts.bilibili}件, PPP=${sourceCounts.ppp}件, その他=${sourceCounts.other}件`);
+      console.log(`📊 ソース別内訳: Javmix=${sourceCounts.javmix}件, JPdmv=${sourceCounts.jpdmv}件, Mat6tube=${sourceCounts.mat6tube}件, Japanhub=${sourceCounts.japanhub}件, Douga4=${sourceCounts.douga4}件, FC2Video=${sourceCounts.fc2video}件, Bilibili=${sourceCounts.bilibili}件, Jable=${sourceCounts.jable}件, X1hub=${sourceCounts.x1hub}件, Airav=${sourceCounts.airav}件, PPP=${sourceCounts.ppp}件, その他=${sourceCounts.other}件`);
       if (sourceCounts.ppp > 0) {
         console.error(`❌ [デバッグ] エラー: 最終結果にPPP動画が${sourceCounts.ppp}件含まれています！`);
       }
@@ -5752,6 +5771,125 @@ app.get('/', (req, res) => {
     }
   }
 });
+
+// Airav検索（airav.io/cn）
+async function searchAirav(query, strictMode = true) {
+  try {
+    console.log(`🔍 Airav検索開始: "${query}" (strictMode: ${strictMode})`);
+    const encodedQuery = encodeURIComponent(query);
+    
+    // 複数のURLパターンを試す
+    const urls = [
+      `https://airav.io/cn/search?q=${encodedQuery}`,
+      `https://airav.io/cn/search/${encodedQuery}`,
+      `https://airav.io/cn/videos/search?q=${encodedQuery}`,
+      `https://airav.io/cn/?s=${encodedQuery}`
+    ];
+    
+    let videos = [];
+    
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://airav.io/cn/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000,
+          maxRedirects: 5
+        });
+        
+        const $ = cheerio.load(response.data);
+        
+        // 複数のセレクタを試す
+        const selectors = [
+          '.video-item',
+          '.item',
+          'a[href*="/videos/"]',
+          'a[href*="/video/"]',
+          'a[href*="/watch/"]',
+          'a[href*="/v/"]',
+          '[class*="video"]',
+          '[class*="item"]',
+          '.result-item',
+          '.search-result-item',
+          'article',
+          '[class*="card"]',
+          '.post-item'
+        ];
+        
+        const seenUrls = new Set();
+        
+        selectors.forEach(selector => {
+          $(selector).each((index, elem) => {
+            if (videos.length >= 50) return false;
+            
+            const $item = $(elem);
+            let href = $item.attr('href') || $item.find('a').attr('href') || '';
+            
+            // hrefが見つからない場合は親要素を探す
+            if (!href) {
+              const $parent = $item.parent();
+              href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+            }
+            
+            // Airavの動画URLパターンを確認
+            if (!href || (!href.includes('/videos/') && !href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+            
+            // 相対URLを絶対URLに変換
+            let fullUrl = href;
+            if (href.startsWith('//')) {
+              fullUrl = 'https:' + href;
+            } else if (href.startsWith('/')) {
+              fullUrl = `https://airav.io${href}`;
+            } else if (!href.startsWith('http')) {
+              fullUrl = `https://airav.io/${href}`;
+            }
+            
+            // 重複チェック
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            const title = extractTitle($, $item);
+            const thumbnail = extractThumbnail($, $item);
+            const duration = extractDurationFromHtml($, $item);
+            
+            if (title && title.length > 3) {
+              videos.push({
+                id: `airav-${Date.now()}-${index}`,
+                title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'airav'
+              });
+            }
+          });
+        });
+        
+        // 結果が見つかったらループを抜ける
+        if (videos.length > 0) break;
+      } catch (urlError) {
+        console.warn(`⚠️ Airav URL試行エラー (${url}):`, urlError.message);
+        continue;
+      }
+    }
+    
+    console.log(`✅ Airav: ${videos.length}件の動画を取得`);
+    return videos;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ Airav検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ Airav検索エラー:', error.message);
+    }
+    return [];
+  }
+}
 
 // Mat6tube検索（アプローチ変更：より積極的に動画を取得）
 async function searchMat6tube(query, strictMode = true) {
