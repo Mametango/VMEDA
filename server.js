@@ -1800,57 +1800,138 @@ async function searchJPdmv(query, strictMode = true) {
 // Douga4検索
 async function searchDouga4(query, strictMode = true) {
   try {
+    query = query || '';
+    console.log(`🔍 Douga4検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
-    // 空のクエリの場合はトップページや最新動画ページから取得
-    const url = query && query.trim() ? 
-      `https://av.douga4.top/kw/${encodedQuery}` :
-      `https://av.douga4.top/`; // トップページから最新動画を取得
+    // 空のクエリの場合は複数URLパターンを試す
+    const urls = query && query.trim() ? [
+      `https://av.douga4.top/kw/${encodedQuery}`,
+      `https://av.douga4.top/search/${encodedQuery}`,
+      `https://av.douga4.top/?q=${encodedQuery}`
+    ] : [
+      `https://av.douga4.top/`, // トップページから最新動画を取得
+      `https://av.douga4.top/latest`, // 最新動画ページ
+      `https://av.douga4.top/videos` // 動画一覧ページ
+    ];
     
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9'
-      },
-      timeout: 30000
-    });
+    let videos = [];
+    const seenUrls = new Set();
     
-    const $ = cheerio.load(response.data);
-    const videos = [];
-    
-    $('.item, .video-item, a[href*="/video/"]').each((index, elem) => {
-      
-      const $item = $(elem);
-      const href = $item.attr('href') || $item.find('a').attr('href') || '';
-      if (!href || !href.includes('/video/')) return;
-      
-      const fullUrl = href.startsWith('http') ? href : `https://av.douga4.top${href}`;
-      const title = extractTitle($, $item);
-      const thumbnail = extractThumbnail($, $item);
-      const duration = extractDurationFromHtml($, $item);
-      
-      if (title && title.length > 3) {
-        // 空のクエリの場合は関連性チェックをスキップ
-        if (query && query.trim()) {
-          // 検索クエリとタイトルの関連性をチェック
-          if (!isTitleRelevant(title, query)) {
-            return; // 関連性がない場合はスキップ
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'ja,en-US;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://av.douga4.top/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000,
+          validateStatus: () => true
+        });
+
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ Douga4: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'douga4',
+            includeUrlSubstrings: ['douga4.top/video/', 'douga4.top/'],
+            excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) {
+            console.log(`✅ Douga4(Jina): ${jinaVideos.length}件の動画を取得`);
+            return jinaVideos;
           }
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ Douga4: HTTP ${response.status}`);
+          continue;
         }
         
-        videos.push({
-          id: `douga4-${Date.now()}-${index}`,
-          title: title.substring(0, 200),
-          thumbnail: thumbnail || '',
-          duration: duration || '',
-          url: fullUrl,
-          embedUrl: fullUrl,
-          source: 'douga4'
+        const $ = cheerio.load(response.data);
+        
+        const selectors = [
+          '.item',
+          '.video-item',
+          'a[href*="/video/"]',
+          'a[href*="/watch/"]',
+          '[class*="video"]',
+          '[class*="item"]'
+        ];
+        
+        selectors.forEach(selector => {
+          $(selector).each((index, elem) => {
+            if (videos.length >= 50) return false;
+            
+            const $item = $(elem);
+            let href = $item.attr('href') || $item.find('a').attr('href') || '';
+            
+            if (!href) {
+              const $parent = $item.parent();
+              href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+            }
+            
+            if (!href || !href.includes('/video/')) return;
+            
+            const fullUrl = href.startsWith('http') ? href : `https://av.douga4.top${href}`;
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            const title = extractTitle($, $item);
+            const thumbnail = extractThumbnail($, $item);
+            const duration = extractDurationFromHtml($, $item);
+            
+            if (title && title.length > 2) {
+              // 空のクエリの場合は関連性チェックをスキップ
+              if (query && query.trim() && strictMode) {
+                if (!isTitleRelevant(title, query, strictMode)) {
+                  return;
+                }
+              }
+              
+              videos.push({
+                id: `douga4-${Date.now()}-${index}`,
+                title: title.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'douga4'
+              });
+            }
+          });
         });
+        
+        if (videos.length > 0) {
+          console.log(`✅ Douga4: ${videos.length}件の動画を取得（URL: ${url}）`);
+          break;
+        }
+      } catch (urlError) {
+        if (urlError.response && urlError.response.status === 403 && isCloudflareChallengeHtml(urlError.response.data)) {
+          try {
+            console.warn('⚠️ Douga4: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
+            const md = await fetchMarkdownViaJina(url);
+            const jinaVideos = extractVideosFromJinaMarkdown(md, {
+              source: 'douga4',
+              includeUrlSubstrings: ['douga4.top/video/', 'douga4.top/'],
+              excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
+              max: 50
+            });
+            if (jinaVideos.length > 0) return jinaVideos;
+          } catch (_) {}
+        }
+        console.warn(`⚠️ Douga4 URL試行エラー (${url}):`, urlError.message);
+        continue;
       }
-    });
+    }
     
+    console.log(`✅ Douga4: ${videos.length}件の動画を取得`);
     return videos;
   } catch (error) {
+    console.error('❌ Douga4検索エラー:', error.message);
     return [];
   }
 }
@@ -1908,125 +1989,174 @@ async function searchSpankbang(query) {
 }
 
 // X1hub検索
-async function searchX1hub(query) {
+async function searchX1hub(query, strictMode = false) {
   try {
+    query = query || '';
+    console.log(`🔍 X1hub検索開始: "${query}" (strictMode: ${strictMode})`);
     const encodedQuery = encodeURIComponent(query);
-    // 空のクエリの場合はトップページや最新動画ページから取得
-    const url = query && query.trim() ? 
-      `https://x1hub.com/search/${encodedQuery}` :
-      `https://x1hub.com/`; // トップページから最新動画を取得
-    
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Referer': 'https://x1hub.com/'
-      },
-      timeout: 30000,
-      validateStatus: () => true
-    });
-
-    // X1hubはトップページがJSレンダリングで0件になりやすいので、まず403/challengeを救済し、
-    // さらにHTML抽出が0件なら r.jina.ai 経由のリンク抽出でフォールバックする
-    if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
-      console.warn('⚠️ X1hub: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
-      const md = await fetchMarkdownViaJina(url);
-      const jinaVideos = extractVideosFromJinaMarkdown(md, {
-        source: 'x1hub',
-        includeUrlSubstrings: ['x1hub.com/contents/video', 'www.x1hub.com/contents/video'],
-        excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
-        max: 50
-      });
-      if (jinaVideos.length > 0) {
-        console.log(`✅ X1hub(Jina): ${jinaVideos.length}件の動画を取得`);
-        return jinaVideos;
-      }
-      return [];
-    }
-    if (response.status >= 400) {
-      console.warn(`⚠️ X1hub: HTTP ${response.status}`);
-      return [];
-    }
-    
-    const $ = cheerio.load(response.data);
-    const videos = [];
-    
-    // 複数のセレクタを試す
-    const selectors = [
-      '.video-item',
-      '.item',
-      'a[href*="/video/"]',
-      'a[href*="/watch/"]',
-      '[class*="video"]',
-      '[class*="item"]'
+    // 空のクエリの場合は複数URLパターンを試す
+    const urls = query && query.trim() ? [
+      `https://x1hub.com/search/${encodedQuery}`,
+      `https://www.x1hub.com/search/${encodedQuery}`,
+      `https://x1hub.com/?q=${encodedQuery}`
+    ] : [
+      `https://x1hub.com/`, // トップページから最新動画を取得
+      `https://www.x1hub.com/`,
+      `https://x1hub.com/contents/video`,
+      `https://www.x1hub.com/contents/video`
     ];
     
-    selectors.forEach(selector => {
-      
-      $(selector).each((index, elem) => {
-        
-        const $item = $(elem);
-        let href = $item.attr('href') || $item.find('a').attr('href') || '';
-        
-        // hrefが見つからない場合は親要素を探す
-        if (!href) {
-          const $parent = $item.parent();
-          href = $parent.attr('href') || $parent.find('a').attr('href') || '';
-        }
-        
-        if (!href || (!href.includes('/video/') && !href.includes('/watch/'))) return;
-        
-        const fullUrl = href.startsWith('http') ? href : `https://x1hub.com${href}`;
-        const title = extractTitle($, $item) || $item.text().trim() || '';
-        const thumbnail = extractThumbnail($, $item);
-        const duration = extractDurationFromHtml($, $item);
-        
-        let finalTitle = title;
-        if (!finalTitle || finalTitle.length < 3) {
-          const urlMatch = fullUrl.match(/\/([^\/]+)$/);
-          if (urlMatch) finalTitle = decodeURIComponent(urlMatch[1]).replace(/[-_]/g, ' ').trim();
-        }
-
-        if (finalTitle && finalTitle.length > 2) {
-          // 重複チェック
-          const isDuplicate = videos.some(v => v.url === fullUrl);
-          if (!isDuplicate) {
-            videos.push({
-              id: `x1hub-${Date.now()}-${index}`,
-              title: finalTitle.substring(0, 200),
-              thumbnail: thumbnail || '',
-              duration: duration || '',
-              url: fullUrl,
-              embedUrl: fullUrl,
-              source: 'x1hub'
-            });
-          }
-        }
-      });
-    });
-
-    if (videos.length === 0) {
+    let videos = [];
+    const seenUrls = new Set();
+    
+    for (const url of urls) {
       try {
-        console.warn('⚠️ X1hub: HTMLから0件。r.jina.ai にフォールバックします。');
-        const md = await fetchMarkdownViaJina(url);
-        const jinaVideos = extractVideosFromJinaMarkdown(md, {
-          source: 'x1hub',
-          includeUrlSubstrings: ['x1hub.com/contents/video', 'www.x1hub.com/contents/video'],
-          excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
-          max: 50
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://x1hub.com/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000,
+          validateStatus: () => true
         });
-        if (jinaVideos.length > 0) {
-          console.log(`✅ X1hub(Jina): ${jinaVideos.length}件の動画を取得`);
-          return jinaVideos;
+
+        // X1hubはトップページがJSレンダリングで0件になりやすいので、まず403/challengeを救済し、
+        // さらにHTML抽出が0件なら r.jina.ai 経由のリンク抽出でフォールバックする
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ X1hub: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'x1hub',
+            includeUrlSubstrings: ['x1hub.com/contents/video', 'www.x1hub.com/contents/video'],
+            excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) {
+            console.log(`✅ X1hub(Jina): ${jinaVideos.length}件の動画を取得`);
+            return jinaVideos;
+          }
+          continue;
         }
-      } catch (_) {}
+        if (response.status >= 400) {
+          console.warn(`⚠️ X1hub: HTTP ${response.status}`);
+          continue;
+        }
+        
+        const $ = cheerio.load(response.data);
+        
+        // 複数のセレクタを試す
+        const selectors = [
+          '.video-item',
+          '.item',
+          'a[href*="/contents/video"]',
+          'a[href*="/video/"]',
+          'a[href*="/watch/"]',
+          '[class*="video"]',
+          '[class*="item"]',
+          'article a',
+          '.card a'
+        ];
+        
+        selectors.forEach(selector => {
+          $(selector).each((index, elem) => {
+            if (videos.length >= 50) return false;
+            
+            const $item = $(elem);
+            let href = $item.attr('href') || $item.find('a').attr('href') || '';
+            
+            // hrefが見つからない場合は親要素を探す
+            if (!href) {
+              const $parent = $item.parent();
+              href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+            }
+            
+            if (!href) return;
+            
+            // x1hub.com/contents/video を含むリンクを優先
+            const isVideoLink = href.includes('/contents/video') || href.includes('/video/') || href.includes('/watch/');
+            if (!isVideoLink && query && query.trim()) {
+              // 検索時は動画リンクのみ
+              return;
+            }
+            
+            const fullUrl = href.startsWith('http') ? href : `https://x1hub.com${href.startsWith('/') ? href : '/' + href}`;
+            if (!fullUrl.includes('x1hub.com')) return;
+            
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            const title = extractTitle($, $item) || $item.text().trim() || '';
+            const thumbnail = extractThumbnail($, $item);
+            const duration = extractDurationFromHtml($, $item);
+            
+            let finalTitle = title;
+            if (!finalTitle || finalTitle.length < 3) {
+              const urlMatch = fullUrl.match(/\/([^\/]+)$/);
+              if (urlMatch) finalTitle = decodeURIComponent(urlMatch[1]).replace(/[-_]/g, ' ').trim();
+            }
+
+            if (finalTitle && finalTitle.length > 2) {
+              videos.push({
+                id: `x1hub-${Date.now()}-${index}`,
+                title: finalTitle.substring(0, 200),
+                thumbnail: thumbnail || '',
+                duration: duration || '',
+                url: fullUrl,
+                embedUrl: fullUrl,
+                source: 'x1hub'
+              });
+            }
+          });
+        });
+
+        if (videos.length > 0) {
+          console.log(`✅ X1hub: ${videos.length}件の動画を取得（URL: ${url}）`);
+          break;
+        }
+        
+        // HTMLから0件の場合は r.jina.ai にフォールバック
+        if (videos.length === 0) {
+          try {
+            console.warn('⚠️ X1hub: HTMLから0件。r.jina.ai にフォールバックします。');
+            const md = await fetchMarkdownViaJina(url);
+            const jinaVideos = extractVideosFromJinaMarkdown(md, {
+              source: 'x1hub',
+              includeUrlSubstrings: ['x1hub.com/contents/video', 'www.x1hub.com/contents/video'],
+              excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
+              max: 50
+            });
+            if (jinaVideos.length > 0) {
+              console.log(`✅ X1hub(Jina): ${jinaVideos.length}件の動画を取得`);
+              return jinaVideos;
+            }
+          } catch (_) {}
+        }
+      } catch (urlError) {
+        if (urlError.response && urlError.response.status === 403 && isCloudflareChallengeHtml(urlError.response.data)) {
+          try {
+            console.warn('⚠️ X1hub: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
+            const md = await fetchMarkdownViaJina(url);
+            const jinaVideos = extractVideosFromJinaMarkdown(md, {
+              source: 'x1hub',
+              includeUrlSubstrings: ['x1hub.com/contents/video', 'www.x1hub.com/contents/video'],
+              excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
+              max: 50
+            });
+            if (jinaVideos.length > 0) return jinaVideos;
+          } catch (_) {}
+        }
+        console.warn(`⚠️ X1hub URL試行エラー (${url}):`, urlError.message);
+        continue;
+      }
     }
     
     console.log(`✅ X1hub: ${videos.length}件の動画を取得`);
     return videos;
   } catch (error) {
-    console.error('X1hub検索エラー:', error.message);
+    console.error('❌ X1hub検索エラー:', error.message);
     if (error.response && error.response.status === 403 && isCloudflareChallengeHtml(error.response.data)) {
       try {
         console.warn('⚠️ X1hub: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
@@ -2196,115 +2326,219 @@ async function searchJavGuru(query) {
 }
 
 // Japanhub検索
-async function searchJapanhub(query) {
+async function searchJapanhub(query, strictMode = false) {
   try {
-    const encodedQuery = encodeURIComponent(query);
-    // 空のクエリの場合はトップページや最新動画ページから取得
-    const url = query && query.trim() ? 
-      `https://japanhub.net/search/${encodedQuery}` :
-      `https://japanhub.net/`; // トップページから最新動画を取得
+    query = query || '';
+    console.log(`🔍 Japanhub検索開始: "${query}" (strictMode: ${strictMode})`);
+    const startTime = Date.now();
+    const queryLower = query.toLowerCase().trim();
     
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Referer': 'https://japanhub.net/'
-      },
-      timeout: 30000,
-      validateStatus: () => true
-    });
-
-    // Cloudflareブロック時は r.jina.ai 経由で取得してリンクから復元
-    if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
-      console.warn('⚠️ Japanhub: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
-      const md = await fetchMarkdownViaJina(url);
-      const jinaVideos = extractVideosFromJinaMarkdown(md, {
-        source: 'japanhub',
-        includeUrlSubstrings: ['japanhub.net/video', 'japanhub.net/watch', 'japanhub.net/v/'],
-        excludeUrlSubstrings: ['/signup', '/login', '/lost', '/confirm', '#'],
-        max: 50
-      });
-      if (jinaVideos.length > 0) {
-        console.log(`✅ Japanhub(Jina): ${jinaVideos.length}件の動画を取得`);
-        return jinaVideos;
-      }
-      return [];
-    }
-    if (response.status >= 400) {
-      console.warn(`⚠️ Japanhub: HTTP ${response.status}`);
-      return [];
+    // 検索URLを構築（複数URLパターンを試す）
+    const urls = [];
+    if (query && query.trim().length > 0) {
+      const encodedQuery = encodeURIComponent(query);
+      urls.push(`https://japanhub.net/search?q=${encodedQuery}`);
+      urls.push(`https://japanhub.net/search/${encodedQuery}`);
+      urls.push(`https://japanhub.net/?s=${encodedQuery}`);
+    } else {
+      // 空のクエリの場合はトップページから取得
+      urls.push(`https://japanhub.net/`);
+      urls.push(`https://japanhub.net/videos`);
+      urls.push(`https://japanhub.net/latest`);
     }
     
-    const $ = cheerio.load(response.data);
     const videos = [];
+    const seenUrls = new Set();
     
-    // 複数のセレクタを試す
-    const selectors = [
-      '.video-item',
-      '.item',
-      'a[href*="/video/"]',
-      'a[href*="/watch/"]',
-      'a[href*="/v/"]',
-      '[class*="video"]',
-      '[class*="item"]'
-    ];
-    
-    selectors.forEach(selector => {
-      
-      $(selector).each((index, elem) => {
+    for (const url of urls) {
+      try {
+        console.log(`🔍 Japanhub: URL取得開始: ${url}`);
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': 'https://japanhub.net/',
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000,
+          validateStatus: () => true
+        });
         
-        const $item = $(elem);
-        let href = $item.attr('href') || $item.find('a').attr('href') || '';
-        
-        // hrefが見つからない場合は親要素を探す
-        if (!href) {
-          const $parent = $item.parent();
-          href = $parent.attr('href') || $parent.find('a').attr('href') || '';
+        console.log(`🔍 Japanhub: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
+
+        // Cloudflareブロック時は r.jina.ai 経由で取得してリンクから復元
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ Japanhub: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'japanhub',
+            includeUrlSubstrings: ['japanhub.net/video', 'japanhub.net/watch', 'japanhub.net/v/'],
+            excludeUrlSubstrings: ['/signup', '/login', '/lost', '/confirm', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) {
+            console.log(`✅ Japanhub(Jina): ${jinaVideos.length}件の動画を取得`);
+            return jinaVideos;
+          }
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ Japanhub: HTTP ${response.status}`);
+          continue;
         }
         
-        if (!href || (!href.includes('/video/') && !href.includes('/watch/') && !href.includes('/v/'))) return;
+        const $ = cheerio.load(response.data);
+        console.log(`🔍 Japanhub: HTML取得完了、パース開始`);
         
-        const fullUrl = href.startsWith('http') ? href : `https://japanhub.net${href}`;
-        const title = extractTitle($, $item);
-        const thumbnail = extractThumbnail($, $item);
-        const duration = extractDurationFromHtml($, $item);
+        // 複数のセレクタを試す
+        const selectors = [
+          'article h2 a',
+          'article h1 a',
+          'h2 a',
+          'h1 a',
+          'article a',
+          '.entry-title a',
+          '.post-title a',
+          '.video-item a',
+          '.item a',
+          'a[href*="/video/"]',
+          'a[href*="/watch/"]',
+          'a[href*="japanhub.net"]'
+        ];
         
-        if (title && title.length > 3) {
-          // 重複チェック
-          const isDuplicate = videos.some(v => v.url === fullUrl);
-          if (!isDuplicate) {
+        let foundCount = 0;
+        let matchedCount = 0;
+        
+        for (const selector of selectors) {
+          $(selector).each((index, elem) => {
+            if (videos.length >= 50) return false;
+            
+            const $item = $(elem);
+            let titleText = $item.text().trim() || $item.attr('title') || '';
+            let href = $item.attr('href') || '';
+            
+            // タイトルが空の場合はスキップ（2文字以上に緩和）
+            if (!titleText || titleText.trim().length < 2) {
+              return;
+            }
+            
+            foundCount++;
+            
+            // 空のクエリの場合はすべての動画を取得
+            if (!query || query.trim().length === 0) {
+              matchedCount++;
+            } else {
+              // 検索クエリとタイトルの関連性をチェック
+              const titleLower = titleText.toLowerCase();
+              const queryInTitle = titleLower.includes(queryLower);
+              
+              // 緩和したマッチング: 部分一致や文字単位の一致も許可
+              const queryChars = queryLower.split('').filter(c => c.trim().length > 0 && c !== ' ');
+              const matchingChars = queryChars.filter(char => titleLower.includes(char)).length;
+              const oneCharMatch = queryChars.length > 0 && matchingChars > 0;
+              
+              const shouldMatch = queryInTitle || oneCharMatch;
+              
+              if (!shouldMatch) {
+                return;
+              }
+              
+              matchedCount++;
+            }
+            
+            // 相対URLを絶対URLに変換
+            let fullUrl = href;
+            if (href) {
+              if (href.startsWith('//')) {
+                fullUrl = 'https:' + href;
+              } else if (href.startsWith('/')) {
+                fullUrl = `https://japanhub.net${href}`;
+              } else if (href.startsWith('./')) {
+                fullUrl = `https://japanhub.net/${href.substring(2)}`;
+              } else if (!href.startsWith('http')) {
+                fullUrl = `https://japanhub.net/${href}`;
+              }
+            } else {
+              return;
+            }
+            
+            // japanhub.netのドメイン内のリンクのみを対象
+            if (!fullUrl.includes('japanhub.net')) return;
+            
+            // 重複チェック
+            if (seenUrls.has(fullUrl)) return;
+            seenUrls.add(fullUrl);
+            
+            // サムネイルを取得
+            let thumbnail = extractThumbnail($, $item);
+            if (!thumbnail) {
+              const $parent = $item.parent();
+              thumbnail = extractThumbnail($, $parent);
+            }
+            if (!thumbnail) {
+              const $grandParent = $item.parent().parent();
+              thumbnail = extractThumbnail($, $grandParent);
+            }
+            
+            const duration = extractDurationFromHtml($, $item);
+            
             videos.push({
               id: `japanhub-${Date.now()}-${index}`,
-              title: title.substring(0, 200),
+              title: titleText.substring(0, 200),
               thumbnail: thumbnail || '',
               duration: duration || '',
               url: fullUrl,
               embedUrl: fullUrl,
               source: 'japanhub'
             });
-          }
+          });
         }
-      });
-    });
+        
+        // 結果が見つかったらループを抜ける
+        if (videos.length > 0) {
+          console.log(`✅ Japanhub: ${videos.length}件の動画を取得（URL: ${url}）`);
+          break;
+        }
+      } catch (urlError) {
+        if (urlError.response && urlError.response.status === 403 && isCloudflareChallengeHtml(urlError.response.data)) {
+          try {
+            console.warn('⚠️ Japanhub: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
+            const md = await fetchMarkdownViaJina(url);
+            const jinaVideos = extractVideosFromJinaMarkdown(md, {
+              source: 'japanhub',
+              includeUrlSubstrings: ['japanhub.net/video', 'japanhub.net/watch', 'japanhub.net/v/'],
+              excludeUrlSubstrings: ['/signup', '/login', '/lost', '/confirm', '#'],
+              max: 50
+            });
+            if (jinaVideos.length > 0) return jinaVideos;
+          } catch (_) {}
+        }
+        console.warn(`⚠️ Japanhub URL試行エラー (${url}):`, urlError.message);
+        continue;
+      }
+    }
     
-    console.log(`✅ Japanhub: ${videos.length}件の動画を取得`);
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    console.log(`🔍 Japanhub: 見つかった動画: ${matchedCount}件、最終結果: ${videos.length}件`);
+    console.log(`✅ Japanhub: ${videos.length}件の動画を取得（実行時間: ${duration}ms）`);
+    
+    if (videos.length > 0) {
+      console.log(`🔍 Japanhub デバッグ: 取得した動画のサンプル:`);
+      videos.slice(0, 5).forEach((video, idx) => {
+        console.log(`  ${idx + 1}. ${video.title.substring(0, 50)}... (URL: ${video.url.substring(0, 60)}...)`);
+      });
+    } else {
+      console.log(`⚠️ Japanhub: 動画が見つかりませんでした（検索クエリ: "${query}", strictMode: ${strictMode}）`);
+    }
+    
     return videos;
   } catch (error) {
-    console.error('Japanhub検索エラー:', error.message);
-    // axios側で403が例外として来た場合もフォールバック（念のため）
-    if (error.response && error.response.status === 403 && isCloudflareChallengeHtml(error.response.data)) {
-      try {
-        console.warn('⚠️ Japanhub: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
-        const md = await fetchMarkdownViaJina('https://japanhub.net/');
-        const jinaVideos = extractVideosFromJinaMarkdown(md, {
-          source: 'japanhub',
-          includeUrlSubstrings: ['japanhub.net/video', 'japanhub.net/watch', 'japanhub.net/v/'],
-          excludeUrlSubstrings: ['/signup', '/login', '/lost', '/confirm', '#'],
-          max: 50
-        });
-        if (jinaVideos.length > 0) return jinaVideos;
-      } catch (_) {}
+    if (error.response && error.response.status === 404) {
+      console.warn('⚠️ Japanhub検索: ページが見つかりません（404）');
+    } else {
+      console.error('❌ Japanhub検索エラー:', error.message);
     }
     return [];
   }
