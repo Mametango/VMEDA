@@ -3607,11 +3607,11 @@ async function searchJavmix(query, strictMode = true) {
         });
 
         if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
-          console.warn('⚠️ Jable: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          console.warn('⚠️ Javmix.TV: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
           const md = await fetchMarkdownViaJina(url);
           const jinaVideos = extractVideosFromJinaMarkdown(md, {
-            source: 'jable',
-            includeUrlSubstrings: ['jable.tv/videos/'],
+            source: 'javmix',
+            includeUrlSubstrings: ['javmix.tv/video/', 'javmix.tv/'],
             excludeUrlSubstrings: ['/categories', '/models', '/latest-updates', '/hot', '#'],
             max: 50
           });
@@ -3619,7 +3619,7 @@ async function searchJavmix(query, strictMode = true) {
           continue;
         }
         if (response.status >= 400) {
-          console.warn(`⚠️ Jable: HTTP ${response.status}`);
+          console.warn(`⚠️ Javmix.TV: HTTP ${response.status}`);
           continue;
         }
         

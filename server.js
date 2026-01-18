@@ -3331,8 +3331,26 @@ async function searchJavmix(query, strictMode = true) {
             'Referer': 'https://javmix.tv/',
             'Accept-Encoding': 'gzip, deflate, br'
           },
-          timeout: 30000
+          timeout: 30000,
+          validateStatus: () => true
         });
+
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ Javmix.TV: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'javmix',
+            includeUrlSubstrings: ['javmix.tv/video/', 'javmix.tv/'],
+            excludeUrlSubstrings: ['/categories', '/models', '/latest-updates', '/hot', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) return jinaVideos;
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ Javmix.TV: HTTP ${response.status}`);
+          continue;
+        }
         
         const $ = cheerio.load(response.data);
         console.log(`🔍 Javmix.TV: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
