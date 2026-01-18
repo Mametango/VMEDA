@@ -1345,8 +1345,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
   // タイムアウトでエラー検出（Bilibiliとdouga4の場合は15秒、IVFreeは20秒、その他は10秒）
-  const timeoutDuration = (source === 'bilibili' || source === 'douga4') ? 15000 : 
-                          (source === 'ivfree') ? 20000 : 10000;
+  const timeoutDuration = (source === 'bilibili' || source === 'douga4') ? 15000 :
+                          (source === 'ivfree' || source === 'jpdmv') ? 20000 : 10000;
   errorTimeout = setTimeout(() => {
     if (hasError) return;
     

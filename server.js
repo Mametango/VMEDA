@@ -4741,6 +4741,24 @@ app.get('/api/jpdmv-video', async (req, res) => {
     }
 
     console.log('📺 JPdmv動画URL取得リクエスト:', videoUrl);
+    
+    const extractEmbedFromMarkdown = (markdown) => {
+      const md = String(markdown || '');
+      // Markdown内のURLをざっくり抽出
+      const urls = md.match(/https?:\/\/[^\s)]+/g) || [];
+      // 埋め込みホストの優先順位（必要に応じて追加）
+      const preferred = [
+        'ytms.one/e/',
+        '/embed/',
+        '/player/',
+        '/e/'
+      ];
+      for (const key of preferred) {
+        const hit = urls.find((u) => u.includes(key));
+        if (hit) return hit.replace(/[)\]]+$/, '');
+      }
+      return '';
+    };
 
     const response = await axios.get(videoUrl, {
       headers: {
@@ -4757,11 +4775,30 @@ app.get('/api/jpdmv-video', async (req, res) => {
 
     // Cloudflare等でHTMLが取れない場合はフォールバック
     if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
-      console.warn('⚠️ JPdmv動画URL取得: Cloudflare(403) を検出。フォールバックして元URLを返します。');
+      console.warn('⚠️ JPdmv動画URL取得: Cloudflare(403) を検出。r.jina.ai でフォールバックします。');
+      try {
+        const md = await fetchMarkdownViaJina(videoUrl);
+        const embedFromMd = extractEmbedFromMarkdown(md);
+        if (embedFromMd) {
+          console.log('✅ JPdmv動画URL取得(Jina):', embedFromMd);
+          return res.json({ embedUrl: embedFromMd, originalUrl: videoUrl });
+        }
+      } catch (e) {
+        console.warn('⚠️ JPdmv動画URL取得(Jina) エラー:', e.message);
+      }
       return res.json({ embedUrl: videoUrl, originalUrl: videoUrl });
     }
     if (response.status >= 400) {
       console.warn(`⚠️ JPdmv動画URL取得: HTTP ${response.status}`);
+      // 失敗時も r.jina.ai を試す
+      try {
+        const md = await fetchMarkdownViaJina(videoUrl);
+        const embedFromMd = extractEmbedFromMarkdown(md);
+        if (embedFromMd) {
+          console.log('✅ JPdmv動画URL取得(Jina):', embedFromMd);
+          return res.json({ embedUrl: embedFromMd, originalUrl: videoUrl });
+        }
+      } catch (_) {}
       return res.json({ embedUrl: videoUrl, originalUrl: videoUrl });
     }
 

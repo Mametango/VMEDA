@@ -5354,6 +5354,22 @@ app.get('/api/jpdmv-video', async (req, res) => {
     }
 
     console.log('📺 JPdmv動画URL取得リクエスト:', videoUrl);
+    
+    const extractEmbedFromMarkdown = (markdown) => {
+      const md = String(markdown || '');
+      const urls = md.match(/https?:\/\/[^\s)]+/g) || [];
+      const preferred = [
+        'ytms.one/e/',
+        '/embed/',
+        '/player/',
+        '/e/'
+      ];
+      for (const key of preferred) {
+        const hit = urls.find((u) => u.includes(key));
+        if (hit) return hit.replace(/[)\]]+$/, '');
+      }
+      return '';
+    };
 
     const response = await axios.get(videoUrl, {
       headers: {
@@ -5369,11 +5385,29 @@ app.get('/api/jpdmv-video', async (req, res) => {
     });
 
     if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
-      console.warn('⚠️ JPdmv動画URL取得: Cloudflare(403) を検出。フォールバックして元URLを返します。');
+      console.warn('⚠️ JPdmv動画URL取得: Cloudflare(403) を検出。r.jina.ai でフォールバックします。');
+      try {
+        const md = await fetchMarkdownViaJina(videoUrl);
+        const embedFromMd = extractEmbedFromMarkdown(md);
+        if (embedFromMd) {
+          console.log('✅ JPdmv動画URL取得(Jina):', embedFromMd);
+          return res.json({ embedUrl: embedFromMd, originalUrl: videoUrl });
+        }
+      } catch (e) {
+        console.warn('⚠️ JPdmv動画URL取得(Jina) エラー:', e.message);
+      }
       return res.json({ embedUrl: videoUrl, originalUrl: videoUrl });
     }
     if (response.status >= 400) {
       console.warn(`⚠️ JPdmv動画URL取得: HTTP ${response.status}`);
+      try {
+        const md = await fetchMarkdownViaJina(videoUrl);
+        const embedFromMd = extractEmbedFromMarkdown(md);
+        if (embedFromMd) {
+          console.log('✅ JPdmv動画URL取得(Jina):', embedFromMd);
+          return res.json({ embedUrl: embedFromMd, originalUrl: videoUrl });
+        }
+      } catch (_) {}
       return res.json({ embedUrl: videoUrl, originalUrl: videoUrl });
     }
 
