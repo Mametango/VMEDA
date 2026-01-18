@@ -134,6 +134,57 @@ function extractVideosFromJinaMarkdown(markdown, options) {
   return videos;
 }
 
+function extractIvKeywordsFromTitles(videos, max = 30) {
+  const out = [];
+  const seen = new Set();
+
+  const push = (kw) => {
+    const s = String(kw || '').trim();
+    if (!s) return;
+    if (seen.has(s)) return;
+    seen.add(s);
+    out.push(s);
+  };
+
+  for (const v of videos || []) {
+    const title = String(v?.title || '');
+
+    // 例: [IMOB-059] / ICDV-30133 など
+    const codeMatches = title.match(/[A-Z]{2,6}-\d{2,6}/g) || [];
+    for (const c of codeMatches) push(c);
+
+    // 例: [IMOB-059] の prefix を拾う（IMOB）
+    const prefixMatch = title.match(/\[([A-Z]{2,6})-\d{2,6}\]/);
+    if (prefixMatch) push(prefixMatch[1]);
+
+    if (out.length >= max) break;
+  }
+
+  return out;
+}
+
+async function searchMat6tubeByIvTitleSeed(ivfreeVideos) {
+  const candidates = extractIvKeywordsFromTitles(ivfreeVideos, 30);
+  if (!candidates.length) {
+    return { queryUsed: '', videos: await searchMat6tube('', false) };
+  }
+
+  // 先頭から数個だけ試して、ヒットしたものを採用（処理時間を抑える）
+  const tryCount = Math.min(8, candidates.length);
+  for (let i = 0; i < tryCount; i++) {
+    const kw = candidates[i];
+    try {
+      const videos = await searchMat6tube(kw, false);
+      if (Array.isArray(videos) && videos.length > 0) {
+        return { queryUsed: kw, videos };
+      }
+    } catch (_) {}
+  }
+
+  // 最後のフォールバック
+  return { queryUsed: '', videos: await searchMat6tube('', false) };
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -4270,51 +4321,48 @@ app.get('/api/random', async (req, res) => {
     console.log(`🎲 ランダム動画取得開始: type=${type}`);
     
     let allVideos = [];
+    let ivMat6tubeQueryUsed = '';
     
     if (type === 'iv') {
       // IV動画: IVFree、JPdmv、Mat6tubeからランダムに表示
-      const ivSearches = [
-        searchIVFree('', false), // 空のクエリで全件取得
-        searchJPdmv('', false), // JPdmvからも取得
-        searchMat6tube('', false) // Mat6tubeからも取得
+      // ただし Mat6tube は、IV側タイトル（例: IMOB-059 等）を検索クエリとして使用する
+      const ivfreePromise = searchIVFree('', false); // 空のクエリで全件取得
+      const jpdmvPromise = searchJPdmv('', false); // JPdmvからも取得
+      const ivfreeVideos = await ivfreePromise.catch(() => []);
+
+      const { queryUsed: mat6tubeQueryUsed, videos: mat6tubeVideos } =
+        await searchMat6tubeByIvTitleSeed(ivfreeVideos).catch(() => ({ queryUsed: '', videos: [] }));
+      ivMat6tubeQueryUsed = mat6tubeQueryUsed || '';
+      console.log(`🔎 IVランダム(Mat6tube): タイトル由来クエリ="${ivMat6tubeQueryUsed}" で ${mat6tubeVideos?.length || 0}件`);
+
+      const jpdmvVideos = await jpdmvPromise.catch(() => []);
+
+      const ivResults = [
+        { name: 'searchIVFree', value: ivfreeVideos },
+        { name: 'searchJPdmv', value: jpdmvVideos },
+        { name: 'searchMat6tube', value: mat6tubeVideos }
       ];
-      
-      const ivResults = await Promise.allSettled(ivSearches);
-      
+
       // デバッグ: 各検索関数の結果を確認
-      const ivSearchFunctionNames = ['searchIVFree', 'searchJPdmv', 'searchMat6tube'];
-      ivResults.forEach((result, index) => {
-        const functionName = ivSearchFunctionNames[index];
-        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-          const videos = result.value;
-          console.log(`✅ [デバッグ] ${functionName}: ${videos.length}件の動画を取得`);
-          if (videos.length === 0) {
-            console.warn(`⚠️ [デバッグ] ${functionName}: 動画が0件です（空の結果）`);
-          } else {
-            // 最初の3件のソースを確認
-            const sources = [...new Set(videos.slice(0, 3).map(v => v.source))];
-            console.log(`📊 [デバッグ] ${functionName}: 最初の3件のソース: ${sources.join(', ')}`);
-          }
-          allVideos.push(...videos);
-        } else if (result.status === 'rejected') {
-          console.error(`❌ [デバッグ] ${functionName}でエラー:`, result.reason?.message || 'Unknown error');
-          console.error(`❌ [デバッグ] ${functionName}エラー詳細:`, result.reason);
+      ivResults.forEach((r) => {
+        const videos = Array.isArray(r.value) ? r.value : [];
+        console.log(`✅ [デバッグ] ${r.name}: ${videos.length}件の動画を取得`);
+        if (videos.length === 0) {
+          console.warn(`⚠️ [デバッグ] ${r.name}: 動画が0件です（空の結果）`);
         } else {
-          console.warn(`⚠️ [デバッグ] ${functionName}: 予期しない結果形式 (status: ${result.status})`);
+          const sources = [...new Set(videos.slice(0, 3).map(v => v.source))];
+          console.log(`📊 [デバッグ] ${r.name}: 最初の3件のソース: ${sources.join(', ')}`);
         }
+        allVideos.push(...videos);
       });
-      
+
       // 各検索関数からの取得数をサマリー表示
       console.log(`📊 [デバッグ] IVランダム: 各検索関数からの取得数サマリー:`);
-      ivResults.forEach((result, index) => {
-        const functionName = ivSearchFunctionNames[index];
-        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-          console.log(`  - ${functionName}: ${result.value.length}件`);
-        } else {
-          console.log(`  - ${functionName}: エラーまたは未取得`);
-        }
+      ivResults.forEach((r) => {
+        const videos = Array.isArray(r.value) ? r.value : [];
+        console.log(`  - ${r.name}: ${videos.length}件`);
       });
-      
+
       console.log(`✅ IVFree、JPdmv、Mat6tubeから${allVideos.length}件の動画を取得`);
     } else if (type === 'jav') {
       // JAV動画: Javmix.TV、JPdmv、Mat6tube、Japanhub、Douga4、FC2Video、Jable、X1hub、Airavから取得
@@ -4472,6 +4520,8 @@ app.get('/api/random', async (req, res) => {
       pppFilteredCount: pppFilteredCount,
       totalAfterFilter: uniqueVideos.length,
       pppInFinal: pppInFinal.length,
+      // IVランダムのMat6tube検索クエリ（タイトル由来）を返す
+      ivMat6tubeQueryUsed: type === 'iv' ? ivMat6tubeQueryUsed : '',
       sourceBreakdown: type === 'iv' ? {
         ivfree: uniqueVideos.filter(v => v.source === 'ivfree').length,
         jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
@@ -6358,6 +6408,11 @@ async function searchMat6tube(query, strictMode = true) {
         const $ = cheerio.load(response.data);
         console.log(`🔍 Mat6tube: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
+        // すべての処理で共有する重複チェック・カウンタ
+        const seenUrls = new Set();
+        let foundCount = 0;
+        let matchedCount = 0;
+
         // /video/パスで検索した場合の特別処理
         // /video/パスが含まれている場合は、すべての/video/リンクを取得
         const isVideoPathSearch = url.includes('/video/');
@@ -6497,9 +6552,6 @@ async function searchMat6tube(query, strictMode = true) {
           'a[href*="mat6tube.com"]'
         ];
         
-        const seenUrls = new Set();
-        let foundCount = 0;
-        let matchedCount = 0;
         
         // HTML構造のデバッグ（最初のURLのみ）
         if (urls.indexOf(url) === 0) {
