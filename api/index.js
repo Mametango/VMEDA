@@ -17,6 +17,112 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { MongoClient } = require('mongodb');
 
+// Cloudflare対策（403 "Just a moment..."）: r.jina.ai 経由でHTML/リンクを取得するフォールバック
+const JINA_PROXY_BASE = 'https://r.jina.ai/http://';
+
+function buildJinaProxyUrl(originalUrl) {
+  if (!originalUrl) return '';
+  return JINA_PROXY_BASE + String(originalUrl).replace(/^https?:\/\//, '');
+}
+
+function isCloudflareChallengeHtml(html) {
+  if (!html) return false;
+  const s = String(html);
+  return (
+    s.includes('Just a moment') ||
+    s.includes('cf-chl') ||
+    s.includes('/cdn-cgi/challenge-platform') ||
+    s.includes('Attention Required') ||
+    s.includes('Cloudflare')
+  );
+}
+
+async function fetchMarkdownViaJina(originalUrl, timeoutMs = 20000) {
+  const proxyUrl = buildJinaProxyUrl(originalUrl);
+  if (!proxyUrl) throw new Error('Invalid URL for Jina proxy');
+  const resp = await axios.get(proxyUrl, {
+    timeout: timeoutMs,
+    validateStatus: () => true
+  });
+  if (resp.status >= 400) {
+    throw new Error(`Jina proxy HTTP ${resp.status}`);
+  }
+  return String(resp.data || '');
+}
+
+function extractVideosFromJinaMarkdown(markdown, options) {
+  const {
+    source,
+    includeUrlSubstrings = [],
+    excludeUrlSubstrings = [],
+    max = 50
+  } = options || {};
+
+  const lines = String(markdown || '').split('\n');
+  const videos = [];
+  const seen = new Set();
+
+  const cleanTitle = (t) =>
+    String(t || '')
+      .replace(/^#+\s*/, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 200);
+
+  for (let i = 0; i < lines.length && videos.length < max; i++) {
+    const line = lines[i];
+    const linkMatches = [...line.matchAll(/\]\((https?:\/\/[^\s)]+)\)/g)];
+    if (linkMatches.length === 0) continue;
+
+    for (const m of linkMatches) {
+      const url = m[1];
+      if (!url) continue;
+
+      if (excludeUrlSubstrings.some((x) => url.includes(x))) continue;
+      if (includeUrlSubstrings.length > 0 && !includeUrlSubstrings.some((x) => url.includes(x))) continue;
+
+      const thumbMatch = line.match(/!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/);
+      const thumbnail = thumbMatch ? thumbMatch[1] : '';
+
+      let title = '';
+      const altTitleMatch = line.match(/!\[[^\]:]*:\s*([^\]]+)\]/);
+      if (altTitleMatch) {
+        title = altTitleMatch[1];
+      } else {
+        const next = lines[i + 1] || '';
+        const heading = next.match(/^#{2,6}\s+(.+)$/);
+        if (heading) title = heading[1];
+      }
+
+      if (!title) {
+        const textMatch = line.match(/\[([^\]]+)\]\(\s*https?:\/\/[^\s)]+\s*\)/);
+        if (textMatch && !textMatch[1].startsWith('![')) title = textMatch[1];
+      }
+
+      const finalTitle = cleanTitle(title) || cleanTitle(url.split('/').filter(Boolean).pop());
+      if (!finalTitle || finalTitle.length < 2) continue;
+
+      const normalizedUrl = url.replace(/^http:\/\//, 'https://');
+      if (seen.has(normalizedUrl)) continue;
+      seen.add(normalizedUrl);
+
+      videos.push({
+        id: `${source || 'jina'}-${Date.now()}-${videos.length}`,
+        title: finalTitle,
+        thumbnail: thumbnail || '',
+        duration: '',
+        url: normalizedUrl,
+        embedUrl: normalizedUrl,
+        source: source || 'jina'
+      });
+
+      if (videos.length >= max) break;
+    }
+  }
+
+  return videos;
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -1681,10 +1787,33 @@ async function searchJPdmv(query, strictMode = true) {
             'Referer': 'https://jpdmv.com/',
             'Accept-Encoding': 'gzip, deflate, br'
           },
-          timeout: 30000
+          timeout: 30000,
+          validateStatus: () => true
         });
         
         console.log(`🔍 JPdmv: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
+
+        // Cloudflareブロック時は r.jina.ai 経由で取得してリンクから復元
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ JPdmv: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'jpdmv',
+            // JPdmvは /video/ ではなく記事スラッグが多いので、ドメイン内リンクを広めに許可
+            includeUrlSubstrings: ['jpdmv.com/'],
+            excludeUrlSubstrings: ['/wp-content/', '/wp-json/', '/wp-admin', '/category', '/tag', '/page/', '/search', '#', '/privacy', '/terms'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) {
+            console.log(`✅ JPdmv(Jina): ${jinaVideos.length}件の動画を取得`);
+            return jinaVideos;
+          }
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ JPdmv: HTTP ${response.status}`);
+          continue;
+        }
         
         const $ = cheerio.load(response.data);
         console.log(`🔍 JPdmv: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
@@ -1736,8 +1865,27 @@ async function searchJPdmv(query, strictMode = true) {
             // jpdmv.comのドメイン内のリンクで、動画らしいURLパターンを含むもの
             if (!href) return;
             const isJpdmvUrl = href.includes('jpdmv.com') || href.startsWith('/');
-            const hasVideoPattern = href.includes('/video/') || href.includes('/watch/') || href.includes('/v/') || href.includes('/play/') || href.includes('/movie/') || href.includes('/embed/');
-            if (!isJpdmvUrl || !hasVideoPattern) {
+            // JPdmvは /video/ 系が無い場合がある（記事スラッグ形式）。画像付きの投稿リンクも拾う。
+            const hasVideoPattern =
+              href.includes('/video/') ||
+              href.includes('/watch/') ||
+              href.includes('/v/') ||
+              href.includes('/play/') ||
+              href.includes('/movie/') ||
+              href.includes('/embed/') ||
+              /\/[a-z]{2,}-\d{3,}/i.test(href) || // TSDS-42814 等
+              /\/\d{4,}/.test(href);
+            const isExcluded =
+              href.includes('/wp-content/') ||
+              href.includes('/wp-json/') ||
+              href.includes('/wp-admin') ||
+              href.includes('/category') ||
+              href.includes('/tag') ||
+              href.includes('/page/') ||
+              href.includes('/search') ||
+              href.includes('#');
+
+            if (!isJpdmvUrl || isExcluded || !hasVideoPattern) {
               return;
             }
             
@@ -1828,6 +1976,19 @@ async function searchJPdmv(query, strictMode = true) {
           console.log(`ℹ️ JPdmv: このURLでは結果が見つかりませんでした（URL: ${url}）`);
         }
       } catch (urlError) {
+        if (urlError.response && urlError.response.status === 403 && isCloudflareChallengeHtml(urlError.response.data)) {
+          try {
+            console.warn('⚠️ JPdmv: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
+            const md = await fetchMarkdownViaJina(url);
+            const jinaVideos = extractVideosFromJinaMarkdown(md, {
+              source: 'jpdmv',
+              includeUrlSubstrings: ['jpdmv.com/'],
+              excludeUrlSubstrings: ['/wp-content/', '/wp-json/', '/wp-admin', '/category', '/tag', '/page/', '/search', '#', '/privacy', '/terms'],
+              max: 50
+            });
+            if (jinaVideos.length > 0) return jinaVideos;
+          } catch (_) {}
+        }
         // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
         if (triedUrls === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
           console.log(`ℹ️ JPdmv: 検索エンドポイントが見つかりません（${urlError.response.status}）。他のURLパターンを試行します。`);
@@ -1992,8 +2153,29 @@ async function searchX1hub(query) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Referer': 'https://x1hub.com/'
       },
-      timeout: 30000
+      timeout: 30000,
+      validateStatus: () => true
     });
+
+    if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+      console.warn('⚠️ X1hub: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+      const md = await fetchMarkdownViaJina(url);
+      const jinaVideos = extractVideosFromJinaMarkdown(md, {
+        source: 'x1hub',
+        includeUrlSubstrings: ['x1hub.com/contents/video', 'www.x1hub.com/contents/video'],
+        excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
+        max: 50
+      });
+      if (jinaVideos.length > 0) {
+        console.log(`✅ X1hub(Jina): ${jinaVideos.length}件の動画を取得`);
+        return jinaVideos;
+      }
+      return [];
+    }
+    if (response.status >= 400) {
+      console.warn(`⚠️ X1hub: HTTP ${response.status}`);
+      return [];
+    }
     
     const $ = cheerio.load(response.data);
     const videos = [];
@@ -2024,17 +2206,23 @@ async function searchX1hub(query) {
         if (!href || (!href.includes('/video/') && !href.includes('/watch/'))) return;
         
         const fullUrl = href.startsWith('http') ? href : `https://x1hub.com${href}`;
-        const title = extractTitle($, $item);
+        const title = extractTitle($, $item) || $item.text().trim() || '';
         const thumbnail = extractThumbnail($, $item);
         const duration = extractDurationFromHtml($, $item);
         
-        if (title && title.length > 3) {
+        let finalTitle = title;
+        if (!finalTitle || finalTitle.length < 3) {
+          const urlMatch = fullUrl.match(/\/([^\/]+)$/);
+          if (urlMatch) finalTitle = decodeURIComponent(urlMatch[1]).replace(/[-_]/g, ' ').trim();
+        }
+
+        if (finalTitle && finalTitle.length > 2) {
           // 重複チェック
           const isDuplicate = videos.some(v => v.url === fullUrl);
           if (!isDuplicate) {
             videos.push({
               id: `x1hub-${Date.now()}-${index}`,
-              title: title.substring(0, 200),
+              title: finalTitle.substring(0, 200),
               thumbnail: thumbnail || '',
               duration: duration || '',
               url: fullUrl,
@@ -2045,11 +2233,41 @@ async function searchX1hub(query) {
         }
       });
     });
+
+    if (videos.length === 0) {
+      try {
+        console.warn('⚠️ X1hub: HTMLから0件。r.jina.ai にフォールバックします。');
+        const md = await fetchMarkdownViaJina(url);
+        const jinaVideos = extractVideosFromJinaMarkdown(md, {
+          source: 'x1hub',
+          includeUrlSubstrings: ['x1hub.com/contents/video', 'www.x1hub.com/contents/video'],
+          excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
+          max: 50
+        });
+        if (jinaVideos.length > 0) {
+          console.log(`✅ X1hub(Jina): ${jinaVideos.length}件の動画を取得`);
+          return jinaVideos;
+        }
+      } catch (_) {}
+    }
     
     console.log(`✅ X1hub: ${videos.length}件の動画を取得`);
     return videos;
   } catch (error) {
     console.error('X1hub検索エラー:', error.message);
+    if (error.response && error.response.status === 403 && isCloudflareChallengeHtml(error.response.data)) {
+      try {
+        console.warn('⚠️ X1hub: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
+        const md = await fetchMarkdownViaJina('https://x1hub.com/');
+        const jinaVideos = extractVideosFromJinaMarkdown(md, {
+          source: 'x1hub',
+          includeUrlSubstrings: ['x1hub.com/contents/video', 'www.x1hub.com/contents/video'],
+          excludeUrlSubstrings: ['/search', '/categories', '/category', '/tags', '#'],
+          max: 50
+        });
+        if (jinaVideos.length > 0) return jinaVideos;
+      } catch (_) {}
+    }
     return [];
   }
 }
@@ -2586,8 +2804,26 @@ async function searchYouku(query) {
             'Referer': 'https://www.youku.com/',
             'Accept-Encoding': 'gzip, deflate, br'
           },
-          timeout: 30000
+          timeout: 30000,
+          validateStatus: () => true
         });
+
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ Jable: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'jable',
+            includeUrlSubstrings: ['jable.tv/videos/'],
+            excludeUrlSubstrings: ['/categories', '/models', '/latest-updates', '/hot', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) return jinaVideos;
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ Jable: HTTP ${response.status}`);
+          continue;
+        }
         
         const $ = cheerio.load(response.data);
         
@@ -2849,8 +3085,26 @@ async function searchSohu(query) {
             'Accept-Encoding': 'gzip, deflate, br'
           },
           timeout: 30000,
-          maxRedirects: 5
+          maxRedirects: 5,
+          validateStatus: () => true
         });
+
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ Airav: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'airav',
+            includeUrlSubstrings: ['airav.io/cn/video'],
+            excludeUrlSubstrings: ['/cn/search', '/cn/videos', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) return jinaVideos;
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ Airav: HTTP ${response.status}`);
+          continue;
+        }
         
         const $ = cheerio.load(response.data);
         console.log(`🔍 Sohu検索: ${url} - HTMLサイズ: ${response.data.length}文字`);
@@ -3290,8 +3544,26 @@ async function searchJavmix(query, strictMode = true) {
             'Referer': 'https://javmix.tv/',
             'Accept-Encoding': 'gzip, deflate, br'
           },
-          timeout: 30000
+          timeout: 30000,
+          validateStatus: () => true
         });
+
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ Jable: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'jable',
+            includeUrlSubstrings: ['jable.tv/videos/'],
+            excludeUrlSubstrings: ['/categories', '/models', '/latest-updates', '/hot', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) return jinaVideos;
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ Jable: HTTP ${response.status}`);
+          continue;
+        }
         
         const $ = cheerio.load(response.data);
         console.log(`🔍 Javmix.TV: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
@@ -3838,6 +4110,19 @@ async function searchJapanhub(query, strictMode = false) {
         // 結果が見つかったらループを抜ける
         if (videos.length > 0) break;
       } catch (urlError) {
+        if (urlError.response && urlError.response.status === 403 && isCloudflareChallengeHtml(urlError.response.data)) {
+          try {
+            console.warn('⚠️ Japanhub: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+            const md = await fetchMarkdownViaJina(url);
+            const jinaVideos = extractVideosFromJinaMarkdown(md, {
+              source: 'japanhub',
+              includeUrlSubstrings: ['japanhub.net/video', 'japanhub.net/watch', 'japanhub.net/v/'],
+              excludeUrlSubstrings: ['/signup', '/login', '/lost', '/confirm', '#'],
+              max: 50
+            });
+            if (jinaVideos.length > 0) return jinaVideos;
+          } catch (_) {}
+        }
         console.warn(`⚠️ Japanhub URL試行エラー (${url}):`, urlError.message);
         continue;
       }
@@ -4487,8 +4772,26 @@ async function searchJable(query) {
             'Referer': 'https://jable.tv/',
             'Accept-Encoding': 'gzip, deflate, br'
           },
-          timeout: 30000
+          timeout: 30000,
+          validateStatus: () => true
         });
+
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ Jable: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'jable',
+            includeUrlSubstrings: ['jable.tv/videos/'],
+            excludeUrlSubstrings: ['/categories', '/models', '/latest-updates', '/hot', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) return jinaVideos;
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ Jable: HTTP ${response.status}`);
+          continue;
+        }
         
         const $ = cheerio.load(response.data);
         
@@ -4562,6 +4865,19 @@ async function searchJable(query) {
         // 結果が見つかったらループを抜ける
         if (videos.length > 0) break;
       } catch (urlError) {
+        if (urlError.response && urlError.response.status === 403 && isCloudflareChallengeHtml(urlError.response.data)) {
+          try {
+            console.warn('⚠️ Jable: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
+            const md = await fetchMarkdownViaJina(url);
+            const jinaVideos = extractVideosFromJinaMarkdown(md, {
+              source: 'jable',
+              includeUrlSubstrings: ['jable.tv/videos/'],
+              excludeUrlSubstrings: ['/categories', '/models', '/latest-updates', '/hot', '#'],
+              max: 50
+            });
+            if (jinaVideos.length > 0) return jinaVideos;
+          } catch (_) {}
+        }
         console.warn(`⚠️ Jable.TV URL試行エラー (${url}):`, urlError.message);
         continue;
       }
@@ -4610,8 +4926,26 @@ async function searchAirav(query, strictMode = true) {
             'Accept-Encoding': 'gzip, deflate, br'
           },
           timeout: 30000,
-          maxRedirects: 5
+          maxRedirects: 5,
+          validateStatus: () => true
         });
+
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ Airav: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'airav',
+            includeUrlSubstrings: ['airav.io/cn/video'],
+            excludeUrlSubstrings: ['/cn/search', '/cn/videos', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) return jinaVideos;
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ Airav: HTTP ${response.status}`);
+          continue;
+        }
         
         const $ = cheerio.load(response.data);
         
@@ -4685,6 +5019,19 @@ async function searchAirav(query, strictMode = true) {
         // 結果が見つかったらループを抜ける
         if (videos.length > 0) break;
       } catch (urlError) {
+        if (urlError.response && urlError.response.status === 403 && isCloudflareChallengeHtml(urlError.response.data)) {
+          try {
+            console.warn('⚠️ Airav: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
+            const md = await fetchMarkdownViaJina(url);
+            const jinaVideos = extractVideosFromJinaMarkdown(md, {
+              source: 'airav',
+              includeUrlSubstrings: ['airav.io/cn/video'],
+              excludeUrlSubstrings: ['/cn/search', '/cn/videos', '#'],
+              max: 50
+            });
+            if (jinaVideos.length > 0) return jinaVideos;
+          } catch (_) {}
+        }
         console.warn(`⚠️ Airav URL試行エラー (${url}):`, urlError.message);
         continue;
       }
@@ -6576,10 +6923,14 @@ async function searchMat6tube(query, strictMode = true) {
     // 空のクエリの場合は、トップページや最新動画ページから動画を取得
     const encodedQuery = query ? encodeURIComponent(query) : '';
     const urls = (!query || query.trim().length === 0) ? [
-      'https://mat6tube.com/', // トップページから最新動画を取得
-      'https://mat6tube.com/recent', // /recentページは検索クエリなしで最新動画を取得
-      'https://mat6tube.com/video/', // /video/パスで全動画を取得
-      'https://mat6tube.com/latest' // 最新動画ページ
+      // mat6tube はトップ/最新がJSレンダリングで空になりやすい。
+      // /search?q=... がHTTP 404でも本文に動画リンクが含まれることがあるため、まずここを試す。
+      'https://mat6tube.com/search?q=1',
+      'https://mat6tube.com/search?q=a',
+      'https://mat6tube.com/', // トップページ
+      'https://mat6tube.com/recent', // /recentページ
+      'https://mat6tube.com/video/', // /video/パス
+      'https://mat6tube.com/latest' // 最新動画ページ（存在しない場合あり）
     ] : [
       `https://mat6tube.com/video/${encodedQuery}`, // 最優先：/video/パスで検索
       `https://mat6tube.com/video/${query}`, // エンコードなしも試す
@@ -6601,7 +6952,8 @@ async function searchMat6tube(query, strictMode = true) {
             'Referer': 'https://mat6tube.com/',
             'Accept-Encoding': 'gzip, deflate, br'
           },
-          timeout: 30000
+          timeout: 30000,
+          validateStatus: () => true
         });
         
         console.log(`🔍 Mat6tube: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
@@ -6991,10 +7343,28 @@ async function searchFC2Video(query, strictMode = true) {
             'Referer': 'https://fc2video.org/',
             'Accept-Encoding': 'gzip, deflate, br'
           },
-          timeout: 30000
+          timeout: 30000,
+          validateStatus: () => true
         });
         
         console.log(`🔍 FC2Video.org: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
+
+        if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+          console.warn('⚠️ FC2Video.org: Cloudflare(403) を検出。r.jina.ai にフォールバックします。');
+          const md = await fetchMarkdownViaJina(url);
+          const jinaVideos = extractVideosFromJinaMarkdown(md, {
+            source: 'fc2video',
+            includeUrlSubstrings: ['fc2video.org/'],
+            excludeUrlSubstrings: ['/all/', '/riben', '/youma', '/wuma', '/tags', '/category', '#'],
+            max: 50
+          });
+          if (jinaVideos.length > 0) return jinaVideos;
+          continue;
+        }
+        if (response.status >= 400) {
+          console.warn(`⚠️ FC2Video.org: HTTP ${response.status}`);
+          continue;
+        }
         const $ = cheerio.load(response.data);
         console.log(`🔍 FC2Video.org: HTML取得完了、パース開始 (HTMLサイズ: ${response.data.length} bytes)`);
         
@@ -7043,7 +7413,17 @@ async function searchFC2Video(query, strictMode = true) {
             // fc2video.orgのドメイン内のリンクで、動画らしいURLパターンを含むもの
             if (!href) return;
             const isFC2VideoUrl = href.includes('fc2video.org') || href.startsWith('/');
-            const hasVideoPattern = href.includes('/video/') || href.includes('/watch/') || href.includes('/v/') || href.includes('/play/') || href.includes('/movie/') || href.includes('/embed/') || href.includes('PPV-') || href.includes('PPV');
+            const hasVideoPattern =
+              href.includes('/video/') ||
+              href.includes('/watch/') ||
+              href.includes('/v/') ||
+              href.includes('/play/') ||
+              href.includes('/movie/') ||
+              href.includes('/embed/') ||
+              href.includes('PPV-') ||
+              href.includes('PPV') ||
+              /\.html($|\?)/i.test(href) || // /1234.html 形式
+              /\/\d{3,}($|\/|\?)/.test(href); // /2257 など
             if (!isFC2VideoUrl || !hasVideoPattern) {
               return;
             }
@@ -7148,6 +7528,19 @@ async function searchFC2Video(query, strictMode = true) {
           console.log(`ℹ️ FC2Video.org: このURLでは結果が見つかりませんでした（URL: ${url}）`);
         }
       } catch (urlError) {
+        if (urlError.response && urlError.response.status === 403 && isCloudflareChallengeHtml(urlError.response.data)) {
+          try {
+            console.warn('⚠️ FC2Video.org: Cloudflare(403) を検出（例外）。r.jina.ai にフォールバックします。');
+            const md = await fetchMarkdownViaJina(url);
+            const jinaVideos = extractVideosFromJinaMarkdown(md, {
+              source: 'fc2video',
+              includeUrlSubstrings: ['fc2video.org/'],
+              excludeUrlSubstrings: ['/all/', '/riben', '/youma', '/wuma', '/tags', '/category', '#'],
+              max: 50
+            });
+            if (jinaVideos.length > 0) return jinaVideos;
+          } catch (_) {}
+        }
         // 404や403エラーは予想される動作なので、警告を抑制（最初のURLのみ情報を出力）
         const urlIndex = urls.indexOf(url) + 1;
         if (urlIndex === 1 && urlError.response && (urlError.response.status === 404 || urlError.response.status === 403)) {
