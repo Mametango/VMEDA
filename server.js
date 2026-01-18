@@ -134,45 +134,50 @@ function extractVideosFromJinaMarkdown(markdown, options) {
   return videos;
 }
 
-function extractIvKeywordsFromTitles(videos, max = 30) {
-  const out = [];
-  const seen = new Set();
-
-  const push = (kw) => {
-    const s = String(kw || '').trim();
-    if (!s) return;
-    if (seen.has(s)) return;
-    seen.add(s);
-    out.push(s);
-  };
+function extractIvPrefixesFromTitles(videos, max = 10) {
+  // IVFreeのタイトルからプレフィックス（IMOB / ICDV / MMR 等）を抽出し、頻度順に返す
+  const counts = new Map();
 
   for (const v of videos || []) {
     const title = String(v?.title || '');
-
-    // 例: [IMOB-059] / ICDV-30133 など
-    const codeMatches = title.match(/[A-Z]{2,6}-\d{2,6}/g) || [];
-    for (const c of codeMatches) push(c);
-
-    // 例: [IMOB-059] の prefix を拾う（IMOB）
-    const prefixMatch = title.match(/\[([A-Z]{2,6})-\d{2,6}\]/);
-    if (prefixMatch) push(prefixMatch[1]);
-
-    if (out.length >= max) break;
+    const matches = [...title.matchAll(/(?:\[)?([A-Z]{2,6})-\d{2,6}(?:\])?/g)];
+    for (const m of matches) {
+      const prefix = String(m[1] || '').trim();
+      if (!prefix) continue;
+      counts.set(prefix, (counts.get(prefix) || 0) + 1);
+    }
   }
 
-  return out;
+  const ranked = [...counts.entries()]
+    .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+    .map(([prefix]) => prefix);
+
+  // ユーザー要望: ICDV/MMR/IMOB などのプレフィックスで検索する
+  const preferred = ['ICDV', 'MMR', 'IMOB'];
+  const preferredFound = ranked.filter((p) => preferred.includes(p));
+  const result = preferredFound.length > 0 ? preferredFound : ranked;
+
+  return result.slice(0, max);
 }
 
 async function searchMat6tubeByIvTitleSeed(ivfreeVideos) {
-  const candidates = extractIvKeywordsFromTitles(ivfreeVideos, 30);
+  // Mat6tubeは個別コードではなく、ICDV/MMR/IMOB等の「プレフィックス」で検索する
+  const candidates = extractIvPrefixesFromTitles(ivfreeVideos, 10);
   if (!candidates.length) {
     return { queryUsed: '', videos: await searchMat6tube('', false) };
   }
 
+  // 候補を軽くシャッフルして偏りを減らす
+  const shuffled = [...candidates];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
   // 先頭から数個だけ試して、ヒットしたものを採用（処理時間を抑える）
-  const tryCount = Math.min(8, candidates.length);
+  const tryCount = Math.min(5, shuffled.length);
   for (let i = 0; i < tryCount; i++) {
-    const kw = candidates[i];
+    const kw = shuffled[i];
     try {
       const videos = await searchMat6tube(kw, false);
       if (Array.isArray(videos) && videos.length > 0) {
