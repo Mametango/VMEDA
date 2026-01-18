@@ -3982,19 +3982,17 @@ app.get('/api/random', async (req, res) => {
     let allVideos = [];
     
     if (type === 'iv') {
-      // IV動画: IVFree、JPdmv、Mat6tube、Douga4、FC2Videoからランダムに表示
+      // IV動画: IVFree、JPdmv、Mat6tubeからランダムに表示
       const ivSearches = [
         searchIVFree('', false), // 空のクエリで全件取得
         searchJPdmv('', false), // JPdmvからも取得
-        searchMat6tube('', false), // Mat6tubeからも取得
-        searchDouga4('', false), // Douga4からも取得
-        searchFC2Video('', false) // FC2Videoからも取得
+        searchMat6tube('', false) // Mat6tubeからも取得
       ];
       
       const ivResults = await Promise.allSettled(ivSearches);
       
       // デバッグ: 各検索関数の結果を確認
-      const ivSearchFunctionNames = ['searchIVFree', 'searchJPdmv', 'searchMat6tube', 'searchDouga4', 'searchFC2Video'];
+      const ivSearchFunctionNames = ['searchIVFree', 'searchJPdmv', 'searchMat6tube'];
       ivResults.forEach((result, index) => {
         const functionName = ivSearchFunctionNames[index];
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
@@ -4027,7 +4025,7 @@ app.get('/api/random', async (req, res) => {
         }
       });
       
-      console.log(`✅ IVFree、JPdmv、Mat6tube、Douga4、FC2Videoから${allVideos.length}件の動画を取得`);
+      console.log(`✅ IVFree、JPdmv、Mat6tubeから${allVideos.length}件の動画を取得`);
     } else if (type === 'jav') {
       // JAV動画: Javmix.TV、JPdmv、Mat6tube、Japanhub、Douga4、FC2Video、Jable、X1hub、Airavから取得
       const javSearches = [
@@ -4188,9 +4186,7 @@ app.get('/api/random', async (req, res) => {
         ivfree: uniqueVideos.filter(v => v.source === 'ivfree').length,
         jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
         mat6tube: uniqueVideos.filter(v => v.source === 'mat6tube').length,
-        douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
-        fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
-        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv', 'mat6tube', 'douga4', 'fc2video'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv', 'mat6tube'].includes(v.source)).length
       } : type === 'jav' ? {
         javmix: uniqueVideos.filter(v => v.source === 'javmix').length,
         jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
@@ -4259,11 +4255,9 @@ app.get('/api/random', async (req, res) => {
         ivfree: uniqueVideos.filter(v => v.source === 'ivfree').length,
         jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
         mat6tube: uniqueVideos.filter(v => v.source === 'mat6tube').length,
-        douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
-        fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
-        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv', 'mat6tube', 'douga4', 'fc2video'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv', 'mat6tube'].includes(v.source)).length
       };
-      console.log(`📊 ソース別内訳: IVFree=${ivSourceCounts.ivfree}件, JPdmv=${ivSourceCounts.jpdmv}件, Mat6tube=${ivSourceCounts.mat6tube}件, Douga4=${ivSourceCounts.douga4}件, FC2Video=${ivSourceCounts.fc2video}件, その他=${ivSourceCounts.other}件`);
+      console.log(`📊 ソース別内訳: IVFree=${ivSourceCounts.ivfree}件, JPdmv=${ivSourceCounts.jpdmv}件, Mat6tube=${ivSourceCounts.mat6tube}件, その他=${ivSourceCounts.other}件`);
     } else {
       const sourceCounts = {
         javmix: uniqueVideos.filter(v => v.source === 'javmix').length,
