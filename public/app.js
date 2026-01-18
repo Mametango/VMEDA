@@ -1318,6 +1318,30 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
         ivfreeUpdateDebugInfo();
       });
   }
+
+  // JPdmvの動画URLを取得（ページ内プレイヤーが読み込めない場合に備えて差し替え）
+  if (source === 'jpdmv') {
+    console.log('📺 JPdmv動画URLをサーバーから取得中...', originalUrl);
+    fetch(`/api/jpdmv-video?url=${encodeURIComponent(originalUrl)}`)
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        if (data?.embedUrl && typeof data.embedUrl === 'string') {
+          // 取得した埋め込みURLへ切り替え（同じなら何もしない）
+          if (data.embedUrl !== iframe.src) {
+            iframe.removeAttribute('sandbox'); // jpdmvは制限を緩める
+            iframe.src = data.embedUrl;
+            console.log('✅ JPdmv動画URLへ切り替え:', data.embedUrl);
+          }
+        }
+      })
+      .catch(error => {
+        // 失敗しても、既にjpdmv-proxy等で表示は試みているため、そのまま継続
+        console.log('ℹ️ JPdmv動画URL取得エラー（表示継続）:', error.message);
+      });
+  }
   
   // iOS Safariではiframeの読み込み確認が難しいため、タイムアウトを長めに設定
   // タイムアウトでエラー検出（Bilibiliとdouga4の場合は15秒、IVFreeは20秒、その他は10秒）

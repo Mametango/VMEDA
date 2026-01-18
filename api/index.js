@@ -5345,6 +5345,101 @@ app.get('/api/douga4-video', async (req, res) => {
   }
 });
 
+// JPdmv動画ページから実際の埋め込みURLを取得するエンドポイント
+app.get('/api/jpdmv-video', async (req, res) => {
+  try {
+    const videoUrl = req.query.url;
+    if (!videoUrl || !String(videoUrl).includes('jpdmv.com')) {
+      return res.status(400).json({ error: 'JPdmv URL is required' });
+    }
+
+    console.log('📺 JPdmv動画URL取得リクエスト:', videoUrl);
+
+    const response = await axios.get(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://jpdmv.com/',
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000,
+      maxRedirects: 5,
+      validateStatus: () => true
+    });
+
+    if (response.status === 403 && isCloudflareChallengeHtml(response.data)) {
+      console.warn('⚠️ JPdmv動画URL取得: Cloudflare(403) を検出。フォールバックして元URLを返します。');
+      return res.json({ embedUrl: videoUrl, originalUrl: videoUrl });
+    }
+    if (response.status >= 400) {
+      console.warn(`⚠️ JPdmv動画URL取得: HTTP ${response.status}`);
+      return res.json({ embedUrl: videoUrl, originalUrl: videoUrl });
+    }
+
+    const $ = cheerio.load(response.data);
+
+    let embedUrl = '';
+    const iframeCandidates = $('iframe[src]').toArray();
+    for (const el of iframeCandidates) {
+      const src = $(el).attr('src') || '';
+      if (!src) continue;
+      const full = src.startsWith('http') ? src : new URL(src, videoUrl).toString();
+
+      const lower = full.toLowerCase();
+      const looksLikePlayer =
+        lower.includes('embed') ||
+        lower.includes('player') ||
+        lower.includes('video') ||
+        lower.includes('stream');
+      const looksLikeAd =
+        lower.includes('doubleclick') ||
+        lower.includes('googlesyndication') ||
+        lower.includes('ads') ||
+        lower.includes('analytics');
+      if (looksLikeAd) continue;
+      if (looksLikePlayer) {
+        embedUrl = full;
+        break;
+      }
+      if (!embedUrl) embedUrl = full;
+    }
+
+    if (!embedUrl) {
+      const videoSrc = $('video source[src]').first().attr('src');
+      if (videoSrc) {
+        embedUrl = videoSrc.startsWith('http') ? videoSrc : new URL(videoSrc, videoUrl).toString();
+      }
+    }
+
+    if (!embedUrl) {
+      const scriptTags = $('script').toArray();
+      for (const script of scriptTags) {
+        const scriptContent = $(script).html() || '';
+        const mp4Match = scriptContent.match(/['"](https?:\/\/[^'"]*\.(mp4|m3u8)(\?[^'"]*)?)['"]/i);
+        if (mp4Match) {
+          embedUrl = mp4Match[1];
+          break;
+        }
+        const iframeMatch = scriptContent.match(/<iframe[^>]+src=['"]([^'"]+)['"]/i);
+        if (iframeMatch) {
+          const src = iframeMatch[1];
+          embedUrl = src.startsWith('http') ? src : new URL(src, videoUrl).toString();
+          break;
+        }
+      }
+    }
+
+    if (!embedUrl) embedUrl = videoUrl;
+
+    console.log('✅ JPdmv動画URL取得:', embedUrl);
+    res.json({ embedUrl, originalUrl: videoUrl });
+  } catch (error) {
+    console.error('❌ JPdmv動画URL取得エラー:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve video URL', embedUrl: req.query.url });
+  }
+});
+
 // IVFree動画URL取得エンドポイント（広告除去版）
 app.get('/api/ivfree-video', async (req, res) => {
   try {
