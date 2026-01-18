@@ -6238,19 +6238,56 @@ app.get('/api/proxy-video', async (req, res) => {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
         'Referer': videoUrl,
-        'Accept-Encoding': 'gzip, deflate, br'
+        // 圧縮レスポンスだとHTML加工が難しくなるため、非圧縮を優先
+        'Accept-Encoding': 'identity'
       },
       timeout: 30000,
       maxRedirects: 5,
       responseType: 'arraybuffer'
     });
-    
-    // レスポンスヘッダーを転送
+
+    const contentType = String(response.headers['content-type'] || '');
+    const isHtml = contentType.includes('text/html') || contentType.includes('application/xhtml+xml');
+
+    // HTMLは相対パス崩れを避けるため <base> を注入
+    if (isHtml) {
+      const origin = (() => {
+        try {
+          return new URL(String(videoUrl)).origin + '/';
+        } catch {
+          return '';
+        }
+      })();
+
+      let html = Buffer.from(response.data || []).toString('utf8');
+      if (origin && !/<base\s+/i.test(html)) {
+        if (/<head[^>]*>/i.test(html)) {
+          html = html.replace(/<head([^>]*)>/i, (m) => `${m}<base href="${origin}">`);
+        } else if (/<html[^>]*>/i.test(html)) {
+          html = html.replace(/<html([^>]*)>/i, (m) => `${m}<head><base href="${origin}"></head>`);
+        } else {
+          html = `<head><base href="${origin}"></head>\n` + html;
+        }
+      }
+
+      res.set({
+        'Content-Type': contentType || 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-Content-Type-Options': 'nosniff'
+      });
+
+      return res.send(html);
+    }
+
+    // 非HTMLはそのまま返す
     res.set({
-      'Content-Type': response.headers['content-type'] || 'text/html',
-      'Cache-Control': 'public, max-age=3600'
+      'Content-Type': contentType || 'application/octet-stream',
+      'Cache-Control': 'public, max-age=3600',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'X-Content-Type-Options': 'nosniff'
     });
-    
+
     res.send(response.data);
   } catch (error) {
     console.error('❌ 動画プロキシエラー:', error.message);
@@ -6380,7 +6417,7 @@ app.get('/', (req, res) => {
                 <div id="results-container"></div>
                 <div id="video-player-container"></div>
               </div>
-              <script src="/app.js?v=1.0.2"></script>
+              <script src="/app.js?v=1.0.3"></script>
             </body>
             </html>
           `);

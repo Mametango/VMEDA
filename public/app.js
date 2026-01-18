@@ -1321,24 +1321,59 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
 
   // JPdmvの動画URLを取得（ページ内プレイヤーが読み込めない場合に備えて差し替え）
   if (source === 'jpdmv') {
+    let jpdmvStatusText = 'JPdmv: URL取得中...';
+    let jpdmvEmbedUrl = '';
+    const ensureJpdmvDebug = () => {
+      let el = container.querySelector('.debug-info');
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'debug-info';
+        el.style.cssText = 'position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.85); color: white; padding: 10px 12px; border-radius: 8px; font-size: 11px; z-index: 9999; max-width: 95%; word-break: break-all; line-height: 1.35;';
+        container.appendChild(el);
+      }
+      const currentSrc = iframe.src || '未設定';
+      el.innerHTML = `
+        <div style="font-weight:bold; margin-bottom:6px;">📺 JPdmv デバッグ</div>
+        <div>状態: ${escapeHtml(jpdmvStatusText)}</div>
+        <div style="margin-top:6px;">originalUrl:</div>
+        <div style="font-size:10px;">${escapeHtml(originalUrl || '')}</div>
+        <div style="margin-top:6px;">embedUrl(取得):</div>
+        <div style="font-size:10px;">${escapeHtml(jpdmvEmbedUrl || '')}</div>
+        <div style="margin-top:6px;">iframe.src(現在):</div>
+        <div style="font-size:10px;">${escapeHtml(currentSrc)}</div>
+      `;
+    };
+
+    ensureJpdmvDebug();
     console.log('📺 JPdmv動画URLをサーバーから取得中...', originalUrl);
     fetch(`/api/jpdmv-video?url=${encodeURIComponent(originalUrl)}`)
       .then(response => {
+        jpdmvStatusText = `JPdmv: レスポンス受信 (HTTP ${response.status})`;
+        ensureJpdmvDebug();
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json();
       })
       .then(data => {
         if (data?.embedUrl && typeof data.embedUrl === 'string') {
-          // 取得した埋め込みURLへ切り替え（同じなら何もしない）
-          if (data.embedUrl !== iframe.src) {
+          jpdmvEmbedUrl = data.embedUrl;
+          jpdmvStatusText = 'JPdmv: embedUrl取得OK';
+          ensureJpdmvDebug();
+
+          // 取得した埋め込みURLへ切り替え（プロキシ経由で読み込み、ブロック/相対パス崩れを軽減）
+          const nextSrc = `/api/proxy-video?url=${encodeURIComponent(data.embedUrl)}`;
+          if (nextSrc !== iframe.src) {
             iframe.removeAttribute('sandbox'); // jpdmvは制限を緩める
-            iframe.src = data.embedUrl;
-            console.log('✅ JPdmv動画URLへ切り替え:', data.embedUrl);
+            iframe.src = nextSrc;
+            jpdmvStatusText = 'JPdmv: iframe.src を更新（proxy-video）';
+            ensureJpdmvDebug();
+            console.log('✅ JPdmv動画URLへ切り替え（proxy-video）:', data.embedUrl);
           }
         }
       })
       .catch(error => {
         // 失敗しても、既にjpdmv-proxy等で表示は試みているため、そのまま継続
+        jpdmvStatusText = `JPdmv: 取得エラー（表示継続）: ${error.message}`;
+        ensureJpdmvDebug();
         console.log('ℹ️ JPdmv動画URL取得エラー（表示継続）:', error.message);
       });
   }
