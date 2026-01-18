@@ -419,16 +419,20 @@ app.get('/favicon.ico', (req, res) => {
 
 try {
   app.use(express.static(publicPath, {
-    maxAge: '1d', // キャッシュ1日
+    // JS/HTMLは更新が頻繁なので強キャッシュしない（古い app.js?v=1.0.2 問題対策）
+    maxAge: 0,
     etag: true,
     setHeaders: (res, filePath) => {
       // 静的ファイルのMIMEタイプを明示的に設定
       if (filePath.endsWith('.js')) {
         res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       } else if (filePath.endsWith('.css')) {
         res.setHeader('Content-Type', 'text/css');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       } else if (filePath.endsWith('.html')) {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       } else if (filePath.endsWith('.svg')) {
         res.setHeader('Content-Type', 'image/svg+xml');
       }
@@ -460,7 +464,7 @@ app.get('/app.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app.js'), {
     headers: { 
       'Content-Type': 'application/javascript',
-      'Cache-Control': 'public, max-age=86400'
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
     }
   });
 });
@@ -470,7 +474,7 @@ app.get('/styles.css', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'styles.css'), {
     headers: { 
       'Content-Type': 'text/css',
-      'Cache-Control': 'public, max-age=86400'
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
     }
   });
 });

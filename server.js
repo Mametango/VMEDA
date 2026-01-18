@@ -6417,7 +6417,7 @@ app.get('/', (req, res) => {
                 <div id="results-container"></div>
                 <div id="video-player-container"></div>
               </div>
-              <script src="/app.js?v=1.0.3"></script>
+              <script src="/app.js?v=1.0.4"></script>
             </body>
             </html>
           `);
