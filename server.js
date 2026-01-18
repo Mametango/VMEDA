@@ -1592,7 +1592,10 @@ async function searchJPdmv(query, strictMode = true) {
           });
           if (jinaVideos.length > 0) {
             console.log(`✅ JPdmv(Jina): ${jinaVideos.length}件の動画を取得`);
-            return jinaVideos;
+            return jinaVideos.map(v => ({
+              ...v,
+              embedUrl: `/api/jpdmv-proxy?url=${encodeURIComponent(v.url)}`
+            }));
           }
           continue;
         }
@@ -1726,7 +1729,7 @@ async function searchJPdmv(query, strictMode = true) {
                 thumbnail: thumbnail || '',
                 duration: duration || '',
                 url: fullUrl,
-                embedUrl: fullUrl,
+                embedUrl: `/api/jpdmv-proxy?url=${encodeURIComponent(fullUrl)}`,
                 source: 'jpdmv'
               });
             } else if (fullUrl && fullUrl.includes('jpdmv.com')) {
@@ -1738,7 +1741,7 @@ async function searchJPdmv(query, strictMode = true) {
                 thumbnail: thumbnail || '',
                 duration: duration || '',
                 url: fullUrl,
-                embedUrl: fullUrl,
+                embedUrl: `/api/jpdmv-proxy?url=${encodeURIComponent(fullUrl)}`,
                 source: 'jpdmv'
               });
             }
@@ -6113,6 +6116,54 @@ app.get('/api/proxy-video', async (req, res) => {
   } catch (error) {
     console.error('❌ 動画プロキシエラー:', error.message);
     res.status(500).json({ error: 'Failed to retrieve video' });
+  }
+});
+
+// JPdmv動画ページをiframeで表示するためのプロキシ
+app.get('/api/jpdmv-proxy', async (req, res) => {
+  try {
+    const videoUrl = req.query.url;
+    if (!videoUrl) return res.status(400).json({ error: 'URL is required' });
+
+    const isJpdmvUrl = String(videoUrl).includes('jpdmv.com');
+    if (!isJpdmvUrl) return res.status(400).json({ error: 'JPdmv URL is required' });
+
+    console.log('📺 JPdmv動画ページをプロキシ経由で取得:', videoUrl);
+
+    const response = await axios.get(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://jpdmv.com/',
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000,
+      maxRedirects: 5,
+      responseType: 'arraybuffer',
+      validateStatus: () => true
+    });
+
+    if (response.status >= 400) {
+      return res
+        .status(502)
+        .type('text/html')
+        .send(`<html><head><meta charset="utf-8"></head><body><h1>JPdmv プロキシエラー</h1><p>HTTP ${response.status}</p><p><a href="${videoUrl}" target="_blank" rel="noreferrer">元のページを開く</a></p></body></html>`);
+    }
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', response.headers['content-type'] || 'text/html; charset=utf-8');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // 同一オリジン内iframeでの表示を許可
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
+    res.send(response.data);
+  } catch (error) {
+    console.error('❌ JPdmvプロキシエラー:', error.message);
+    res
+      .status(500)
+      .type('text/html')
+      .send(`<html><head><meta charset="utf-8"></head><body><h1>JPdmv プロキシエラー</h1><p>${error.message}</p><p><a href="${req.query.url}" target="_blank" rel="noreferrer">元のページを開く</a></p></body></html>`);
   }
 });
 

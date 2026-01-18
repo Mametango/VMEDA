@@ -778,7 +778,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   const iframe = document.createElement('iframe');
   // URLを正規化（iOS Safari対応）
   let normalizedUrl = embedUrl.startsWith('//') ? `https:${embedUrl}` : embedUrl;
-  if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+  // /api/... のような相対URLはそのまま使う（https:// を付けない）
+  if (!normalizedUrl.startsWith('/') && !normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
     normalizedUrl = `https://${normalizedUrl}`;
   }
   
@@ -862,14 +863,14 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
   // ただし、Bilibili、douga4、ivfree、pizjavの場合は既に処理されているため除外
   const isIOSDevice = isIPhone();
-  if (isIOSDevice && source !== 'bilibili' && source !== 'douga4' && source !== 'ivfree' && source !== 'pizjav') {
+  if (isIOSDevice && source !== 'bilibili' && source !== 'douga4' && source !== 'ivfree' && source !== 'pizjav' && source !== 'jpdmv') {
     // プロキシエンドポイント経由でデスクトップのUser-Agentで読み込む
     const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(normalizedUrl)}`;
     normalizedUrl = proxyUrl;
   }
   
   // Bilibili、douga4、ivfreeの場合は、iPhone/Braveブラウザで特別な設定
-  if ((source === 'bilibili' || source === 'douga4' || source === 'ivfree') && isIPhone()) {
+  if ((source === 'bilibili' || source === 'douga4' || source === 'ivfree' || source === 'jpdmv') && isIPhone()) {
     // iPhone/Braveブラウザの場合、より寛容な設定を適用
     // sandbox属性は設定しない（プレイヤーが動作しなくなる可能性があるため）
     iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline; accelerometer; gyroscope; clipboard-write; clipboard-read');
