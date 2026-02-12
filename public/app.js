@@ -902,7 +902,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   iframe.className = 'video-player';
   iframe.setAttribute('loading', 'lazy');
   iframe.setAttribute('frameborder', '0');
-  iframe.setAttribute('scrolling', 'no');
+  iframe.setAttribute('scrolling', source === 'pizjav' ? 'yes' : 'no'); // Pizjav: ページ内スクロールで動画下半分を見られるように
   // iOS Safari対応（全画面表示を許可）
   iframe.setAttribute('webkitallowfullscreen', 'true');
   iframe.setAttribute('mozallowfullscreen', 'true');
