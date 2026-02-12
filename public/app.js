@@ -1,3 +1,8 @@
+/**
+ * VMEDA: あらゆるサイトを VMEDA のフィルター（プロキシ）を通して表示し、
+ * 広告などを排除して動画を視聴できるようにする。
+ * サイト表示・動画再生は原則としてプロキシ経由（site-proxy / ivfree-proxy 等）を利用する。
+ */
 // グローバルエラーハンドラー（外部リソースの読み込みエラーを抑制）
 window.addEventListener('error', (event) => {
   // 外部サイトのリソース読み込みエラーを抑制
@@ -109,8 +114,6 @@ const resultsDiv = document.getElementById('results');
 const loadingDiv = document.getElementById('loading');
 const sortContainer = document.getElementById('sort-container');
 const sortSelect = document.getElementById('sort-select');
-const ivRandomBtn = document.getElementById('iv-random-btn');
-const javRandomBtn = document.getElementById('jav-random-btn');
 
 // 現在の検索結果を保持
 let currentVideos = [];
@@ -239,7 +242,12 @@ function displayResults(videos, searchQuery) {
     return displayResults(videos, searchQuery);
   }
 
-  const html = videosToShow.map(video => {
+  const html = videosToShow.map((video, index) => {
+    // 表示に必要な最小限のフィールドを補完（JAVランダム等で欠損時も正常表示）
+    const vid = video.id || `video-${startIndex + index}`;
+    const title = (video.title && String(video.title).trim()) ? String(video.title) : '動画';
+    const url = video.url || '';
+    const embedUrl = video.embedUrl || url;
     // サムネイルURLを正規化（相対パスを絶対URLに変換）
     let thumbnail = video.thumbnail || '';
     if (thumbnail) {
@@ -262,16 +270,16 @@ function displayResults(videos, searchQuery) {
     if (!thumbnail || thumbnail.length === 0) {
       // IVFreeの場合は、タイトルからIDを抽出してデフォルト画像を表示
       if (video.source === 'ivfree') {
-        const idMatch = video.title.match(/\[([A-Z]+-\d+)\]/);
+        const idMatch = title.match(/\[([A-Z]+-\d+)\]/);
         if (idMatch) {
           const id = idMatch[1].toLowerCase();
           thumbnail = `http://ivfree.asia/images/${id}.jpg`;
         }
       }
       // その他のサイトでも、URLからサムネイルを推測
-      if (!thumbnail && video.url) {
+      if (!thumbnail && url) {
         // URLから画像パスを推測（一般的なパターン）
-        const urlMatch = video.url.match(/(https?:\/\/[^\/]+)/);
+        const urlMatch = url.match(/(https?:\/\/[^\/]+)/);
         if (urlMatch) {
           const baseUrl = urlMatch[1];
           // 一般的なサムネイルパスを試す
@@ -283,12 +291,12 @@ function displayResults(videos, searchQuery) {
             '/image.jpg'
           ];
           // デフォルト画像として、プレースホルダー画像を使用
-          thumbnail = `https://via.placeholder.com/640x360/667eea/ffffff?text=${encodeURIComponent(video.title.substring(0, 20))}`;
+          thumbnail = `https://via.placeholder.com/640x360/667eea/ffffff?text=${encodeURIComponent(title.substring(0, 20))}`;
         }
       }
       // それでもサムネイルがない場合は、プレースホルダー画像を使用
       if (!thumbnail || thumbnail.length === 0) {
-        thumbnail = `https://via.placeholder.com/640x360/667eea/ffffff?text=${encodeURIComponent(video.title.substring(0, 20))}`;
+        thumbnail = `https://via.placeholder.com/640x360/667eea/ffffff?text=${encodeURIComponent(title.substring(0, 20))}`;
       }
     }
     
@@ -304,22 +312,22 @@ function displayResults(videos, searchQuery) {
     return `
     <div class="video-item" data-source="${video.source || ''}">
       <div class="video-header">
-        <h3 class="video-title">${escapeHtml(video.title)}</h3>
+        <h3 class="video-title">${escapeHtml(title)}</h3>
         <div class="video-header-right">
           ${showDuration ? `<span class="video-duration">${escapeHtml(duration)}</span>` : ''}
           <span class="video-source">${getSourceName(video.source)}</span>
         </div>
       </div>
-      <div class="video-player-container" id="player-${video.id}">
+      <div class="video-player-container" id="player-${vid}">
         ${hasThumbnail ? `
-          <div class="video-thumbnail-wrapper" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}', event)">
-            <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" class="video-thumbnail" loading="lazy" onerror="this.onerror=null; this.style.display='none'; const overlay = this.nextElementSibling; if(overlay) { overlay.style.display='flex'; overlay.style.opacity='1'; }">
+          <div class="video-thumbnail-wrapper" onclick="showPlayer('${escapeHtml(vid)}', '${escapeHtml(embedUrl)}', '${escapeHtml(url)}', '${video.source || ''}', event)">
+            <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(title)}" class="video-thumbnail" loading="lazy" onerror="this.onerror=null; this.style.display='none'; const overlay = this.nextElementSibling; if(overlay) { overlay.style.display='flex'; overlay.style.opacity='1'; }">
             <div class="play-overlay">
               <button class="play-btn-thumbnail ${isBilibili ? 'bilibili-icon' : ''}">${playIcon}</button>
             </div>
           </div>
         ` : `
-          <button class="play-btn" onclick="showPlayer('${video.id}', '${escapeHtml(video.embedUrl)}', '${escapeHtml(video.url)}', '${video.source || ''}', event)">
+          <button class="play-btn" onclick="showPlayer('${escapeHtml(vid)}', '${escapeHtml(embedUrl)}', '${escapeHtml(url)}', '${video.source || ''}', event)">
             ${playIcon} 再生
           </button>
         `}
@@ -333,8 +341,9 @@ function displayResults(videos, searchQuery) {
   
   // iPhoneでのタッチイベントをクリックイベントとして処理
   // 動画プレイヤーコンテナにタッチイベントリスナーを追加（新しく追加された動画のみ）
-  videosToShow.forEach(video => {
-    const videoElement = document.getElementById(`player-${video.id}`);
+  videosToShow.forEach((video, idx) => {
+    const vid = video.id || `video-${startIndex + idx}`;
+    const videoElement = document.getElementById(`player-${vid}`);
     if (videoElement) {
       const thumbnailWrapper = videoElement.querySelector('.video-thumbnail-wrapper');
       const playBtn = videoElement.querySelector('.play-btn');
@@ -357,9 +366,6 @@ function displayResults(videos, searchQuery) {
       });
     }
   });
-  
-  // 検索結果表示後、広告を検索結果の間に挿入
-  insertAdsInResults();
   
   // ページネーションを表示
   displayPagination();
@@ -575,52 +581,6 @@ function sortVideos(videos, sortType) {
   console.log('ℹ️ ページ読み込み完了: 自動検索は実行されません');
 })();
 
-// 検索履歴を読み込んで表示する関数
-async function loadRecentSearches() {
-  try {
-    const response = await fetch('/api/recent-searches');
-    if (!response.ok) {
-      console.log('ℹ️ 検索履歴の取得に失敗しました');
-      return;
-    }
-    
-    const data = await response.json();
-    const searches = data.searches || [];
-    const recentSearchesList = document.getElementById('recent-searches-list');
-    
-    if (!recentSearchesList) {
-      return;
-    }
-    
-    if (searches.length === 0) {
-      recentSearchesList.innerHTML = '';
-      return;
-    }
-    
-    // 検索履歴を表示
-    recentSearchesList.innerHTML = searches
-      .slice(0, 10) // 最新10件のみ表示
-      .map(search => {
-        const query = escapeHtml(search.query || '');
-        return `<span class="recent-search-item" onclick="searchVideos('${query.replace(/'/g, "\\'")}')">${query}</span>`;
-      })
-      .join('');
-  } catch (error) {
-    // エラーは無視（検索履歴が取得できなくても動作は継続）
-    console.log('ℹ️ 検索履歴の読み込みエラー（無視）:', error.message);
-  }
-}
-
-// ページ読み込み時に検索履歴を読み込む
-loadRecentSearches();
-
-// 定期的に検索履歴を更新（10秒ごと、高速化のため間隔を短縮）
-// エラー時や空の場合は既存の表示を保持するため、検索履歴が消えることはありません
-setInterval(() => {
-  console.log('🔄 検索履歴を定期更新中...');
-  loadRecentSearches();
-}, 10000); // 10秒ごとに更新（高速化のため30秒から短縮）
-
 // 動画サイトごとの埋め込み対応状況を判定（緩和版）
 // 基本的には埋め込みを試み、エラーが発生した場合のみ元のURLにリンク
 function isEmbeddable(url, source) {
@@ -809,6 +769,13 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     }
   }
   
+  // JPdmvはプロキシが502/500になりやすいため、まず元のページを直接表示する
+  if (source === 'jpdmv' && originalUrl && String(originalUrl).includes('jpdmv.com')) {
+    const jpdmvDirect = originalUrl.startsWith('http') ? originalUrl : `https:${originalUrl}`;
+    normalizedUrl = jpdmvDirect;
+    console.log('📺 JPdmv: 元のページを直接表示で試します:', jpdmvDirect);
+  }
+  
   // douga4の埋め込みURLを完全なURLに変換（iPhone Safari対応）
   if (source === 'douga4' && normalizedUrl.includes('douga4.top')) {
     // 既にhttps://で始まっている場合はそのまま、//で始まっている場合はhttps:を追加
@@ -829,8 +796,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       normalizedUrl = 'http://' + normalizedUrl;
     }
     
-    // 外部動画サイトのURL（vidnest.io、loadvid.comなど）の場合は、直接iframeで表示
+    // 外部動画サイトのURL（vidnest.io、lulustream、loadvid.comなど）の場合は、直接iframeで表示
     const isExternalVideoUrl = normalizedUrl.includes('vidnest.io') || 
+                                normalizedUrl.includes('lulustream.com') ||
                                 normalizedUrl.includes('cdn.loadvid.com') || 
                                 normalizedUrl.includes('loadvid.com') ||
                                 normalizedUrl.includes('luluvid.com') ||
@@ -842,22 +810,20 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       // プロキシ経由の処理をスキップ
       console.log('📺 IVFree外部動画URLを直接表示:', normalizedUrl);
     } else if (normalizedUrl.includes('ivfree.asia')) {
-      // IVFreeの動画ページの場合は、まず動画URLを取得してからプロキシ経由で表示
-      // ポップアップ広告を抑制するため、プロキシエンドポイントを使用
-      // ただし、既にプロキシ経由の場合はそのまま使用
+      // IVFreeの動画ページは常にプロキシ経由で表示（混合コンテンツ防止・広告除去・再生安定）
       if (!normalizedUrl.includes('/api/ivfree-proxy')) {
-        // 動画URL取得処理は後で実行される（ivfree-video API呼び出し時）
-        // ここでは元のURLを保持
+        const ivfreePageUrl = normalizedUrl.startsWith('http') ? normalizedUrl : `http://${normalizedUrl}`;
+        normalizedUrl = `/api/ivfree-proxy?url=${encodeURIComponent(ivfreePageUrl)}`;
+        console.log('📺 IVFree動画をプロキシ経由で表示:', normalizedUrl);
       }
     }
   }
   
-  // Pizjavの動画ページをプロキシ経由で表示（広告やポップアップを抑制）
+  // PizjavはVMEDA内でプロキシ経由表示（広告・ポップアップを除去して快適に視聴）
   if (source === 'pizjav' && normalizedUrl.includes('pizjav.com')) {
-    // プロキシエンドポイント経由で表示
-    const proxyUrl = `/api/pizjav-proxy?url=${encodeURIComponent(normalizedUrl)}`;
-    normalizedUrl = proxyUrl;
-    console.log('📺 Pizjav動画をプロキシ経由で表示:', normalizedUrl);
+    const pizjavUrl = normalizedUrl.startsWith('http') ? normalizedUrl : `https:${normalizedUrl}`;
+    normalizedUrl = `/api/pizjav-proxy?url=${encodeURIComponent(pizjavUrl)}`;
+    console.log('📺 Pizjav動画をプロキシ経由で表示（広告なし）:', normalizedUrl);
   }
   
   // iPhone（Braveブラウザ含む）でデスクトップに偽装するため、プロキシ経由で読み込む
@@ -869,14 +835,13 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     normalizedUrl = proxyUrl;
   }
   
-  // Bilibili、douga4、ivfreeの場合は、iPhone/Braveブラウザで特別な設定
-  if ((source === 'bilibili' || source === 'douga4' || source === 'ivfree' || source === 'jpdmv') && isIPhone()) {
-    // iPhone/Braveブラウザの場合、より寛容な設定を適用
-    // sandbox属性は設定しない（プレイヤーが動作しなくなる可能性があるため）
+  // 登録ソースはすべて sandbox なし・再生に必要な allow を付与（動画が再生できるようにする）
+  const playbackSources = ['bilibili', 'douga4', 'ivfree', 'jpdmv', 'pizjav', 'javmix', 'japanhub', 'fc2video', 'jable', 'x1hub', 'airav'];
+  if (playbackSources.includes(source)) {
     iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline; accelerometer; gyroscope; clipboard-write; clipboard-read');
     iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+    iframe.removeAttribute('sandbox');
   } else {
-    // その他の場合は通常の設定
     iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; playsinline');
   }
   
@@ -896,6 +861,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   const isIVFreeExternalVideoForSandbox = source === 'ivfree' && (
     actualVideoUrl.includes('vidnest.io') || 
+    actualVideoUrl.includes('lulustream.com') ||
     actualVideoUrl.includes('cdn.loadvid.com') || 
     actualVideoUrl.includes('loadvid.com') ||
     actualVideoUrl.includes('luluvid.com') ||
@@ -904,12 +870,15 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     normalizedUrl.includes('/api/ivfree-proxy')
   );
   
-  if (source === 'ivfree' && !isIVFreeExternalVideoForSandbox) {
+  if (source === 'pizjav' && normalizedUrl.includes('/api/pizjav-proxy')) {
+    iframe.removeAttribute('sandbox');
+  }
+  if (source === 'ivfree' && normalizedUrl.includes('/api/ivfree-proxy')) {
+    // ivfree-proxy経由の場合はsandboxを付けない（cookie/localStorageでvidnest等が再生に必要）
+    iframe.removeAttribute('sandbox');
+  } else if (source === 'ivfree' && !isIVFreeExternalVideoForSandbox) {
     // sandbox属性でポップアップを制限（ただし、動画再生に必要な権限は許可）
-    // allow-same-originとallow-scriptsの両方を含めるとセキュリティ警告が出るが、動画再生に必要
     iframe.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation');
-    // ポップアップを完全にブロックするため、allow-popupsは含めない
-    // allow-same-originは含めない（セキュリティ警告を避けるため）
   } else if (source === 'ivfree' && isIVFreeExternalVideoForSandbox) {
     // 外部動画サイトの場合は、sandbox属性を設定しない（サンドボックス検出を回避）
     // プロキシ経由で表示される外部動画サイトもサンドボックス検出を回避する必要がある
@@ -923,27 +892,11 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   // iframeのsrcを設定（douga4の場合は後で更新される可能性がある）
   iframe.src = normalizedUrl;
   
-  // 外部動画サイトの場合は、src設定後にもsandbox属性を確実に削除
-  if (source === 'ivfree' && isIVFreeExternalVideoForSandbox) {
-    // src設定後にsandbox属性を削除（複数回試行）
-    setTimeout(() => {
-      iframe.removeAttribute('sandbox');
-      if (iframe.hasAttribute('sandbox')) {
-        iframe.removeAttribute('sandbox');
-      }
-    }, 0);
-    setTimeout(() => {
-      iframe.removeAttribute('sandbox');
-      if (iframe.hasAttribute('sandbox')) {
-        iframe.removeAttribute('sandbox');
-      }
-    }, 100);
-    setTimeout(() => {
-      iframe.removeAttribute('sandbox');
-      if (iframe.hasAttribute('sandbox')) {
-        iframe.removeAttribute('sandbox');
-      }
-    }, 500);
+  // 外部動画サイト・Pizjavプロキシの場合は、src設定後にもsandbox属性を確実に削除
+  if ((source === 'ivfree' && isIVFreeExternalVideoForSandbox) || (source === 'pizjav' && normalizedUrl.includes('/api/pizjav-proxy'))) {
+    setTimeout(() => { iframe.removeAttribute('sandbox'); }, 0);
+    setTimeout(() => { iframe.removeAttribute('sandbox'); }, 100);
+    setTimeout(() => { iframe.removeAttribute('sandbox'); }, 500);
   }
   iframe.allowFullscreen = true;
   iframe.className = 'video-player';
@@ -967,13 +920,17 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
           const text = elem.textContent || elem.innerText || '';
           if (text && (
             text.includes('Please change your browser') ||
+            text.includes('change your browser to continue') ||
+            text.includes('AdBlock detected') ||
             text.includes('disable AdBlock') ||
             text.includes('disable UBlock') ||
             text.includes('disable AdGuard') ||
             text.includes('to watch this video') ||
             text.includes('AdBlock / UBlock') ||
             text.includes('AdBlock / AdGuard') ||
-            text.includes('change your browser or disable')
+            text.includes('change your browser or disable') ||
+            text.includes('turn off adblockers') ||
+            text.includes('click ADS to continue')
           )) {
             elem.remove();
           }
@@ -987,13 +944,17 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
                 const text = node.textContent || node.innerText || '';
                 if (text && (
                   text.includes('Please change your browser') ||
+                  text.includes('change your browser to continue') ||
+                  text.includes('AdBlock detected') ||
                   text.includes('disable AdBlock') ||
                   text.includes('disable UBlock') ||
                   text.includes('disable AdGuard') ||
                   text.includes('to watch this video') ||
                   text.includes('AdBlock / UBlock') ||
                   text.includes('AdBlock / AdGuard') ||
-                  text.includes('change your browser or disable')
+                  text.includes('change your browser or disable') ||
+                  text.includes('turn off adblockers') ||
+                  text.includes('click ADS to continue')
                 )) {
                   node.remove();
                 }
@@ -1159,12 +1120,57 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   container.innerHTML = '';
   container.style.position = 'relative';
   container.style.width = '100%';
-  container.style.paddingTop = '56.25%'; // 16:9
+  // Pizjavはページ内にヘッダーがあり動画が下にずれるため、表示を高くして動画が入りやすくする
+  container.style.paddingTop = source === 'pizjav' ? '90%' : '56.25%'; // 16:9
   container.style.background = '#000';
   container.style.borderRadius = '8px';
   container.style.overflow = 'hidden';
   
   container.appendChild(iframe);
+  
+  // JPdmvの場合は「jpdmv.comで開く」リンクを常に表示（プロキシが失敗しやすくiframeもブロックされやすいため）
+  if (source === 'jpdmv' && originalUrl) {
+    const jpdmvOpenUrl = originalUrl.startsWith('http') ? originalUrl : `https:${originalUrl}`;
+    const openLink = document.createElement('a');
+    openLink.href = jpdmvOpenUrl;
+    openLink.target = '_blank';
+    openLink.rel = 'noopener noreferrer';
+    openLink.className = 'jpdmv-open-original';
+    openLink.textContent = 'jpdmv.comで開く';
+    openLink.style.cssText = 'position: absolute; bottom: 0; left: 0; right: 0; display: block; text-align: center; padding: 8px 12px; background: rgba(0,0,0,0.85); color: #fff; font-size: 13px; text-decoration: none; z-index: 1000; border-radius: 0 0 8px 8px;';
+    container.appendChild(openLink);
+  }
+  
+  // Pizjavの場合は「v.pizjav.comで開く」リンクと位置ずれデバッグ用の案内を表示
+  if (source === 'pizjav' && originalUrl) {
+    const pizjavOpenUrl = originalUrl.startsWith('http') ? originalUrl : `https:${originalUrl}`;
+    const openLink = document.createElement('a');
+    openLink.href = pizjavOpenUrl;
+    openLink.target = '_blank';
+    openLink.rel = 'noopener noreferrer';
+    openLink.className = 'pizjav-open-original';
+    openLink.textContent = 'v.pizjav.comで開く';
+    openLink.style.cssText = 'position: absolute; bottom: 0; left: 0; right: 0; display: block; text-align: center; padding: 8px 12px; background: rgba(0,0,0,0.85); color: #fff; font-size: 13px; text-decoration: none; z-index: 1000; border-radius: 0 0 8px 8px;';
+    container.appendChild(openLink);
+    // 位置ずれデバッグ: コンテナ・iframe寸法と案内（Pizjavはページ内にヘッダーがあり動画が下にずれることがある）
+    const debugWrap = document.createElement('div');
+    debugWrap.id = `pizjav-debug-${videoId}`;
+    debugWrap.className = 'pizjav-debug';
+    debugWrap.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; padding: 6px 8px; background: rgba(0,0,0,0.75); color: #ccc; font-size: 11px; z-index: 1001; line-height: 1.3; pointer-events: none;';
+    const updatePizjavDebug = () => {
+      if (!debugWrap.parentNode || !container.parentNode) return;
+      const rect = container.getBoundingClientRect();
+      const ifr = container.querySelector('iframe');
+      const iframeSize = ifr ? `${ifr.offsetWidth}×${ifr.offsetHeight}` : '—';
+      debugWrap.innerHTML = `[Pizjav] コンテナ: ${Math.round(rect.width)}×${Math.round(rect.height)}px / iframe: ${iframeSize} — 動画の位置が合わない場合は「v.pizjav.comで開く」で別タブで視聴`;
+    };
+    updatePizjavDebug();
+    container.appendChild(debugWrap);
+    const debugInterval = setInterval(() => {
+      if (!debugWrap.parentNode) { clearInterval(debugInterval); return; }
+      updatePizjavDebug();
+    }, 1500);
+  }
   
   // douga4の場合は、デバッグ情報をコンテナクリア後に追加（常に表示）
   if (isDouga4 && douga4UpdateDebugInfo) {
@@ -1221,6 +1227,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   // 外部動画サイトのURLもプロキシ経由で表示（広告ブロッカー検出を回避）
   const isIVFreeExternalVideo = source === 'ivfree' && (
     normalizedUrl.includes('vidnest.io') || 
+    normalizedUrl.includes('lulustream.com') ||
     normalizedUrl.includes('cdn.loadvid.com') || 
     normalizedUrl.includes('loadvid.com') ||
     normalizedUrl.includes('luluvid.com') ||
@@ -1252,8 +1259,8 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     };
     
     ivfreeUpdateDebugInfo();
-    
-    fetch(`/api/ivfree-video?url=${encodeURIComponent(normalizedUrl)}`)
+    const ivfreeFetchUrl = (originalUrl && originalUrl.includes('ivfree.asia')) ? originalUrl : normalizedUrl;
+    fetch(`/api/ivfree-video?url=${encodeURIComponent(ivfreeFetchUrl)}`)
       .then(response => {
         ivfreeStatusText = 'レスポンス受信...';
         ivfreeUpdateDebugInfo();
@@ -1269,6 +1276,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
           // 外部動画サイト（luluvid.comなど）の場合は、直接iframeで表示（プロキシを使わない）
           // プロキシ経由だとHLSストリームがCORSでブロックされるため
           const isExternalEmbedUrl = data.embedUrl.includes('vidnest.io') || 
+                                      data.embedUrl.includes('lulustream.com') ||
                                       data.embedUrl.includes('cdn.loadvid.com') || 
                                       data.embedUrl.includes('loadvid.com') ||
                                       data.embedUrl.includes('luluvid.com') ||
@@ -1312,11 +1320,29 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
         }
       })
       .catch(error => {
-        // エラーが発生しても既にプロキシ経由で表示されているので、そのまま継続
         console.log('ℹ️ IVFree動画URL取得エラー（既にプロキシ経由で表示中）:', error.message);
         ivfreeStatusText = 'プロキシ経由で表示中';
         ivfreeUpdateDebugInfo();
       });
+  }
+
+  // IVFreeをプロキシで表示している場合も、バックグラウンドで動画URL取得して再生できれば差し替え
+  if (source === 'ivfree' && normalizedUrl.includes('/api/ivfree-proxy') && originalUrl && originalUrl.includes('ivfree.asia')) {
+    fetch(`/api/ivfree-video?url=${encodeURIComponent(originalUrl)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.embedUrl && container.querySelector('iframe')) {
+          const ifr = container.querySelector('iframe');
+          const isExternal = /vidnest|lulustream|loadvid|luluvid|embed/i.test(data.embedUrl);
+          if (isExternal) {
+            ifr.removeAttribute('sandbox');
+            ifr.src = data.embedUrl;
+          } else {
+            ifr.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
+          }
+        }
+      })
+      .catch(() => {});
   }
 
   // JPdmvの動画URLを取得（ページ内プレイヤーが読み込めない場合に備えて差し替え）
@@ -1359,15 +1385,50 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
           jpdmvStatusText = 'JPdmv: embedUrl取得OK';
           ensureJpdmvDebug();
 
-          // 取得した埋め込みURLへ切り替え（プロキシ経由で読み込み、ブロック/相対パス崩れを軽減）
-          const nextSrc = `/api/proxy-video?url=${encodeURIComponent(data.embedUrl)}`;
-          if (nextSrc !== iframe.src) {
-            iframe.removeAttribute('sandbox'); // jpdmvは制限を緩める
-            iframe.src = nextSrc;
-            jpdmvStatusText = 'JPdmv: iframe.src を更新（proxy-video）';
+          const directUrl = data.embedUrl.startsWith('http') ? data.embedUrl : `https:${data.embedUrl}`;
+          const norm = (u) => (u || '').replace(/\/$/, '');
+          // 既に元のページを直接表示している場合はそのまま（プロキシで上書きしない）
+          if (norm(iframe.src) === norm(directUrl)) {
+            jpdmvStatusText = 'JPdmv: 直接表示のまま';
             ensureJpdmvDebug();
-            console.log('✅ JPdmv動画URLへ切り替え（proxy-video）:', data.embedUrl);
+            console.log('✅ JPdmv: 直接表示のまま維持');
+            return;
           }
+
+          // 二重エンコード防止: 1回デコードしてからクエリに渡す
+          let urlForProxy = data.embedUrl;
+          try {
+            urlForProxy = decodeURIComponent(String(data.embedUrl));
+          } catch (e) { /* そのまま使用 */ }
+          const nextSrc = `/api/proxy-video?url=${encodeURIComponent(urlForProxy)}`;
+          // プロキシで表示を試す
+          iframe.removeAttribute('sandbox');
+          iframe.src = nextSrc;
+          jpdmvStatusText = 'JPdmv: iframe.src を更新（proxy-video）';
+          ensureJpdmvDebug();
+          console.log('✅ JPdmv動画URLへ切り替え（proxy-video）:', data.embedUrl);
+          // プロキシが502/500のときだけ元のページを直接表示に切り替え
+          fetch(nextSrc, { method: 'GET', mode: 'same-origin' })
+            .then(r => {
+              if (!r.ok && (r.status === 502 || r.status === 500)) {
+                if (container.parentNode && iframe.parentNode && iframe.src === nextSrc) {
+                  iframe.removeAttribute('sandbox');
+                  iframe.src = directUrl;
+                  jpdmvStatusText = 'JPdmv: プロキシ失敗のため元のページを直接表示';
+                  ensureJpdmvDebug();
+                  console.log('🔄 JPdmv: フォールバックで元のページを直接表示:', directUrl);
+                }
+              }
+            })
+            .catch(() => {
+              if (container.parentNode && iframe.parentNode && iframe.src === nextSrc) {
+                iframe.removeAttribute('sandbox');
+                iframe.src = directUrl;
+                jpdmvStatusText = 'JPdmv: プロキシ失敗のため元のページを直接表示';
+                ensureJpdmvDebug();
+                console.log('🔄 JPdmv: フォールバックで元のページを直接表示:', directUrl);
+              }
+            });
         }
       })
       .catch(error => {
@@ -1485,15 +1546,20 @@ function getSourceName(source) {
     'ppp': 'PPP.Porn',
     'javmix': 'Javmix.TV',
     'ivfree': 'IVFree',
+    'pizjav': 'Pizjav',
     'mat6tube': 'Mat6tube',
     'fc2video': 'FC2Video.org',
+    'japanhub': 'Japanhub',
+    'jable': 'Jable',
+    'airav': 'Airav',
     'test': 'テスト'
   };
-  return names[source] || source;
+  return names[source] || (source ? String(source) : '');
 }
 
 // HTMLエスケープ
 function escapeHtml(text) {
+  if (text == null || text === '') return '';
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
@@ -1510,422 +1576,222 @@ searchInput.addEventListener('keypress', (e) => {
   }
 });
 
-// IVランダム動画取得
-async function getRandomIV() {
-  console.log('🎲 IVランダム動画取得開始');
-  if (!loadingDiv) {
-    console.error('❌ loadingDivが見つかりません');
+// 登録サイトのトップURL（サイト全体をVMEDA内で広告除去表示）
+const SITE_BASE_URLS = {
+  ivfree: 'http://ivfree.asia/',
+  aivfree: 'http://aivfree.com/',
+  jpdmv: 'https://jpdmv.com/',
+  pizjav: 'https://v.pizjav.com/',
+  javmix: 'https://javmix.tv/',
+  japanhub: 'https://japanhub.net/',
+  douga4: 'https://douga4.top/',
+  fc2video: 'https://fc2video.org/',
+  jable: 'https://jable.tv/',
+  x1hub: 'https://x1hub.com/',
+  airav: 'https://airav.io/'
+};
+
+// サイト攻略デバッグ（localStorage）
+function vmedaDebugEnabled() {
+  try { return localStorage.getItem('vmeda_debug') === '1'; } catch (e) { return false; }
+}
+function setVmedaDebug(on) {
+  try { localStorage.setItem('vmeda_debug', on ? '1' : '0'); } catch (e) {}
+}
+
+// VMEDAフィルター経由でサイト全体を表示（あらゆるサイトをフィルター通過→広告除去）
+function openSiteInFrame(source) {
+  if (!source) return;
+  const baseUrl = SITE_BASE_URLS[source];
+  if (!baseUrl) {
+    console.warn('Unknown source:', source);
     return;
   }
-  loadingDiv.classList.remove('hidden');
-  if (resultsDiv) {
-    resultsDiv.innerHTML = '';
+  const wrap = document.getElementById('site-frame-wrap');
+  const frame = document.getElementById('site-frame');
+  if (!wrap || !frame) return;
+  let proxyUrl = '/api/site-proxy?url=' + encodeURIComponent(baseUrl);
+  if (vmedaDebugEnabled()) proxyUrl += '&vmeda_debug=1';
+  frame.src = proxyUrl;
+  wrap.classList.remove('hidden');
+  const results = document.getElementById('results');
+  const sortContainer = document.getElementById('sort-container');
+  if (results) results.classList.add('hidden');
+  if (sortContainer) sortContainer.classList.add('hidden');
+  console.log('📄 サイトをVMEDAフィルター経由で表示:', baseUrl);
+  if (vmedaDebugEnabled()) console.log('🐛 デバッグON プロキシURL:', proxyUrl);
+}
+
+function closeSiteFrame() {
+  const wrap = document.getElementById('site-frame-wrap');
+  const frame = document.getElementById('site-frame');
+  if (wrap) wrap.classList.add('hidden');
+  if (frame) frame.src = '';
+  const results = document.getElementById('results');
+  const sortContainer = document.getElementById('sort-container');
+  if (results) results.classList.remove('hidden');
+  if (sortContainer) sortContainer.classList.remove('hidden');
+}
+
+// 登録サイトボタン（VMEDAフィルター経由でサイト全体を表示）
+document.querySelectorAll('.site-btn').forEach(btn => {
+  const source = btn.getAttribute('data-source');
+  if (source) {
+    btn.addEventListener('click', () => openSiteInFrame(source));
   }
-  
+});
+
+document.getElementById('site-frame-back')?.addEventListener('click', closeSiteFrame);
+
+const siteFrameEl = document.getElementById('site-frame');
+document.getElementById('site-frame-history-back')?.addEventListener('click', () => {
   try {
-    console.log('🔍 /api/random?type=iv にリクエスト送信');
-    const response = await fetch('/api/random?type=iv');
-    console.log('📡 レスポンス受信:', response.status, response.statusText);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('❌ エラーレスポンス:', errorData);
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    if (siteFrameEl && siteFrameEl.contentWindow) {
+      siteFrameEl.contentWindow.history.back();
     }
-    
-    const data = await response.json();
-    console.log('📊 ランダム動画データ受信:', data);
-    const videos = data.results || [];
-    console.log(`✅ ${videos.length}件のIVランダム動画を取得`);
-    
-    currentVideos = videos;
-    currentPage = 1;
-    totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
-    
-    // ランダム表示の場合はソートを「デフォルト」にリセット（ランダム順を維持）
-    if (sortSelect) {
-      sortSelect.value = 'default';
-    }
-    
-    if (videos.length > 0) {
-      // サーバー側でランダムにシャッフルされた順序をそのまま表示
-      console.log('🎲 ランダム順で表示（ソートなし）');
-      displayResults(videos, 'IV Random');
-      if (sortContainer) {
-        sortContainer.classList.remove('hidden');
-      }
-    } else {
-      if (resultsDiv) {
-        resultsDiv.innerHTML = `<p class="error-message">No IV random videos found. Please try again later.</p>`;
-      }
-      if (sortContainer) {
-        sortContainer.classList.add('hidden');
-      }
-    }
-  } catch (error) {
-    console.error('❌ IVランダム動画取得エラー:', error);
-    console.error('❌ エラー詳細:', error.message, error.stack);
-    if (resultsDiv) {
-      resultsDiv.innerHTML = `<p class="error-message">Failed to load random IV videos: ${error.message}. Please try again.</p>`;
-    }
-  } finally {
-    if (loadingDiv) {
-      loadingDiv.classList.add('hidden');
-    }
-  }
-}
-
-// JAVランダム動画取得
-async function getRandomJAV() {
-  console.log('🎲 JAVランダム動画取得開始');
-  if (!loadingDiv) {
-    console.error('❌ loadingDivが見つかりません');
-    return;
-  }
-  loadingDiv.classList.remove('hidden');
-  if (resultsDiv) {
-    resultsDiv.innerHTML = '';
-  }
-  
+  } catch (e) {}
+});
+document.getElementById('site-frame-history-forward')?.addEventListener('click', () => {
   try {
-    console.log('🔍 /api/random?type=jav にリクエスト送信');
-    const response = await fetch('/api/random?type=jav');
-    console.log('📡 レスポンス受信:', response.status, response.statusText);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('❌ エラーレスポンス:', errorData);
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    if (siteFrameEl && siteFrameEl.contentWindow) {
+      siteFrameEl.contentWindow.history.forward();
     }
-    
-    const data = await response.json();
-    console.log('📊 ランダム動画データ受信:', data);
-    console.log('📊 データ構造:', Object.keys(data));
-    console.log('📊 debug情報の有無:', data.debug ? 'あり' : 'なし');
-    
-    const videos = data.results || [];
-    console.log(`✅ ${videos.length}件のJAVランダム動画を取得`);
-    
-    // デバッグ情報を表示（常に表示）
-    if (data.debug) {
-      console.log('🔍 [デバッグ] サーバー側のデバッグ情報:', JSON.stringify(data.debug, null, 2));
-      console.log(`🔍 [デバッグ] フィルタリング前: ${data.debug.totalBeforeFilter}件`);
-      console.log(`🚫 [デバッグ] 除外されたPPP動画数: ${data.debug.pppFilteredCount}件`);
-      console.log(`🔍 [デバッグ] フィルタリング後: ${data.debug.totalAfterFilter}件`);
-      console.log(`❌ [デバッグ] 最終結果のPPP動画数: ${data.debug.pppInFinal}件`);
-      if (data.debug.sourceBreakdown) {
-        console.log(`📊 [デバッグ] ソース別内訳:`);
-        const breakdown = data.debug.sourceBreakdown;
-        if (breakdown.javmix !== undefined) console.log(`  - Javmix: ${breakdown.javmix}件`);
-        if (breakdown.jpdmv !== undefined) console.log(`  - JPdmv: ${breakdown.jpdmv}件`);
-        if (breakdown.mat6tube !== undefined) console.log(`  - Mat6tube: ${breakdown.mat6tube}件`);
-        if (breakdown.japanhub !== undefined) console.log(`  - Japanhub: ${breakdown.japanhub}件`);
-        if (breakdown.douga4 !== undefined) console.log(`  - Douga4: ${breakdown.douga4}件`);
-        if (breakdown.fc2video !== undefined) console.log(`  - FC2Video: ${breakdown.fc2video}件`);
-        if (breakdown.bilibili !== undefined) console.log(`  - Bilibili: ${breakdown.bilibili}件`);
-        if (breakdown.jable !== undefined) console.log(`  - Jable: ${breakdown.jable}件`);
-        if (breakdown.x1hub !== undefined) console.log(`  - X1hub: ${breakdown.x1hub}件`);
-        if (breakdown.airav !== undefined) console.log(`  - Airav: ${breakdown.airav}件`);
-        if (breakdown.ivfree !== undefined) console.log(`  - IVFree: ${breakdown.ivfree}件`);
-        if (breakdown.jpdmv !== undefined) console.log(`  - JPdmv: ${breakdown.jpdmv}件`);
-        if (breakdown.mat6tube !== undefined) console.log(`  - Mat6tube: ${breakdown.mat6tube}件`);
-        if (breakdown.douga4 !== undefined) console.log(`  - Douga4: ${breakdown.douga4}件`);
-        if (breakdown.fc2video !== undefined) console.log(`  - FC2Video: ${breakdown.fc2video}件`);
-        if (breakdown.ppp !== undefined && breakdown.ppp > 0) {
-          console.error(`  - PPP: ${breakdown.ppp}件 ❌ (エラー: PPP動画が含まれています！)`);
-        }
-        if (breakdown.other !== undefined && breakdown.other > 0) {
-          console.log(`  - その他: ${breakdown.other}件`);
-        }
-        
-        // 0件のソースを警告表示
-        const zeroSources = [];
-        if (breakdown.javmix === 0) zeroSources.push('Javmix');
-        if (breakdown.jpdmv === 0) zeroSources.push('JPdmv');
-        if (breakdown.mat6tube === 0) zeroSources.push('Mat6tube');
-        if (breakdown.japanhub === 0) zeroSources.push('Japanhub');
-        if (breakdown.douga4 === 0) zeroSources.push('Douga4');
-        if (breakdown.fc2video === 0) zeroSources.push('FC2Video');
-        if (breakdown.bilibili === 0) zeroSources.push('Bilibili');
-        if (breakdown.jable === 0) zeroSources.push('Jable');
-        if (breakdown.x1hub === 0) zeroSources.push('X1hub');
-        if (breakdown.airav === 0) zeroSources.push('Airav');
-        if (zeroSources.length > 0) {
-          console.warn(`⚠️ [デバッグ] 0件のソース: ${zeroSources.join(', ')}`);
-        }
-      }
-    } else {
-      console.warn('⚠️ [デバッグ] デバッグ情報がレスポンスに含まれていません');
-    }
-    
-    // 実際に取得された動画のソースを確認
-    const actualSources = {};
-    videos.forEach(v => {
-      if (v && v.source) {
-        actualSources[v.source] = (actualSources[v.source] || 0) + 1;
-      }
-    });
-    console.log(`📊 [クライアント側] 実際に取得された動画のソース別内訳:`, actualSources);
-    
-    // クライアント側でPPP動画をチェック（より厳格に）
-    const pppVideosInResults = videos.filter(v => {
-      if (!v) return false;
-      const isPPP = v.source === 'ppp' || 
-                    v.source === 'PPP' ||
-                    (v.url && (
-                      v.url.includes('ppp.porn') ||
-                      v.url.includes('ppp-porn') ||
-                      v.url.toLowerCase().includes('ppp.porn') ||
-                      v.url.toLowerCase().includes('ppp-porn')
-                    ));
-      return isPPP;
-    });
-    
-    if (pppVideosInResults.length > 0) {
-      console.error(`❌ [クライアント側デバッグ] 警告: レスポンスにPPP動画が${pppVideosInResults.length}件含まれています！`);
-      pppVideosInResults.slice(0, 10).forEach((v, i) => {
-        console.error(`  ${i + 1}. source="${v.source}", url="${v.url ? v.url.substring(0, 100) : 'N/A'}", title="${v.title ? v.title.substring(0, 50) : 'N/A'}"`);
-      });
-      
-      // PPP動画をクライアント側で除外
-      const filteredVideos = videos.filter(v => {
-        if (!v) return false;
-        const isPPP = v.source === 'ppp' || 
-                      v.source === 'PPP' ||
-                      (v.url && (
-                        v.url.includes('ppp.porn') ||
-                        v.url.includes('ppp-porn') ||
-                        v.url.toLowerCase().includes('ppp.porn') ||
-                        v.url.toLowerCase().includes('ppp-porn')
-                      ));
-        return !isPPP;
-      });
-      console.log(`🚫 [クライアント側デバッグ] PPP動画を${pppVideosInResults.length}件除外しました（${videos.length}件 → ${filteredVideos.length}件）`);
-      currentVideos = filteredVideos;
-      currentPage = 1;
-      totalPages = Math.ceil(filteredVideos.length / VIDEOS_PER_PAGE);
-      displayResults(filteredVideos, 'JAV Random');
-      if (sortContainer) {
-        sortContainer.classList.remove('hidden');
-      }
-      return;
-    } else {
-      console.log('✅ [クライアント側デバッグ] PPP動画は検出されませんでした');
-    }
-    
-    currentVideos = videos;
-    currentPage = 1;
-    totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
-    
-    // ランダム表示の場合はソートを「デフォルト」にリセット（ランダム順を維持）
-    if (sortSelect) {
-      sortSelect.value = 'default';
-    }
-    
-    if (videos.length > 0) {
-      // サーバー側でランダムにシャッフルされた順序をそのまま表示
-      console.log('🎲 ランダム順で表示（ソートなし）');
-      displayResults(videos, 'JAV Random');
-      if (sortContainer) {
-        sortContainer.classList.remove('hidden');
-      }
-    } else {
-      if (resultsDiv) {
-        resultsDiv.innerHTML = `<p class="error-message">No JAV random videos found. Please try again later.</p>`;
-      }
-      if (sortContainer) {
-        sortContainer.classList.add('hidden');
-      }
-    }
-  } catch (error) {
-    console.error('❌ JAVランダム動画取得エラー:', error);
-    console.error('❌ エラー詳細:', error.message, error.stack);
-    if (resultsDiv) {
-      resultsDiv.innerHTML = `<p class="error-message">Failed to load random JAV videos: ${error.message}. Please try again.</p>`;
-    }
-  } finally {
-    if (loadingDiv) {
-      loadingDiv.classList.add('hidden');
-    }
-  }
-}
+  } catch (e) {}
+});
 
-// IVランダムボタン
-if (ivRandomBtn) {
-  console.log('✅ IVランダムボタンが見つかりました');
-  ivRandomBtn.addEventListener('click', () => {
-    console.log('🎬 IVランダムボタンがクリックされました');
-    getRandomIV();
-  });
-} else {
-  console.error('❌ IVランダムボタンが見つかりません');
-}
+// サイト攻略デバッグパネル
+(function() {
+  const panel = document.getElementById('vmeda-debug-panel');
+  const toggleBtn = document.getElementById('vmeda-debug-toggle');
+  const proxyUrlInput = document.getElementById('vmeda-debug-proxy-url');
+  const realUrlInput = document.getElementById('vmeda-debug-real-url');
+  const statsEl = document.getElementById('vmeda-debug-stats');
+  const copyBtn = document.getElementById('vmeda-debug-copy-url');
+  const copyAllBtn = document.getElementById('vmeda-debug-copy-all');
+  const openTabBtn = document.getElementById('vmeda-debug-open-tab');
+  let lastDebugData = null;
+  let lastClientDebug = null;
 
-// JAVランダムボタン
-if (javRandomBtn) {
-  console.log('✅ JAVランダムボタンが見つかりました');
-  javRandomBtn.addEventListener('click', () => {
-    console.log('🎥 JAVランダムボタンがクリックされました');
-    getRandomJAV();
-  });
-} else {
-  console.error('❌ JAVランダムボタンが見つかりません');
-}
-
-// 広告の読み込み（環境変数または設定から）
-async function loadAds() {
-  // サーバーから広告設定を取得
-  let adClientId = '';
-  let adSlotHeader = '';
-  let adSlotFooter = '';
-  let adSlotInContent = '';
-  
-  try {
-    const response = await fetch('/api/ad-config');
-    if (response.ok) {
-      const config = await response.json();
-      adClientId = config.adClientId || '';
-      adSlotHeader = config.adSlotHeader || '';
-      adSlotFooter = config.adSlotFooter || '';
-      adSlotInContent = config.adSlotInContent || '';
-    }
-  } catch (error) {
-    console.log('ℹ️ 広告設定の取得に失敗:', error);
-  }
-  
-  // フォールバック: グローバル変数から取得
-  if (!adClientId) {
-    adClientId = window.AD_CLIENT_ID || '';
-    adSlotHeader = window.AD_SLOT_HEADER || '';
-    adSlotFooter = window.AD_SLOT_FOOTER || '';
-    adSlotInContent = window.AD_SLOT_IN_CONTENT || '';
-  }
-  
-  if (!adClientId) {
-    console.log('ℹ️ 広告クライアントIDが設定されていません');
-    return;
-  }
-  
-  // グローバル変数に設定（後で使用するため）
-  window.AD_CLIENT_ID = adClientId;
-  window.AD_SLOT_HEADER = adSlotHeader;
-  window.AD_SLOT_FOOTER = adSlotFooter;
-  window.AD_SLOT_IN_CONTENT = adSlotInContent;
-  
-  // Google AdSenseスクリプトを読み込む
-  if (!document.querySelector('script[src*="adsbygoogle"]')) {
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClientId}`;
-    script.crossOrigin = 'anonymous';
-    document.head.appendChild(script);
-  }
-  
-  // ヘッダー下の広告
-  if (adSlotHeader) {
-    const adHeader = document.getElementById('ad-header');
-    if (adHeader) {
-      adHeader.innerHTML = `
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="${adClientId}"
-             data-ad-slot="${adSlotHeader}"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-      `;
-      try {
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (e) {
-        console.log('ℹ️ 広告の読み込みエラー:', e);
-      }
-    }
-  }
-  
-  // フッター上の広告
-  if (adSlotFooter) {
-    const adFooter = document.getElementById('ad-footer');
-    if (adFooter) {
-      adFooter.innerHTML = `
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="${adClientId}"
-             data-ad-slot="${adSlotFooter}"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-      `;
-      try {
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (e) {
-        console.log('ℹ️ 広告の読み込みエラー:', e);
-      }
-    }
-  }
-}
-
-// 検索結果の間に広告を挿入
-function insertAdsInResults() {
-  const adClientId = window.AD_CLIENT_ID || '';
-  const adSlotInContent = window.AD_SLOT_IN_CONTENT || '';
-  
-  if (!adClientId || !adSlotInContent) {
-    return;
-  }
-  
-  const videoItems = document.querySelectorAll('.video-item');
-  if (videoItems.length === 0) return;
-  
-  // 5件ごとに広告を挿入（最初の広告は3件目以降）
-  // ただし、動画プレイヤーが表示されている動画アイテムの前後には広告を挿入しない
-  for (let i = 3; i < videoItems.length; i += 5) {
-    const videoItem = videoItems[i];
-    
-    // この動画アイテムに動画プレイヤーが表示されているかチェック
-    const hasPlayer = videoItem.querySelector('.video-player-container iframe');
-    if (hasPlayer) {
-      // 動画プレイヤーが表示されている場合は、この位置には広告を挿入しない
-      continue;
-    }
-    
-    // 前後の動画アイテムに動画プレイヤーが表示されているかチェック
-    const prevItem = videoItems[i - 1];
-    const nextItem = videoItems[i + 1];
-    const prevHasPlayer = prevItem && prevItem.querySelector('.video-player-container iframe');
-    const nextHasPlayer = nextItem && nextItem.querySelector('.video-player-container iframe');
-    
-    if (prevHasPlayer || nextHasPlayer) {
-      // 前後の動画アイテムに動画プレイヤーが表示されている場合は、この位置には広告を挿入しない
-      continue;
-    }
-    
-    const adDiv = document.createElement('div');
-    adDiv.className = 'ad-container ad-in-content';
-    adDiv.innerHTML = `
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="${adClientId}"
-           data-ad-slot="${adSlotInContent}"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-    `;
-    
-    videoItems[i].parentNode.insertBefore(adDiv, videoItems[i].nextSibling);
-    
+  function updatePanelFromFrame() {
+    if (!siteFrameEl || !proxyUrlInput) return;
     try {
-      (adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (e) {
-      console.log('ℹ️ 広告の読み込みエラー:', e);
-    }
+      const src = siteFrameEl.src || '';
+      proxyUrlInput.value = src;
+      const m = src.match(/url=([^&]+)/);
+      if (m) try { realUrlInput.value = decodeURIComponent(m[1]); } catch (e) { realUrlInput.value = m[1]; }
+    } catch (e) {}
   }
-}
 
-// ページ読み込み時に広告を読み込む
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    loadAds();
+  function renderDebugStats() {
+    if (!statsEl) return;
+    const merged = lastDebugData ? { ...lastDebugData } : {};
+    if (lastClientDebug) {
+      merged.clientRemovedTotal = lastClientDebug.clientRemovedTotal;
+      merged.clientCandidatesThisRun = lastClientDebug.clientCandidatesThisRun;
+      merged.clientRemovedThisRun = lastClientDebug.clientRemovedThisRun;
+      merged.clientSkippedCount = lastClientDebug.clientSkippedCount;
+      merged.clientLastSnippets = lastClientDebug.lastSnippets;
+      if (lastClientDebug.clientSkipped && lastClientDebug.clientSkipped.length) merged.clientSkipped = lastClientDebug.clientSkipped;
+      if (lastClientDebug.bottomOverlayCandidatesThisRun != null) merged.bottomOverlayCandidatesThisRun = lastClientDebug.bottomOverlayCandidatesThisRun;
+      if (lastClientDebug.bottomOverlayRemovedThisRun != null) merged.bottomOverlayRemovedThisRun = lastClientDebug.bottomOverlayRemovedThisRun;
+      if (lastClientDebug.bottomOverlayRemovedTotal != null) merged.bottomOverlayRemovedTotal = lastClientDebug.bottomOverlayRemovedTotal;
+      if (lastClientDebug.bottomOverlayRemovedSnippets && lastClientDebug.bottomOverlayRemovedSnippets.length) merged.bottomOverlayRemovedSnippets = lastClientDebug.bottomOverlayRemovedSnippets;
+      if (lastClientDebug.bottomOverlaySkipped && lastClientDebug.bottomOverlaySkipped.length) merged.bottomOverlaySkipped = lastClientDebug.bottomOverlaySkipped;
+    }
+    var summary = '';
+    if (merged.scriptsRemoved != null) summary += 'サーバー: スクリプト除去 ' + merged.scriptsRemoved + ', アドブロック候補チェック ' + (merged.adblockCandidatesChecked != null ? merged.adblockCandidatesChecked : '?') + ', 除去 ' + (merged.adblockElementsRemoved != null ? merged.adblockElementsRemoved : '?') + ', URL書き換え ' + (merged.resourcesRewritten != null ? merged.resourcesRewritten : '?');
+    if (merged.clientRemovedTotal != null || merged.clientCandidatesThisRun != null) summary += (summary ? ' | ' : '') + 'クライアント: 候補 ' + (merged.clientCandidatesThisRun != null ? merged.clientCandidatesThisRun : '?') + ', 除去合計 ' + (merged.clientRemovedTotal != null ? merged.clientRemovedTotal : '?') + ', スキップ ' + (merged.clientSkippedCount != null ? merged.clientSkippedCount : '?');
+    if (merged.bottomOverlayCandidatesThisRun != null || merged.bottomOverlayRemovedTotal != null) summary += (summary ? ' | ' : '') + '動画下部バナー: 候補 ' + (merged.bottomOverlayCandidatesThisRun != null ? merged.bottomOverlayCandidatesThisRun : '?') + ', 今回除去 ' + (merged.bottomOverlayRemovedThisRun != null ? merged.bottomOverlayRemovedThisRun : '?') + ', 除去合計 ' + (merged.bottomOverlayRemovedTotal != null ? merged.bottomOverlayRemovedTotal : '?');
+    var body = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : '(データなし)';
+    statsEl.textContent = summary ? summary + '\n\n' + body : body;
+  }
+
+  window.addEventListener('message', function(e) {
+    if (!e.data) return;
+    if (e.data.type === 'vmeda-debug' && e.data.data) {
+      lastDebugData = e.data.data;
+      if (realUrlInput) realUrlInput.value = lastDebugData.decodedUrl || '';
+      renderDebugStats();
+    } else if (e.data.type === 'vmeda-debug-client') {
+      lastClientDebug = {
+        clientRemovedTotal: e.data.clientRemovedTotal,
+        clientCandidatesThisRun: e.data.clientCandidatesThisRun,
+        clientRemovedThisRun: e.data.clientRemovedThisRun,
+        clientSkippedCount: e.data.clientSkippedCount,
+        lastSnippets: e.data.lastSnippets || [],
+        clientSkipped: e.data.clientSkipped || [],
+        bottomOverlayCandidatesThisRun: e.data.bottomOverlayCandidatesThisRun,
+        bottomOverlayRemovedThisRun: e.data.bottomOverlayRemovedThisRun,
+        bottomOverlayRemovedTotal: e.data.bottomOverlayRemovedTotal,
+        bottomOverlayRemovedSnippets: e.data.bottomOverlayRemovedSnippets || [],
+        bottomOverlaySkipped: e.data.bottomOverlaySkipped || []
+      };
+      renderDebugStats();
+    }
   });
-} else {
-  loadAds();
-}
+
+  siteFrameEl?.addEventListener('load', function() {
+    if (vmedaDebugEnabled()) updatePanelFromFrame();
+  });
+
+  if (toggleBtn && panel) {
+    if (vmedaDebugEnabled()) { panel.classList.remove('hidden'); toggleBtn.classList.add('active'); }
+    toggleBtn.addEventListener('click', function() {
+      const on = panel.classList.toggle('hidden');
+      const debugNowOn = !on;
+      setVmedaDebug(debugNowOn);
+      toggleBtn.classList.toggle('active', !on);
+      if (!on) updatePanelFromFrame();
+      if (debugNowOn && siteFrameEl && siteFrameEl.src && siteFrameEl.src.indexOf('site-proxy') !== -1 && siteFrameEl.src.indexOf('vmeda_debug=1') === -1) {
+        var newSrc = siteFrameEl.src + (siteFrameEl.src.indexOf('?') === -1 ? '?' : '&') + 'vmeda_debug=1';
+        siteFrameEl.src = newSrc;
+        if (proxyUrlInput) proxyUrlInput.value = newSrc;
+        if (realUrlInput) {
+          var match = newSrc.match(/url=([^&]+)/);
+          if (match) try { realUrlInput.value = decodeURIComponent(match[1]); } catch (er) { realUrlInput.value = match[1]; }
+        }
+      }
+    });
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      e.preventDefault();
+      if (panel && toggleBtn) { panel.classList.toggle('hidden'); setVmedaDebug(!panel.classList.contains('hidden')); toggleBtn.classList.toggle('active', !panel.classList.contains('hidden')); if (!panel.classList.contains('hidden')) updatePanelFromFrame(); }
+    }
+  });
+
+  if (copyBtn && proxyUrlInput) copyBtn.addEventListener('click', function() {
+    const url = proxyUrlInput.value;
+    if (!url) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function() { copyBtn.textContent = 'コピー済'; setTimeout(function() { copyBtn.textContent = 'URLコピー'; }, 1500); });
+    } else {
+      proxyUrlInput.select();
+      document.execCommand('copy');
+      copyBtn.textContent = 'コピー済';
+      setTimeout(function() { copyBtn.textContent = 'URLコピー'; }, 1500);
+    }
+  });
+  if (copyAllBtn) copyAllBtn.addEventListener('click', function() {
+    var lines = [];
+    if (proxyUrlInput && proxyUrlInput.value) lines.push('プロキシURL: ' + proxyUrlInput.value);
+    if (realUrlInput && realUrlInput.value) lines.push('実URL: ' + realUrlInput.value);
+    if (statsEl && statsEl.textContent) lines.push('統計 (最終ページ):\n' + statsEl.textContent);
+    var text = lines.join('\n\n');
+    if (!text) text = '(データなし)';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function() { copyAllBtn.textContent = 'コピー済'; setTimeout(function() { copyAllBtn.textContent = 'デバッグ一括コピー'; }, 1500); });
+    } else {
+      var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      copyAllBtn.textContent = 'コピー済';
+      setTimeout(function() { copyAllBtn.textContent = 'デバッグ一括コピー'; }, 1500);
+    }
+  });
+  if (openTabBtn && proxyUrlInput) openTabBtn.addEventListener('click', function() {
+    const url = proxyUrlInput.value;
+    if (url) window.open(url, '_blank');
+  });
+})();
 
 // ソート選択時の処理
 if (sortSelect) {

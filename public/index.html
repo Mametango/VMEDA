@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="format-detection" content="telephone=no">
@@ -14,12 +14,13 @@
   <title>VMEDA - 動画検索サイト</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=1.0.6">
 </head>
 <body>
   <div class="container">
     <header class="header">
       <h1 class="site-title">VMEDA</h1>
+      <p class="header-debug-hint">🐛 攻略デバッグ: 登録サイト表示中に「デバッグ」ボタンで除去数・統計を表示（Ctrl+Shift+D）</p>
     </header>
 
     <section class="search-section">
@@ -33,20 +34,29 @@
         >
         <button id="search-btn" class="search-btn">検索</button>
       </div>
-      <div class="random-buttons">
-        <button id="iv-random-btn" class="random-btn iv-btn">🎬 IVランダム</button>
-        <button id="jav-random-btn" class="random-btn jav-btn">🎥 JAVランダム</button>
+      <div class="site-buttons-section">
+        <p class="site-buttons-label">登録サイト（VMEDA内で表示）</p>
+        <div class="site-buttons iv-sites">
+          <span class="site-group-label">IV</span>
+          <button type="button" class="site-btn" data-source="ivfree">IVFree</button>
+          <button type="button" class="site-btn" data-source="aivfree">Aivfree</button>
+          <button type="button" class="site-btn" data-source="jpdmv">JPdmv</button>
+          <button type="button" class="site-btn" data-source="pizjav">Pizjav</button>
+        </div>
+        <div class="site-buttons jav-sites">
+          <span class="site-group-label">JAV</span>
+          <button type="button" class="site-btn" data-source="javmix">Javmix</button>
+          <button type="button" class="site-btn" data-source="japanhub">Japanhub</button>
+          <button type="button" class="site-btn" data-source="douga4">Douga4</button>
+          <button type="button" class="site-btn" data-source="fc2video">FC2Video</button>
+          <button type="button" class="site-btn" data-source="jable">Jable</button>
+          <button type="button" class="site-btn" data-source="x1hub">X1hub</button>
+          <button type="button" class="site-btn" data-source="airav">Airav</button>
+        </div>
       </div>
     </section>
 
-    <!-- 広告エリア1: ヘッダー下 -->
-    <div id="ad-header" class="ad-container ad-header"></div>
-
     <div id="loading" class="loading hidden">検索中...</div>
-
-    <div id="recent-searches" class="recent-searches" style="display: block;">
-      <div id="recent-searches-list" class="recent-searches-list"></div>
-    </div>
 
     <div id="sort-container" class="sort-container hidden">
       <label for="sort-select" class="sort-label">並び替え:</label>
@@ -62,10 +72,30 @@
       </select>
     </div>
 
-    <div id="results" class="results"></div>
+    <div id="site-frame-wrap" class="site-frame-wrap hidden">
+      <div class="site-frame-toolbar">
+        <button type="button" id="site-frame-back" class="site-frame-back">← VMEDAに戻る</button>
+        <div class="site-frame-nav">
+          <button type="button" id="site-frame-history-back" class="site-frame-nav-btn" title="戻る">← 戻る</button>
+          <button type="button" id="site-frame-history-forward" class="site-frame-nav-btn" title="進む">進む →</button>
+        </div>
+        <button type="button" id="vmeda-debug-toggle" class="vmeda-debug-toggle" title="サイト攻略デバッグ (Ctrl+Shift+D)">🐛 VMEDA 攻略デバッグ</button>
+      </div>
+      <div id="vmeda-debug-panel" class="vmeda-debug-panel hidden">
+        <div class="vmeda-debug-header">VMEDA 攻略デバッグ — 除去したスクリプト数・要素数・書き換えURL数</div>
+        <div class="vmeda-debug-row"><label>プロキシURL:</label><input id="vmeda-debug-proxy-url" class="vmeda-debug-input" readonly /></div>
+        <div class="vmeda-debug-row"><label>実URL:</label><input id="vmeda-debug-real-url" class="vmeda-debug-input" readonly /></div>
+        <div class="vmeda-debug-row"><label>統計 (最終ページ):</label><pre id="vmeda-debug-stats" class="vmeda-debug-stats"></pre></div>
+        <div class="vmeda-debug-actions">
+          <button type="button" id="vmeda-debug-copy-url" class="vmeda-debug-btn">URLコピー</button>
+          <button type="button" id="vmeda-debug-copy-all" class="vmeda-debug-btn">デバッグ一括コピー</button>
+          <button type="button" id="vmeda-debug-open-tab" class="vmeda-debug-btn">別タブで開く</button>
+        </div>
+      </div>
+      <iframe id="site-frame" class="site-frame" title="登録サイト" allow="fullscreen; autoplay; encrypted-media; picture-in-picture"></iframe>
+    </div>
 
-    <!-- 広告エリア2: フッター上 -->
-    <div id="ad-footer" class="ad-container ad-footer"></div>
+    <div id="results" class="results"></div>
   </div>
 
   <script src="app.js?v=1.0.4"></script>

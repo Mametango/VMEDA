@@ -1,4 +1,4 @@
-// Vercelサーバーレス環境でのエラーハンドリング
+// 未処理例外時もプロセスを即終了させずログだけ出す（Cursor/開発時のクラッシュ軽減）
 process.on('uncaughtException', (error) => {
   console.error('❌ 未処理の例外:', error);
 });
@@ -4581,26 +4581,17 @@ app.get('/api/random', async (req, res) => {
     console.log(`🎲 ランダム動画取得開始: type=${type}`);
     
     let allVideos = [];
-    let ivMat6tubeQueryUsed = '';
     
     if (type === 'iv') {
-      // IV動画: IVFree、JPdmv、Mat6tubeからランダムに表示
-      // ただし Mat6tube は、IV側タイトル（例: IMOB-059 等）を検索クエリとして使用する
+      // IV動画: IVFree、JPdmvからランダムに表示（Mat6tubeは削除済み）
       const ivfreePromise = searchIVFree('', false); // 空のクエリで全件取得
       const jpdmvPromise = searchJPdmv('', false); // JPdmvからも取得
       const ivfreeVideos = await ivfreePromise.catch(() => []);
-
-      const { queryUsed: mat6tubeQueryUsed, videos: mat6tubeVideos } =
-        await searchMat6tubeByIvTitleSeed(ivfreeVideos).catch(() => ({ queryUsed: '', videos: [] }));
-      ivMat6tubeQueryUsed = mat6tubeQueryUsed || '';
-      console.log(`🔎 IVランダム(Mat6tube): タイトル由来クエリ="${ivMat6tubeQueryUsed}" で ${mat6tubeVideos?.length || 0}件`);
-
       const jpdmvVideos = await jpdmvPromise.catch(() => []);
 
       const ivResults = [
         { name: 'searchIVFree', value: ivfreeVideos },
-        { name: 'searchJPdmv', value: jpdmvVideos },
-        { name: 'searchMat6tube', value: mat6tubeVideos }
+        { name: 'searchJPdmv', value: jpdmvVideos }
       ];
 
       // デバッグ: 各検索関数の結果を確認
@@ -4623,13 +4614,12 @@ app.get('/api/random', async (req, res) => {
         console.log(`  - ${r.name}: ${videos.length}件`);
       });
 
-      console.log(`✅ IVFree、JPdmv、Mat6tubeから${allVideos.length}件の動画を取得`);
+      console.log(`✅ IVFree、JPdmvから${allVideos.length}件の動画を取得`);
     } else if (type === 'jav') {
-      // JAV動画: Javmix.TV、JPdmv、Mat6tube、Japanhub、Douga4、FC2Video、Jable、X1hub、Airavから取得
+      // JAV動画: Javmix.TV、JPdmv、Japanhub、Douga4、FC2Video、Jable、X1hub、Airavから取得（Mat6tubeは削除済み）
       const javSearches = [
         searchJavmix('', false),
         searchJPdmv('', false),
-        searchMat6tube('', false),
         searchJapanhub('', false), // Japanhubからも取得
         searchDouga4('', false), // Douga4からも取得
         searchFC2Video('', false), // FC2Videoからも取得
@@ -4641,7 +4631,7 @@ app.get('/api/random', async (req, res) => {
       const javResults = await Promise.allSettled(javSearches);
       
       // デバッグ: 各検索関数の結果を確認
-      const searchFunctionNames = ['searchJavmix', 'searchJPdmv', 'searchMat6tube', 'searchJapanhub', 'searchDouga4', 'searchFC2Video', 'searchJable', 'searchX1hub', 'searchAirav'];
+      const searchFunctionNames = ['searchJavmix', 'searchJPdmv', 'searchJapanhub', 'searchDouga4', 'searchFC2Video', 'searchJable', 'searchX1hub', 'searchAirav'];
       javResults.forEach((result, index) => {
         const functionName = searchFunctionNames[index];
         if (result.status === 'fulfilled' && Array.isArray(result.value)) {
@@ -4780,17 +4770,13 @@ app.get('/api/random', async (req, res) => {
       pppFilteredCount: pppFilteredCount,
       totalAfterFilter: uniqueVideos.length,
       pppInFinal: pppInFinal.length,
-      // IVランダムのMat6tube検索クエリ（タイトル由来）を返す
-      ivMat6tubeQueryUsed: type === 'iv' ? ivMat6tubeQueryUsed : '',
       sourceBreakdown: type === 'iv' ? {
         ivfree: uniqueVideos.filter(v => v.source === 'ivfree').length,
         jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
-        mat6tube: uniqueVideos.filter(v => v.source === 'mat6tube').length,
-        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv', 'mat6tube'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv'].includes(v.source)).length
       } : type === 'jav' ? {
         javmix: uniqueVideos.filter(v => v.source === 'javmix').length,
         jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
-        mat6tube: uniqueVideos.filter(v => v.source === 'mat6tube').length,
         japanhub: uniqueVideos.filter(v => v.source === 'japanhub').length,
         douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
         fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
@@ -4798,7 +4784,7 @@ app.get('/api/random', async (req, res) => {
         x1hub: uniqueVideos.filter(v => v.source === 'x1hub').length,
         airav: uniqueVideos.filter(v => v.source === 'airav').length,
         ppp: uniqueVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length,
-        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'japanhub', 'douga4', 'fc2video', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
       } : {}
     };
     
@@ -4854,15 +4840,13 @@ app.get('/api/random', async (req, res) => {
       const ivSourceCounts = {
         ivfree: uniqueVideos.filter(v => v.source === 'ivfree').length,
         jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
-        mat6tube: uniqueVideos.filter(v => v.source === 'mat6tube').length,
-        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv', 'mat6tube'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['ivfree', 'jpdmv'].includes(v.source)).length
       };
-      console.log(`📊 ソース別内訳: IVFree=${ivSourceCounts.ivfree}件, JPdmv=${ivSourceCounts.jpdmv}件, Mat6tube=${ivSourceCounts.mat6tube}件, その他=${ivSourceCounts.other}件`);
+      console.log(`📊 ソース別内訳: IVFree=${ivSourceCounts.ivfree}件, JPdmv=${ivSourceCounts.jpdmv}件, その他=${ivSourceCounts.other}件`);
     } else {
       const sourceCounts = {
         javmix: uniqueVideos.filter(v => v.source === 'javmix').length,
         jpdmv: uniqueVideos.filter(v => v.source === 'jpdmv').length,
-        mat6tube: uniqueVideos.filter(v => v.source === 'mat6tube').length,
         japanhub: uniqueVideos.filter(v => v.source === 'japanhub').length,
         douga4: uniqueVideos.filter(v => v.source === 'douga4').length,
         fc2video: uniqueVideos.filter(v => v.source === 'fc2video').length,
@@ -4870,9 +4854,9 @@ app.get('/api/random', async (req, res) => {
         x1hub: uniqueVideos.filter(v => v.source === 'x1hub').length,
         airav: uniqueVideos.filter(v => v.source === 'airav').length,
         ppp: uniqueVideos.filter(v => v && (v.source === 'ppp' || (v.url && v.url.includes('ppp.porn')))).length,
-        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'mat6tube', 'japanhub', 'douga4', 'fc2video', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
+        other: uniqueVideos.filter(v => v && v.source && !['javmix', 'jpdmv', 'japanhub', 'douga4', 'fc2video', 'jable', 'x1hub', 'airav', 'ppp'].includes(v.source)).length
       };
-      console.log(`📊 ソース別内訳: Javmix=${sourceCounts.javmix}件, JPdmv=${sourceCounts.jpdmv}件, Mat6tube=${sourceCounts.mat6tube}件, Japanhub=${sourceCounts.japanhub}件, Douga4=${sourceCounts.douga4}件, FC2Video=${sourceCounts.fc2video}件, Jable=${sourceCounts.jable}件, X1hub=${sourceCounts.x1hub}件, Airav=${sourceCounts.airav}件, PPP=${sourceCounts.ppp}件, その他=${sourceCounts.other}件`);
+      console.log(`📊 ソース別内訳: Javmix=${sourceCounts.javmix}件, JPdmv=${sourceCounts.jpdmv}件, Japanhub=${sourceCounts.japanhub}件, Douga4=${sourceCounts.douga4}件, FC2Video=${sourceCounts.fc2video}件, Jable=${sourceCounts.jable}件, X1hub=${sourceCounts.x1hub}件, Airav=${sourceCounts.airav}件, PPP=${sourceCounts.ppp}件, その他=${sourceCounts.other}件`);
       if (sourceCounts.ppp > 0) {
         console.error(`❌ [デバッグ] エラー: 最終結果にPPP動画が${sourceCounts.ppp}件含まれています！`);
       }
@@ -6595,6 +6579,17 @@ app.get('/api/jpdmv-proxy', async (req, res) => {
   }
 });
 
+// VMEDA site-proxy / pizjav-proxy（api/lib のプロキシをローカル実行用に登録）
+try {
+  const siteProxy = require('./api/lib/site-proxy');
+  const pizjavProxy = require('./api/lib/pizjav-proxy');
+  siteProxy.register(app);
+  pizjavProxy.register(app);
+  console.log('✅ site-proxy / pizjav-proxy 登録完了');
+} catch (e) {
+  console.warn('⚠️ site-proxy / pizjav-proxy の読み込みに失敗:', e.message);
+}
+
 // ルートパス - index.htmlを返す（Vercel対応）
 app.get('/', (req, res) => {
   try {
@@ -7477,5 +7472,15 @@ async function searchFC2Video(query, strictMode = true) {
   }
 }
 
-// Vercel用にエクスポート
+// 直接実行時はHTTPサーバーを起動（node server.js で Cursor/ターミナルが即終了しないようにする）
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log('VMEDA server: http://localhost:' + PORT);
+  }).on('error', (err) => {
+    console.error('Listen error:', err.message);
+    process.exitCode = 1;
+  });
+}
+
 module.exports = app;
