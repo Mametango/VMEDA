@@ -707,13 +707,19 @@ function stopVideo(videoId) {
   const container = document.getElementById(`player-${videoId}`);
   if (!container) return;
   
-  const iframe = container.querySelector('iframe');
-  if (iframe) {
+  const player = container.querySelector('iframe, video.video-player');
+  if (player) {
     // iframeのsrcを削除して動画を停止
-    iframe.src = '';
+    if (player.tagName === 'IFRAME') {
+      player.src = '';
+    } else if (player.tagName === 'VIDEO') {
+      player.pause();
+      player.removeAttribute('src');
+      player.load();
+    }
     // コンテナをクリアして再生ボタンを表示
     container.innerHTML = `
-      <button class="play-btn" onclick="showPlayer('${videoId}', '${escapeHtml(iframe.getAttribute('data-embed-url') || '')}', '${escapeHtml(iframe.getAttribute('data-original-url') || '')}', '${iframe.getAttribute('data-source') || ''}')">
+      <button class="play-btn" onclick="showPlayer('${videoId}', '${escapeHtml(player.getAttribute('data-embed-url') || '')}', '${escapeHtml(player.getAttribute('data-original-url') || '')}', '${player.getAttribute('data-source') || ''}')">
         ▶ 再生
       </button>
     `;
@@ -780,6 +786,50 @@ function isIPhone() {
 
 document.documentElement.classList.toggle('ios-device', isIPhone());
 
+function renderNativeVideoPlayer(container, videoId, mediaUrl, embedUrl, originalUrl, source) {
+  container.innerHTML = '';
+  container.style.position = 'relative';
+  container.style.width = '100%';
+  container.style.paddingTop = '56.25%';
+  container.style.background = '#000';
+  container.style.borderRadius = '8px';
+  container.style.overflow = 'hidden';
+
+  const video = document.createElement('video');
+  video.className = 'video-player';
+  video.controls = true;
+  video.playsInline = true;
+  video.preload = 'metadata';
+  video.src = mediaUrl;
+  video.setAttribute('data-embed-url', embedUrl || mediaUrl);
+  video.setAttribute('data-original-url', originalUrl || '');
+  video.setAttribute('data-source', source || '');
+  video.style.width = '100%';
+  video.style.height = '100%';
+  video.style.position = 'absolute';
+  video.style.top = '0';
+  video.style.left = '0';
+  video.style.border = 'none';
+  video.style.background = '#000';
+  container.appendChild(video);
+
+  if (originalUrl) {
+    const openLink = document.createElement('a');
+    openLink.href = originalUrl;
+    openLink.target = '_blank';
+    openLink.rel = 'noopener noreferrer';
+    openLink.className = 'open-original-btn';
+    openLink.textContent = '元のサイトで開く';
+    openLink.style.position = 'absolute';
+    openLink.style.right = '12px';
+    openLink.style.bottom = '12px';
+    openLink.style.zIndex = '2';
+    container.appendChild(openLink);
+  }
+
+  video.play().catch(() => {});
+}
+
 // プレイヤー表示（グローバルスコープに公開）
 window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   const container = document.getElementById(`player-${videoId}`);
@@ -839,6 +889,10 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   const iframe = document.createElement('iframe');
   // URLを正規化（iOS Safari対応）
   let normalizedUrl = embedUrl.startsWith('//') ? `https:${embedUrl}` : embedUrl;
+  if (isDirectMediaUrl(normalizedUrl)) {
+    renderNativeVideoPlayer(container, videoId, normalizedUrl, embedUrl, originalUrl, source);
+    return;
+  }
   // /api/... のような相対URLはそのまま使う（https:// を付けない）
   if (!normalizedUrl.startsWith('/') && !normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
     normalizedUrl = `https://${normalizedUrl}`;
@@ -1351,6 +1405,10 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     if (isIVFreeExternalVideo) {
       // 外部動画サイトの場合は、直接iframeで表示
       iframe.removeAttribute('sandbox');
+      if (isDirectMediaUrl(normalizedUrl)) {
+        renderNativeVideoPlayer(container, videoId, normalizedUrl, embedUrl, originalUrl, source);
+        return;
+      }
       iframe.src = normalizedUrl;
       console.log('📺 IVFree外部動画URLを直接表示（プロキシなし）:', normalizedUrl);
     } else {
@@ -1405,9 +1463,11 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
           if (isExternalEmbedUrl) {
             // 外部動画サイトの場合は、直接iframeで表示
             iframe.removeAttribute('sandbox');
-            iframe.src = isDirectMediaUrl(data.embedUrl)
-              ? data.embedUrl
-              : `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
+            if (isDirectMediaUrl(data.embedUrl)) {
+              renderNativeVideoPlayer(container, videoId, data.embedUrl, data.embedUrl, originalUrl, source);
+              return;
+            }
+            iframe.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
             ivfreeStatusText = `動画URL更新（直接表示）: ${data.embedUrl.substring(0, 30)}...`;
             ivfreeUpdateDebugInfo();
             console.log('📺 IVFree外部動画URLを直接表示（プロキシなし）:', data.embedUrl);
@@ -1458,8 +1518,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
           const isExternal = /vidnest|lulustream|loadvid|luluvid|embed/i.test(data.embedUrl);
           if (isExternal) {
             if (isDirectMediaUrl(data.embedUrl)) {
-              ifr.removeAttribute('sandbox');
-              ifr.src = data.embedUrl;
+              renderNativeVideoPlayer(container, videoId, data.embedUrl, data.embedUrl, originalUrl, source);
             } else {
               ifr.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
             }
