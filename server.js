@@ -4747,6 +4747,31 @@ app.get('/api/recent-searches', async (req, res) => {
   }
 });
 
+app.get('/api/bilibili-related', async (req, res) => {
+  try {
+    const videoUrl = String(req.query.url || '').trim();
+    const title = String(req.query.title || '').trim();
+
+    if (!videoUrl || !videoUrl.includes('bilibili.com')) {
+      return res.status(400).json({ error: 'Bilibili video URL is required' });
+    }
+
+    const seedVideo = {
+      id: `bilibili-seed-${Date.now()}`,
+      title,
+      url: videoUrl,
+      embedUrl: videoUrl,
+      source: 'bilibili'
+    };
+
+    const relatedVideos = await searchBilibiliRelatedFromVideoPages([seedVideo], 12);
+    res.json({ results: relatedVideos });
+  } catch (error) {
+    console.error('Bilibili関連動画取得エラー:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve Bilibili related videos' });
+  }
+});
+
 // ランダム動画取得API
 app.get('/api/random', async (req, res) => {
   try {

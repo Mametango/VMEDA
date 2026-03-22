@@ -388,21 +388,20 @@ async function toggleRelatedVideos(videoId) {
 
   const video = findVideoRecord(videoId, '', '');
   const query = buildRelatedQuery(video);
-  if (!query) {
-    host.innerHTML = '<div class="related-empty">関連動画を探すためのタイトルが見つかりませんでした。</div>';
+  const videoUrl = String(video?.url || video?.embedUrl || '').trim();
+  if (!videoUrl || !videoUrl.includes('bilibili.com')) {
+    host.innerHTML = '<div class="related-empty">Bilibili の動画URLが見つかりませんでした。</div>';
     return;
   }
 
   host.innerHTML = '<div class="related-loading">関連動画を読み込み中...</div>';
 
   try {
-    const response = await fetch('/api/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ query })
+    const params = new URLSearchParams({
+      url: videoUrl,
+      title: video?.title || ''
     });
+    const response = await fetch(`/api/bilibili-related?${params.toString()}`);
 
     if (!response.ok) {
       throw new Error('Failed to load related videos');
