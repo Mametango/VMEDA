@@ -6645,6 +6645,9 @@ app.get('/api/proxy-video', async (req, res) => {
     if (!videoUrl) {
       return res.status(400).json({ error: 'URL parameter is required' });
     }
+    if (String(videoUrl).includes('bilibili.com') || String(videoUrl).includes('player.bilibili.com')) {
+      return res.redirect(String(videoUrl));
+    }
     
     console.log('📺 動画プロキシリクエスト:', videoUrl);
     
