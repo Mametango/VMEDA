@@ -160,6 +160,102 @@ function findVideoRecord(videoId, originalUrl, embedUrl) {
   }) || null;
 }
 
+function replaceVideoRecord(videoId, nextVideo) {
+  const normalizedUrl = normalizeBilibiliPageUrl(nextVideo?.url || nextVideo?.embedUrl || '');
+  const normalizedThumbnail = normalizeThumbnailUrl(nextVideo?.thumbnail, nextVideo?.title || videoId);
+  const mergedVideo = {
+    ...nextVideo,
+    id: videoId,
+    url: normalizedUrl || nextVideo?.url || '',
+    embedUrl: normalizedUrl || nextVideo?.embedUrl || nextVideo?.url || '',
+    source: nextVideo?.source || 'bilibili',
+    thumbnail: normalizedThumbnail
+  };
+
+  let replaced = false;
+  currentVideos = currentVideos.map((video) => {
+    if (video && video.id === videoId) {
+      replaced = true;
+      return {
+        ...video,
+        ...mergedVideo
+      };
+    }
+    return video;
+  });
+
+  if (!replaced) {
+    currentVideos.unshift(mergedVideo);
+  }
+
+  return mergedVideo;
+}
+
+function syncVideoCard(videoId, video) {
+  const container = document.getElementById(`player-${videoId}`);
+  const videoItem = container?.closest('.video-item');
+  if (!videoItem || !video) {
+    return;
+  }
+
+  const title = String(video.title || '関連動画').trim();
+  const duration = String(video.duration || '').trim();
+  const officialUrl = normalizeBilibiliPageUrl(video.url || video.embedUrl || '');
+  const relatedUrl = officialUrl
+    ? `/related.html?${new URLSearchParams({ url: officialUrl, title, q: buildRelatedQuery(video) || title }).toString()}`
+    : '';
+
+  const titleNode = videoItem.querySelector('.video-title');
+  if (titleNode) {
+    titleNode.textContent = title;
+  }
+
+  const durationNode = videoItem.querySelector('.video-duration');
+  if (durationNode) {
+    durationNode.textContent = duration;
+    durationNode.style.display = duration ? '' : 'none';
+  }
+
+  const sourceNode = videoItem.querySelector('.video-source');
+  if (sourceNode) {
+    sourceNode.textContent = getSourceName(video.source || 'bilibili');
+  }
+
+  const officialBtn = videoItem.querySelector('.official-btn');
+  if (officialBtn) {
+    if (officialUrl) {
+      officialBtn.setAttribute('href', officialUrl);
+      officialBtn.style.display = '';
+    } else {
+      officialBtn.style.display = 'none';
+    }
+  }
+
+  const relatedBtn = videoItem.querySelector('.related-btn');
+  if (relatedBtn) {
+    if (relatedUrl) {
+      relatedBtn.setAttribute('href', relatedUrl);
+      relatedBtn.style.display = '';
+    } else {
+      relatedBtn.style.display = 'none';
+    }
+  }
+
+  const thumb = videoItem.querySelector('.video-thumbnail');
+  if (thumb && video.thumbnail) {
+    thumb.setAttribute('src', video.thumbnail);
+    thumb.setAttribute('alt', title);
+  }
+
+  const wrapper = videoItem.querySelector('.video-thumbnail-wrapper');
+  if (wrapper) {
+    wrapper.setAttribute(
+      'onclick',
+      `showPlayer('${escapeHtml(videoId)}', '${escapeHtml(video.embedUrl || video.url || '')}', '${escapeHtml(video.url || video.embedUrl || '')}', '${escapeHtml(video.source || 'bilibili')}', event)`
+    );
+  }
+}
+
 function recordVideoView(videoId, embedUrl, originalUrl, source) {
   const matched = findVideoRecord(videoId, originalUrl, embedUrl);
   const entry = {
@@ -390,7 +486,7 @@ function buildRelatedVideoMarkup(video, fallbackQuery) {
           ${duration}
         </div>
         <div class="related-video-actions">
-          <button type="button" class="related-open-btn" data-query="${query}">この場で開く</button>
+          <button type="button" class="related-open-btn" data-query="${query}">この場で再生</button>
           ${url ? `<a class="related-link-btn" href="${url}" target="_blank" rel="noopener noreferrer">Bilibiliで開く</a>` : ''}
         </div>
       </div>
@@ -533,15 +629,20 @@ async function showInlineRelatedVideos(videoId) {
     </div>
   `;
 
-  host.querySelectorAll('.related-open-btn').forEach((button) => {
+  host.querySelectorAll('.related-open-btn').forEach((button, index) => {
     button.addEventListener('click', async () => {
-      const nextQuery = String(button.dataset.query || '').trim();
-      if (!nextQuery) {
+      const nextVideo = relatedVideos[index];
+      if (!nextVideo) {
         return;
       }
-      searchInput.value = nextQuery;
-      await searchVideos(nextQuery);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const mergedVideo = replaceVideoRecord(videoId, nextVideo);
+      syncVideoCard(videoId, mergedVideo);
+      window.showPlayer(
+        videoId,
+        mergedVideo.embedUrl || mergedVideo.url || '',
+        mergedVideo.url || mergedVideo.embedUrl || '',
+        mergedVideo.source || 'bilibili'
+      );
     });
   });
 }
