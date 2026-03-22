@@ -1,0 +1,1137 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --app-vh: 1vh;
+}
+
+html {
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  min-height: calc(var(--app-vh, 1vh) * 100);
+  min-height: -webkit-fill-available; /* iOS Safari対応 */
+  padding: 20px;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
+  -webkit-touch-callout: none; /* 長押しメニューを無効化 */
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.site-title {
+  color: white;
+  font-size: 48px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.header-debug-hint {
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.search-section {
+  margin-bottom: 30px;
+}
+
+.search-container {
+  display: flex;
+  gap: 10px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.search-input {
+  flex: 1;
+  padding: 15px 20px;
+  font-size: 16px; /* iOSで自動ズームを防ぐ最小サイズ */
+  border: none;
+  border-radius: 30px;
+  outline: none;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  -webkit-appearance: none; /* iOS Safariのデフォルトスタイルを無効化 */
+  appearance: none;
+}
+
+.search-btn {
+  padding: 15px 30px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  background: #4CAF50;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: background 0.3s;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.1); /* タップ時のハイライト */
+  min-height: 44px; /* iOS推奨タップ領域サイズ */
+  min-width: 44px;
+  touch-action: manipulation; /* ダブルタップズームを無効化 */
+}
+
+.search-btn:hover {
+  background: #45a049;
+}
+
+.search-btn:active {
+  background: #3d8b40;
+  transform: scale(0.98);
+}
+
+.random-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.random-btn {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: all 0.3s;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+  min-height: 44px;
+  min-width: 120px;
+  touch-action: manipulation;
+}
+
+.iv-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.iv-btn:hover {
+  background: linear-gradient(135deg, #5568d3 0%, #6a3d8f 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+}
+
+.iv-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.jav-btn {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.jav-btn:hover {
+  background: linear-gradient(135deg, #e082ea 0%, #e4465b 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+}
+
+.jav-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.site-buttons-section {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 12px;
+}
+
+.site-buttons-label {
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.site-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.site-buttons:last-child {
+  margin-bottom: 0;
+}
+
+.site-group-label {
+  color: rgba(255,255,255,0.9);
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 4px;
+  min-width: 28px;
+}
+
+.site-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  background: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.site-btn:hover {
+  background: rgba(255,255,255,0.35);
+  transform: translateY(-1px);
+}
+
+.site-btn:active {
+  transform: translateY(0);
+}
+
+.site-frame-wrap {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: calc(var(--app-vh, 1vh) * 100);
+  z-index: 10000;
+  background: #111;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.site-frame-wrap.hidden {
+  display: none;
+}
+
+.site-frame-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  gap: 10px;
+  background: rgba(0,0,0,0.9);
+}
+
+.site-frame-back {
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: bold;
+  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.site-frame-back:hover {
+  opacity: 0.9;
+}
+
+.site-frame-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.site-frame-nav-btn {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.site-frame-nav-btn:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.site-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  min-height: calc(var(--app-vh, 1vh) * 100 - 56px);
+  border: none;
+  background: #000;
+}
+
+.vmeda-debug-toggle {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #ccc;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.vmeda-debug-toggle:hover { background: rgba(255,255,255,0.2); }
+.vmeda-debug-toggle.active { background: rgba(100,200,100,0.3); color: #fff; }
+
+.vmeda-debug-panel {
+  width: 100%;
+  padding: 12px;
+  background: rgba(0,0,0,0.95);
+  border-bottom: 1px solid #333;
+  font-size: 12px;
+  font-family: monospace;
+}
+.vmeda-debug-panel.hidden { display: none; }
+.vmeda-debug-header { color: #8f8; margin-bottom: 8px; font-weight: bold; }
+.vmeda-debug-row { margin: 6px 0; }
+.vmeda-debug-row label { display: inline-block; width: 100px; color: #aaa; }
+.vmeda-debug-input { width: calc(100% - 110px); padding: 4px 8px; background: #222; color: #8f8; border: 1px solid #444; border-radius: 4px; font-size: 11px; }
+.vmeda-debug-stats { margin: 8px 0; padding: 8px; background: #1a1a1a; color: #aaa; border-radius: 4px; font-size: 11px; white-space: pre-wrap; max-height: 220px; overflow: auto; }
+.vmeda-debug-actions { margin-top: 10px; display: flex; gap: 8px; }
+.vmeda-debug-btn { padding: 6px 12px; font-size: 11px; color: #fff; background: #444; border: 1px solid #666; border-radius: 4px; cursor: pointer; }
+.vmeda-debug-btn:hover { background: #555; }
+
+.loading {
+  text-align: center;
+  color: white;
+  font-size: 18px;
+  margin: 20px 0;
+}
+
+.hidden {
+  display: none;
+}
+
+.sort-container {
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+}
+
+.sort-label {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sort-select {
+  flex: 1;
+  padding: 10px 15px;
+  font-size: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  max-width: 300px;
+}
+
+.sort-select:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 1);
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* 広告コンテナ */
+.ad-container {
+  margin: 20px auto;
+  text-align: center;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.ad-header {
+  margin-top: 0;
+  margin-bottom: 30px;
+}
+
+.ad-footer {
+  margin-top: 30px;
+  margin-bottom: 0;
+}
+
+.ad-in-content {
+  margin: 30px 0;
+  max-width: 100%;
+}
+
+.results {
+  display: grid;
+  gap: 20px;
+}
+
+.video-item {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.video-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+.video-title {
+  font-size: 18px;
+  color: #333;
+  flex: 1;
+  min-width: 0;
+}
+
+.video-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.video-duration {
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.video-source {
+  padding: 5px 15px;
+  background: #667eea;
+  color: white;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.video-player-container {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  padding-top: 56.25%; /* 16:9 */
+  height: 0; /* padding-topで高さを制御するため */
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  /* 動画プレイヤー周辺の広告を非表示 - z-indexを最大値にして広告の上に表示 */
+  z-index: 999999 !important;
+  isolation: isolate !important; /* 新しいスタッキングコンテキストを作成 */
+  /* 広告が上に表示されないようにする */
+  transform: translateZ(0) !important; /* ハードウェアアクセラレーション */
+  -webkit-transform: translateZ(0) !important;
+  will-change: z-index !important; /* パフォーマンス最適化 */
+  /* 広告が上に表示されないようにする */
+  pointer-events: auto !important;
+}
+
+/* 動画プレイヤーコンテナ内の広告を非表示（具体的なセレクタのみ） */
+.video-player-container .ad-container,
+.video-player-container .ad-in-content,
+.video-player-container ins.adsbygoogle,
+.video-player-container iframe[src*="adsbygoogle"],
+.video-player-container iframe[src*="doubleclick"],
+.video-player-container iframe[src*="googlesyndication"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+/* 動画プレイヤーが表示されている時、その動画アイテム内の広告を非表示 */
+.video-item:has(.video-player-container iframe) .ad-container,
+.video-item:has(.video-player-container iframe) .ad-in-content,
+.video-item:has(.video-player-container iframe) ins.adsbygoogle {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+/* 動画プレイヤーの前後に表示される広告も非表示 */
+.video-item:has(.video-player-container iframe) + .ad-container,
+.video-item:has(.video-player-container iframe) + .ad-in-content {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.video-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #000;
+  /* iOS Safari対応 */
+  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
+  /* iPhone Safariで確実に表示されるように */
+  display: block;
+  -webkit-transform: translateZ(0); /* ハードウェアアクセラレーション */
+  transform: translateZ(0);
+  /* タッチ操作を有効化 */
+  touch-action: manipulation;
+  /* 広告の上に確実に表示されるように */
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+
+/* PPP.Pornの動画プレイヤー用の特別なスタイル（下側が切れないように） */
+.video-item[data-source="ppp"] .video-player-container,
+.video-item[data-source="ppp"] .video-player {
+  overflow: visible;
+}
+
+.video-item[data-source="ppp"] .video-player-container {
+  padding-top: 60%; /* 16:9より少し高くして、下側が切れないように */
+  min-height: 400px; /* 最小高さを確保 */
+}
+
+.video-item[data-source="ppp"] .video-player {
+  height: 100%;
+  min-height: 100%;
+}
+
+/* Pizjav: ページ内にヘッダーがあり動画が下にずれるため、表示領域を高くして動画が入りやすくする */
+.video-item[data-source="pizjav"] .video-player-container {
+  padding-top: 90%;
+  min-height: 360px;
+}
+.video-item[data-source="pizjav"] .video-player {
+  height: 100%;
+}
+
+.play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 15px 30px;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  background: rgba(0,0,0,0.7);
+  border: 2px solid white;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.play-btn:hover {
+  background: rgba(0,0,0,0.9);
+}
+
+.video-thumbnail-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #1a1a1a;
+  transition: transform 0.3s ease;
+}
+
+.video-thumbnail-wrapper:hover {
+  transform: scale(1.02);
+}
+
+.video-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #1a1a1a;
+  transition: opacity 0.3s ease;
+}
+
+.video-thumbnail[src=""] {
+  display: none;
+}
+
+.play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none; /* クリックイベントを親要素に渡す */
+}
+
+.play-overlay .play-btn-thumbnail {
+  pointer-events: auto; /* 再生ボタンはクリック可能 */
+}
+
+.video-thumbnail-wrapper:hover .play-overlay {
+  opacity: 1;
+}
+
+/* タッチデバイス（iPhoneなど）では常に再生ボタンを表示 */
+@media (hover: none) and (pointer: coarse) {
+  .play-overlay {
+    opacity: 1; /* タッチデバイスでは常に表示 */
+  }
+}
+
+/* ローディングスピナーアニメーション */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ページネーション */
+.pagination {
+  margin: 30px 0;
+  text-align: center;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  min-width: 40px;
+}
+
+.pagination-btn:hover:not(.disabled):not(.active) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.pagination-btn.active {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+  font-weight: bold;
+}
+
+.pagination-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-ellipsis {
+  padding: 8px 4px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.pagination-info {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.play-btn-thumbnail {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.9);
+  border: 4px solid white;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  padding: 0;
+  line-height: 1;
+}
+
+/* Bilibiliアイコンのスタイル */
+.play-btn-thumbnail.bilibili-icon {
+  background: rgba(255, 119, 0, 0.9); /* Bilibiliのオレンジ色 */
+  font-size: 40px;
+}
+
+.play-btn-thumbnail:hover {
+  transform: scale(1.1);
+  background: rgba(102, 126, 234, 1);
+}
+
+/* レスポンシブデザイン（モバイル対応） */
+@media (max-width: 768px) {
+  html, body {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  body {
+    padding: 10px;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  .results {
+    padding-bottom: 30px;
+  }
+
+  .container {
+    max-width: 100%;
+    width: 100%;
+    padding: 0;
+    min-width: 0;
+  }
+
+  .site-title {
+    font-size: 28px;
+    margin-bottom: 20px;
+  }
+
+  .header {
+    margin-bottom: 20px;
+  }
+
+  .header-debug-hint {
+    font-size: 11px;
+  }
+
+  .search-section {
+    margin-bottom: 20px;
+  }
+
+  .search-container {
+    flex-direction: column;
+    gap: 10px;
+    max-width: 100%;
+  }
+
+  .search-input {
+    font-size: 16px; /* iOSで自動ズームを防ぐ最小サイズ */
+    width: 100%;
+  }
+
+  .search-btn {
+    width: 100%;
+  }
+
+  .site-buttons-section {
+    padding: 12px;
+  }
+
+  .site-buttons {
+    gap: 6px;
+  }
+
+  .site-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .site-frame-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .site-frame-back {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  .site-frame-nav {
+    gap: 4px;
+  }
+
+  .site-frame-nav-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .vmeda-debug-toggle {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .recent-searches-list {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .recent-search-item {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+
+  .results {
+    display: block;
+    gap: 15px;
+  }
+
+  .video-item {
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 15px;
+    min-height: auto;
+  }
+
+  .video-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .video-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .video-title {
+    font-size: 16px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .video-info {
+    padding: 10px 0;
+  }
+
+  .video-meta {
+    font-size: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .video-player-container {
+    width: 100%;
+    margin: 10px 0;
+    padding: 0;
+    padding-top: 56.25% !important; /* 16:9 アスペクト比を強制 */
+    height: 0 !important;
+    min-height: 280px !important; /* iPhoneで下部が切れないよう最小高さ確保 */
+    position: relative;
+  }
+
+  .video-thumbnail-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* 動画アイテムの高さを確保 */
+  .video-item {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .video-item .video-player-container {
+    flex-shrink: 0;
+  }
+
+  /* pizjav/ivfree系: ページ内にヘッダーがあり動画が下にずれるため、iPhoneで高さを十分に */
+  .video-item[data-source="pizjav"] .video-player-container,
+  .video-item[data-source="ivfree"] .video-player-container,
+  .video-item[data-source="aivfree"] .video-player-container {
+    padding-top: 100% !important;
+    min-height: 70vh !important;
+  }
+
+  .video-item[data-source="pizjav"] .video-player,
+  .video-item[data-source="ivfree"] .video-player,
+  .video-item[data-source="aivfree"] .video-player {
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* aivfree: PCサイトが表示されるため、iPhoneで縮小して収める */
+  .video-item[data-source="aivfree"] .video-player {
+    width: 960px !important;
+    height: 540px !important;
+    max-width: none !important;
+    transform: scale(min(calc((100vw - 40px) / 960), 1)) translateZ(0);
+    -webkit-transform: scale(min(calc((100vw - 40px) / 960), 1)) translateZ(0);
+    transform-origin: 0 0;
+    -webkit-transform-origin: 0 0;
+  }
+
+  .sort-container {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+    padding: 10px;
+    margin: 15px 0;
+  }
+
+  .sort-label {
+    font-size: 14px;
+  }
+
+  .sort-select {
+    width: 100%;
+    font-size: 14px;
+    max-width: 100%;
+  }
+
+  .ad-container {
+    margin: 15px 0;
+    padding: 10px;
+  }
+}
+
+.player-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: white;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 90%;
+  z-index: 10;
+}
+
+.error-detail {
+  font-size: 14px;
+  color: #ffcccc;
+  margin: 10px 0;
+}
+
+.open-original-btn {
+  display: inline-block;
+  margin: 10px 5px;
+  padding: 12px 24px;
+  background: #4CAF50;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background 0.3s;
+}
+
+.open-original-btn:hover {
+  background: #45a049;
+}
+
+.retry-btn {
+  display: inline-block;
+  margin: 10px 5px;
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.retry-btn:hover {
+  background: #5568d3;
+}
+
+
+.recent-searches {
+  margin: 20px 0;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(15px);
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.recent-searches-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.recent-search-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.recent-search-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.recent-search-item:hover::before {
+  left: 100%;
+}
+
+.recent-search-item:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.recent-search-item:active {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.recent-search-icon {
+  font-size: 16px;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.recent-search-query {
+  display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.no-recent-searches {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  text-align: center;
+  padding: 15px;
+  font-style: italic;
+}
+
+.loading-searches {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  text-align: center;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.loading-searches::before {
+  content: '⏳';
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .recent-searches {
+    padding: 15px;
+    margin: 15px 0;
+  }
+  
+  .recent-searches-list {
+    gap: 8px;
+  }
+  
+  .recent-search-item {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  
+  .recent-search-query {
+    max-width: 150px;
+  }
+}
+
+.no-results, .error {
+  text-align: center;
+  color: white;
+  font-size: 18px;
+  padding: 40px;
+}
+
+/* レスポンシブデザインを無効化 - デスクトップと同じ表示 */
