@@ -1137,6 +1137,9 @@ app.post('/api/search', async (req, res) => {
     console.log(`📋 検索関数リスト: ${searchFunctions.map(sf => sf.name).join(', ')} (全${searchFunctions.length}件)`);
     
     // 各検索関数を安全に呼び出す（まずはstrictMode=falseで緩和したマッチングを試す）
+    searchFunctions.length = 0;
+    searchFunctions.push({ fn: searchBilibili, name: 'Bilibili' });
+    console.log('🔒 検索モード: Bilibili only');
     searchFunctions.forEach(({ fn, name }, index) => {
       try {
         if (typeof fn === 'function') {
