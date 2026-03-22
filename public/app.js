@@ -347,7 +347,7 @@ function displayResults(videos, searchQuery) {
         const idMatch = title.match(/\[([A-Z]+-\d+)\]/);
         if (idMatch) {
           const id = idMatch[1].toLowerCase();
-          thumbnail = `http://ivfree.asia/images/${id}.jpg`;
+          thumbnail = `https://ivfree.asia/images/${id}.jpg`;
         }
       }
       // その他のサイトでも、URLからサムネイルを推測
@@ -948,7 +948,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     if (normalizedUrl.startsWith('//')) {
       normalizedUrl = 'https:' + normalizedUrl;
     } else if (!normalizedUrl.startsWith('http')) {
-      normalizedUrl = 'http://' + normalizedUrl;
+      normalizedUrl = (source === 'ivfree' || source === 'aivfree' || isIVFamilyUrl(originalUrl) || isIVFamilyUrl(normalizedUrl))
+        ? 'https://' + normalizedUrl
+        : 'http://' + normalizedUrl;
     }
     
     // 外部動画サイトのURL（vidnest.io、lulustream、loadvid.comなど）の場合は、直接iframeで表示
@@ -967,7 +969,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     } else if (isIVFamilyUrl(normalizedUrl)) {
       // IVFreeの動画ページは常にプロキシ経由で表示（混合コンテンツ防止・広告除去・再生安定）
       if (!normalizedUrl.includes('/api/ivfree-proxy')) {
-        const ivfreePageUrl = normalizedUrl.startsWith('http') ? normalizedUrl : `http://${normalizedUrl}`;
+        const ivfreePageUrl = normalizedUrl.startsWith('http') ? normalizedUrl : `https://${normalizedUrl}`;
         normalizedUrl = `/api/ivfree-proxy?url=${encodeURIComponent(ivfreePageUrl)}`;
         console.log('📺 IVFree動画をプロキシ経由で表示:', normalizedUrl);
       }
@@ -1763,8 +1765,8 @@ searchInput.addEventListener('keypress', (e) => {
 
 // 登録サイトのトップURL（サイト全体をVMEDA内で広告除去表示）
 const SITE_BASE_URLS = {
-  ivfree: 'http://ivfree.asia/',
-  aivfree: 'http://aivfree.com/',
+  ivfree: 'https://ivfree.asia/',
+  aivfree: 'https://aivfree.com/',
   jpdmv: 'https://jpdmv.com/',
   pizjav: 'https://v.pizjav.com/',
   javmix: 'https://javmix.tv/',

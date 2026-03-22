@@ -54,7 +54,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
-          'Referer': 'http://ivfree.asia/',
+          'Referer': 'https://ivfree.asia/',
           'Accept-Encoding': 'gzip, deflate, br'
         },
         timeout: 30000,
@@ -813,7 +813,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
       
       // CSPを完全に緩和（IVFreeのリソースをすべて許可）
       // metaタグのCSPはframe-ancestorsを無視するため、レスポンスヘッダーでも設定
-      const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com https://ivfree.asia http://ivfree.asia https://fonts.googleapis.com; style-src * 'unsafe-inline' https://fonts.googleapis.com https://ivfree.asia http://ivfree.asia; img-src * data: blob: https://ivfree.asia http://ivfree.asia; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data: https://fonts.gstatic.com;`;
+      const cspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com https://ivfree.asia https://fonts.googleapis.com; style-src * 'unsafe-inline' https://fonts.googleapis.com https://ivfree.asia; img-src * data: blob: https://ivfree.asia; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data: https://fonts.gstatic.com;`;
       
       // 新しいCSPを追加（metaタグ）
       $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${cspContent}">`);
@@ -997,7 +997,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'http://ivfree.asia/',
+        'Referer': 'https://ivfree.asia/',
         'Accept-Encoding': 'gzip, deflate, br'
       },
       timeout: 30000,
@@ -1345,7 +1345,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     $('head meta[http-equiv="csp"]').remove();
     
     // CSPを完全に緩和（IVFreeのリソースをすべて許可）
-    const ivfreeCspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com https://ivfree.asia http://ivfree.asia https://fonts.googleapis.com; style-src * 'unsafe-inline' https://fonts.googleapis.com https://ivfree.asia http://ivfree.asia; img-src * data: blob: https://ivfree.asia http://ivfree.asia; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data: https://fonts.gstatic.com;`;
+    const ivfreeCspContent = `default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' https://code.jquery.com https://static.adxadserv.com https://www.googletagmanager.com https://www.google-analytics.com https://ivfree.asia https://fonts.googleapis.com; style-src * 'unsafe-inline' https://fonts.googleapis.com https://ivfree.asia; img-src * data: blob: https://ivfree.asia; media-src * blob:; frame-src *; object-src *; base-uri *; form-action *; connect-src *; font-src * data: https://fonts.gstatic.com;`;
     
     // 新しいCSPを追加（metaタグ）
     $('head').prepend(`<meta http-equiv="Content-Security-Policy" content="${ivfreeCspContent}">`);

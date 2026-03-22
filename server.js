@@ -4050,7 +4050,7 @@ async function searchIVFree(query, strictMode = true) {
     const queryLower = query.toLowerCase().trim();
     
     // トップページから全件取得してフィルタリング（検索機能があるか不明なため）
-    const url = `http://ivfree.asia/`;
+    const url = `https://ivfree.asia/`;
     
     console.log(`🔍 IVFree: URL取得開始: ${url}`);
     const response = await axios.get(url, {
@@ -4058,7 +4058,7 @@ async function searchIVFree(query, strictMode = true) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Referer': 'http://ivfree.asia/',
+        'Referer': 'https://ivfree.asia/',
         'Accept-Encoding': 'gzip, deflate, br'
       },
       timeout: 30000,
@@ -4200,11 +4200,11 @@ async function searchIVFree(query, strictMode = true) {
           if (href.startsWith('//')) {
             fullUrl = 'http:' + href;
           } else if (href.startsWith('/')) {
-            fullUrl = `http://ivfree.asia${href}`;
+            fullUrl = `https://ivfree.asia${href}`;
           } else if (href.startsWith('./')) {
-            fullUrl = `http://ivfree.asia/${href.substring(2)}`;
+            fullUrl = `https://ivfree.asia/${href.substring(2)}`;
           } else if (!href.startsWith('http')) {
-            fullUrl = `http://ivfree.asia/${href}`;
+            fullUrl = `https://ivfree.asia/${href}`;
           }
         } else {
           // リンクが見つからない場合は、IDパターンからURLを生成
@@ -4212,7 +4212,7 @@ async function searchIVFree(query, strictMode = true) {
           if (idMatch) {
             // 複数のURLパターンを試す
             const id = idMatch[1];
-            fullUrl = `http://ivfree.asia/video/${id}`;
+            fullUrl = `https://ivfree.asia/video/${id}`;
           } else {
             return;
           }
@@ -4246,7 +4246,7 @@ async function searchIVFree(query, strictMode = true) {
           const idMatch = titleText.match(/\[([A-Z]+-\d+)\]/);
           if (idMatch) {
             const id = idMatch[1].toLowerCase();
-            thumbnail = `http://ivfree.asia/images/${id}.jpg`;
+            thumbnail = `https://ivfree.asia/images/${id}.jpg`;
           }
         }
         
@@ -5202,7 +5202,7 @@ app.get('/api/ivfree-video', async (req, res) => {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'http://ivfree.asia/',
+        'Referer': 'https://ivfree.asia/',
         'Accept-Encoding': 'gzip, deflate, br'
       },
       timeout: 30000,
@@ -5347,7 +5347,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
-          'Referer': 'http://ivfree.asia/',
+          'Referer': 'https://ivfree.asia/',
           'Accept-Encoding': 'gzip, deflate, br'
         },
         timeout: 30000,
@@ -6094,7 +6094,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'http://ivfree.asia/',
+        'Referer': 'https://ivfree.asia/',
         'Accept-Encoding': 'gzip, deflate, br'
       },
       timeout: 30000,
@@ -6298,7 +6298,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
     // Content Security Policyを追加してポップアップを制限（ただし、動画再生に必要なリソースは許可）
     // base-uriも許可（baseタグを使用するため）
     if ($('head meta[http-equiv="Content-Security-Policy"]').length === 0) {
-      $('head').prepend('<meta http-equiv="Content-Security-Policy" content="default-src \'self\' http://ivfree.asia https://ivfree.asia; script-src \'self\' http://ivfree.asia https://ivfree.asia \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' http://ivfree.asia https://ivfree.asia data:; media-src \'self\' http://ivfree.asia https://ivfree.asia *; frame-src \'self\' http://ivfree.asia https://ivfree.asia *; object-src \'none\'; base-uri \'self\' http://ivfree.asia https://ivfree.asia; form-action \'self\'; frame-ancestors \'self\'; upgrade-insecure-requests;">');
+      $('head').prepend('<meta http-equiv="Content-Security-Policy" content="default-src \'self\' https://ivfree.asia; script-src \'self\' https://ivfree.asia \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' https://ivfree.asia data:; media-src \'self\' https://ivfree.asia *; frame-src \'self\' https://ivfree.asia *; object-src \'none\'; base-uri \'self\' https://ivfree.asia; form-action \'self\'; frame-ancestors \'self\'; upgrade-insecure-requests;">');
     }
     
     // window.openを無効化するスクリプトを追加（より強力に）
