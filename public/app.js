@@ -271,6 +271,11 @@ function extractOriginalUrlFromProxyUrl(proxyUrl) {
   }
 }
 
+function isIVFamilyUrl(value) {
+  const url = String(value || '');
+  return url.includes('ivfree.asia') || url.includes('aivfree.com');
+}
+
 // 結果表示（ページネーション対応）
 function displayResults(videos, searchQuery) {
   if (videos.length === 0) {
@@ -879,7 +884,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
   
   // IVFreeの埋め込みURLを完全なURLに変換（iPhone Safari対応）
-  if (source === 'ivfree') {
+  if (source === 'ivfree' || source === 'aivfree' || isIVFamilyUrl(originalUrl) || isIVFamilyUrl(normalizedUrl)) {
     // 既にhttps://で始まっている場合はそのまま、//で始まっている場合はhttps:を追加
     if (normalizedUrl.startsWith('//')) {
       normalizedUrl = 'https:' + normalizedUrl;
@@ -900,7 +905,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
       // 外部動画サイトの場合は、直接iframeで表示（プロキシ不要）
       // プロキシ経由の処理をスキップ
       console.log('📺 IVFree外部動画URLを直接表示:', normalizedUrl);
-    } else if (normalizedUrl.includes('ivfree.asia')) {
+    } else if (isIVFamilyUrl(normalizedUrl)) {
       // IVFreeの動画ページは常にプロキシ経由で表示（混合コンテンツ防止・広告除去・再生安定）
       if (!normalizedUrl.includes('/api/ivfree-proxy')) {
         const ivfreePageUrl = normalizedUrl.startsWith('http') ? normalizedUrl : `http://${normalizedUrl}`;
@@ -1352,11 +1357,11 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     
     ivfreeUpdateDebugInfo();
     const ivfreeFetchUrl =
-      (originalUrl && originalUrl.includes('ivfree.asia')) ? originalUrl :
-      (normalizedUrl && normalizedUrl.includes('ivfree.asia')) ? normalizedUrl :
+      (originalUrl && isIVFamilyUrl(originalUrl)) ? originalUrl :
+      (normalizedUrl && isIVFamilyUrl(normalizedUrl)) ? normalizedUrl :
       extractOriginalUrlFromProxyUrl(normalizedUrl);
 
-    if (!ivfreeFetchUrl || !ivfreeFetchUrl.includes('ivfree.asia')) {
+    if (!ivfreeFetchUrl || !isIVFamilyUrl(ivfreeFetchUrl)) {
       ivfreeStatusText = 'IVFree元URLが見つからないため、そのまま表示';
       ivfreeUpdateDebugInfo();
       console.warn('⚠️ IVFree元URLを復元できませんでした:', { originalUrl, normalizedUrl });
@@ -1429,7 +1434,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
 
   // IVFreeをプロキシで表示している場合も、バックグラウンドで動画URL取得して再生できれば差し替え
-  if (source === 'ivfree' && normalizedUrl.includes('/api/ivfree-proxy') && originalUrl && originalUrl.includes('ivfree.asia')) {
+  if ((source === 'ivfree' || source === 'aivfree' || isIVFamilyUrl(originalUrl)) && normalizedUrl.includes('/api/ivfree-proxy') && originalUrl && isIVFamilyUrl(originalUrl)) {
     fetch(`/api/ivfree-video?url=${encodeURIComponent(originalUrl)}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {

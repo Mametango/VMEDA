@@ -5260,7 +5260,7 @@ app.get('/api/ivfree-video', async (req, res) => {
     if (iframe.length > 0) {
       const iframeSrc = iframe.attr('src');
       if (iframeSrc) {
-        embedUrl = iframeSrc.startsWith('http') ? iframeSrc : `http://ivfree.asia${iframeSrc}`;
+        embedUrl = iframeSrc.startsWith('http') ? iframeSrc : new URL(iframeSrc, videoUrl).toString();
       }
     }
     
@@ -5269,7 +5269,7 @@ app.get('/api/ivfree-video', async (req, res) => {
     if (video.length > 0) {
       const videoSrc = video.attr('src');
       if (videoSrc) {
-        embedUrl = videoSrc.startsWith('http') ? videoSrc : `http://ivfree.asia${videoSrc}`;
+        embedUrl = videoSrc.startsWith('http') ? videoSrc : new URL(videoSrc, videoUrl).toString();
       }
     }
     
