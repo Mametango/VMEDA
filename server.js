@@ -2849,6 +2849,8 @@ async function searchAkibaAbv(query) {
 function normalizeBilibiliVideoUrl(rawValue) {
   const raw = String(rawValue || '').trim();
   if (!raw) return '';
+  const bvidMatch = raw.match(/BV[a-zA-Z0-9]+/);
+  if (bvidMatch) return `https://www.bilibili.com/video/${bvidMatch[0]}/`;
   if (raw.startsWith('//')) return `https:${raw}`;
   if (raw.startsWith('/video/')) return `https://www.bilibili.com${raw}`;
   if (raw.startsWith('video/')) return `https://www.bilibili.com/${raw}`;
