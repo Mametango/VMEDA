@@ -4050,22 +4050,36 @@ async function searchIVFree(query, strictMode = true) {
     const queryLower = query.toLowerCase().trim();
     
     // トップページから全件取得してフィルタリング（検索機能があるか不明なため）
-    const url = `https://ivfree.asia/`;
+    const candidateUrls = ['https://ivfree.asia/', 'http://ivfree.asia/'];
+    let url = candidateUrls[0];
+    let response = null;
     
     console.log(`🔍 IVFree: URL取得開始: ${url}`);
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Referer': 'https://ivfree.asia/',
-        'Accept-Encoding': 'gzip, deflate, br'
-      },
-      timeout: 30000,
-      validateStatus: function (status) {
-        return status >= 200 && status < 400;
+    for (const candidateUrl of candidateUrls) {
+      try {
+        console.log(`IVFree fetch candidate: ${candidateUrl}`);
+        response = await axios.get(candidateUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': candidateUrl,
+            'Accept-Encoding': 'gzip, deflate, br'
+          },
+          timeout: 30000,
+          validateStatus: function (status) {
+            return status >= 200 && status < 400;
+          }
+        });
+        url = candidateUrl;
+        break;
+      } catch (error) {
+        console.warn(`IVFree fetch failed: ${candidateUrl} / ${error.message}`);
       }
-    });
+    }
+    if (!response) {
+      throw new Error('IVFree page fetch failed for both HTTPS and HTTP');
+    }
     
     console.log(`🔍 IVFree: HTTPステータス: ${response.status}, HTMLサイズ: ${response.data.length} bytes`);
     
