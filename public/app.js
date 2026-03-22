@@ -595,9 +595,10 @@ async function showInlineRelatedVideos(videoId) {
     const response = await fetch(`/api/bilibili-related?${params.toString()}`);
     if (response.ok) {
       const data = await response.json();
-      if (Array.isArray(data)) {
+      const items = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+      if (items.length > 0) {
         const seen = new Set();
-        relatedVideos = data.filter((item) => {
+        relatedVideos = items.filter((item) => {
           const normalizedUrl = normalizeBilibiliPageUrl(item?.url || item?.embedUrl || '');
           if (!normalizedUrl || normalizedUrl === videoUrl || seen.has(normalizedUrl)) {
             return false;
