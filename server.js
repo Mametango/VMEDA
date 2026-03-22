@@ -2846,6 +2846,17 @@ async function searchAkibaAbv(query) {
 
 // Bilibili検索（WEBスクレイピング）
 // 注意: Bilibiliはスクレイピング対策を講じている可能性があります
+function normalizeBilibiliVideoUrl(rawValue) {
+  const raw = String(rawValue || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('//')) return `https:${raw}`;
+  if (raw.startsWith('/video/')) return `https://www.bilibili.com${raw}`;
+  if (raw.startsWith('video/')) return `https://www.bilibili.com/${raw}`;
+  if (raw.startsWith('http://')) return raw.replace('http://', 'https://');
+  if (raw.startsWith('https://')) return raw;
+  return `https://www.bilibili.com/${raw.replace(/^\/+/, '')}`;
+}
+
 async function searchBilibili(query, strictMode = true) {
   try {
     const encodedQuery = encodeURIComponent(query);
@@ -2890,7 +2901,7 @@ async function searchBilibili(query, strictMode = true) {
         const href = $item.attr('href') || $item.find('a').attr('href') || '';
         if (!href || !href.includes('/video/')) return;
         
-        const fullUrl = href.startsWith('http') ? href : `https://www.bilibili.com${href}`;
+        const fullUrl = normalizeBilibiliVideoUrl(href);
         const title = extractTitle($, $item);
         const thumbnail = extractThumbnail($, $item);
         const duration = extractDurationFromHtml($, $item);
@@ -2935,7 +2946,7 @@ async function searchBilibiliRelatedFromVideoPages(seedVideos = [], limit = 20) 
   const targets = (Array.isArray(seedVideos) ? seedVideos : []).slice(0, 3);
 
   for (const seed of targets) {
-    const videoUrl = String(seed?.url || '').trim();
+    const videoUrl = normalizeBilibiliVideoUrl(seed?.url || '');
     if (!videoUrl) continue;
 
     try {
@@ -2969,7 +2980,7 @@ async function searchBilibiliRelatedFromVideoPages(seedVideos = [], limit = 20) 
           const href = $item.attr('href') || $item.find('a').attr('href') || '';
           if (!href || !href.includes('/video/')) return;
 
-          const fullUrl = href.startsWith('http') ? href : `https://www.bilibili.com${href}`;
+          const fullUrl = normalizeBilibiliVideoUrl(href);
           if (!fullUrl.includes('/video/')) return;
           if (fullUrl === videoUrl || seenUrls.has(fullUrl)) return;
           seenUrls.add(fullUrl);
@@ -4749,7 +4760,7 @@ app.get('/api/recent-searches', async (req, res) => {
 
 app.get('/api/bilibili-related', async (req, res) => {
   try {
-    const videoUrl = String(req.query.url || '').trim();
+    const videoUrl = normalizeBilibiliVideoUrl(req.query.url || '');
     const title = String(req.query.title || '').trim();
 
     if (!videoUrl || !videoUrl.includes('bilibili.com')) {

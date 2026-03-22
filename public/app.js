@@ -346,6 +346,16 @@ function buildRelatedQuery(video) {
   return title.replace(/\s+/g, ' ').slice(0, 80);
 }
 
+function normalizeBilibiliPageUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('//')) return `https:${raw}`;
+  if (raw.startsWith('/video/')) return `https://www.bilibili.com${raw}`;
+  if (raw.startsWith('video/')) return `https://www.bilibili.com/${raw}`;
+  if (raw.startsWith('http://')) return raw.replace('http://', 'https://');
+  return raw;
+}
+
 function buildRelatedVideoMarkup(video, fallbackQuery) {
   const title = escapeHtml(video?.title || '関連動画');
   const url = escapeHtml(video?.url || video?.embedUrl || '');
@@ -488,8 +498,9 @@ function displayResults(videos, searchQuery) {
     // Bilibiliの動画の場合はアイコンを変更
     const isBilibili = video.source === 'bilibili';
     const playIcon = isBilibili ? '📺' : '▶';
-    const relatedLink = (url && url.includes('bilibili.com'))
-      ? `/related.html?${new URLSearchParams({ url, title, q: buildRelatedQuery(video) || title }).toString()}`
+    const officialUrl = normalizeBilibiliPageUrl(url);
+    const relatedLink = (officialUrl && officialUrl.includes('bilibili.com'))
+      ? `/related.html?${new URLSearchParams({ url: officialUrl, title, q: buildRelatedQuery(video) || title }).toString()}`
       : '';
     
     return `
@@ -516,7 +527,7 @@ function displayResults(videos, searchQuery) {
         `}
       </div>
       <div class="video-actions">
-        ${url ? `<a class="official-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">公式で開く</a>` : ''}
+        ${officialUrl ? `<a class="official-btn" href="${escapeHtml(officialUrl)}" target="_blank" rel="noopener noreferrer">公式で開く</a>` : ''}
         ${relatedLink ? `<a class="related-btn" href="${escapeHtml(relatedLink)}">関連動画</a>` : ''}
       </div>
       <div class="related-results hidden" id="related-${vid}"></div>
