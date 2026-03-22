@@ -4777,13 +4777,13 @@ app.get('/api/bilibili-related', async (req, res) => {
       source: 'bilibili'
     };
 
-    let relatedVideos = await searchBilibiliRelatedFromVideoPages([seedVideo], 12);
+    let relatedVideos = await searchBilibiliRelatedFromVideoPages([seedVideo], 24);
 
     if ((!Array.isArray(relatedVideos) || relatedVideos.length === 0) && title) {
       const fallbackResults = await searchBilibili(title);
       relatedVideos = (Array.isArray(fallbackResults) ? fallbackResults : [])
         .filter((video) => video && video.url && video.url !== videoUrl)
-        .slice(0, 12);
+        .slice(0, 24);
     }
 
     res.json({ results: relatedVideos });

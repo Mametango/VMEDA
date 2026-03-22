@@ -26,10 +26,11 @@
     .related-hero-title {
       font-size: 28px;
       margin-bottom: 8px;
+      line-height: 1.4;
     }
     .related-hero-copy {
-      color: rgba(255,255,255,0.9);
-      line-height: 1.6;
+      color: rgba(255,255,255,0.92);
+      line-height: 1.7;
     }
     .related-hero-actions {
       display: flex;
@@ -48,6 +49,22 @@
       background: rgba(255,255,255,0.14);
       border: 1px solid rgba(255,255,255,0.22);
       color: white;
+    }
+    .related-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .related-summary-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      font-size: 13px;
+      font-weight: 700;
     }
     .related-screen-list {
       display: grid;
@@ -76,6 +93,11 @@
       font-size: 18px;
       font-weight: 700;
       line-height: 1.5;
+    }
+    .related-screen-copy {
+      color: #475569;
+      line-height: 1.6;
+      font-size: 14px;
     }
     .related-screen-meta {
       display: flex;
@@ -136,13 +158,17 @@
         <a class="top-link top-link-accent" href="/related.html">関連動画</a>
       </div>
       <h1 class="site-title">VMEDA Related Videos</h1>
-      <p class="header-debug-hint">選んだ動画をもとに、Bilibili の関連動画を別画面で見やすく並べます。</p>
+      <p class="header-debug-hint">関連動画だけをまとめて見て、次々に辿っていけるページです。</p>
     </header>
 
     <main class="related-shell">
       <section class="related-hero">
         <h2 id="related-seed-title" class="related-hero-title">関連動画</h2>
-        <p id="related-seed-copy" class="related-hero-copy">動画を選ぶと、このページに関連動画が表示されます。</p>
+        <p id="related-seed-copy" class="related-hero-copy">動画を選ぶと、このページに関連動画が並びます。</p>
+        <div class="related-summary">
+          <span id="related-count-badge" class="related-summary-badge">0 件</span>
+          <span id="related-query-badge" class="related-summary-badge">関連候補</span>
+        </div>
         <div class="related-hero-actions">
           <a id="related-back-search" class="related-hero-link" href="/">検索へ戻る</a>
           <a id="related-open-source" class="related-hero-link" href="/" target="_blank" rel="noopener noreferrer">元動画を開く</a>
@@ -173,20 +199,39 @@
       return value;
     }
 
+    function normalizeBilibiliPageUrl(url) {
+      const raw = String(url || '').trim();
+      if (!raw) return '';
+      const bvidMatch = raw.match(/BV[a-zA-Z0-9]+/);
+      if (bvidMatch) return `https://www.bilibili.com/video/${bvidMatch[0]}/`;
+      if (raw.startsWith('//')) return `https:${raw}`;
+      if (raw.startsWith('/video/')) return `https://www.bilibili.com${raw}`;
+      if (raw.startsWith('video/')) return `https://www.bilibili.com/${raw}`;
+      if (raw.startsWith('http://')) return raw.replace('http://', 'https://');
+      return raw;
+    }
+
     async function initRelatedScreen() {
       const params = new URLSearchParams(window.location.search);
-      const videoUrl = params.get('url') || '';
+      const videoUrl = normalizeBilibiliPageUrl(params.get('url') || '');
       const title = params.get('title') || '';
       const query = params.get('q') || title || '';
 
       const titleEl = document.getElementById('related-seed-title');
       const copyEl = document.getElementById('related-seed-copy');
+      const countBadgeEl = document.getElementById('related-count-badge');
+      const queryBadgeEl = document.getElementById('related-query-badge');
       const backSearchEl = document.getElementById('related-back-search');
       const openSourceEl = document.getElementById('related-open-source');
       const listEl = document.getElementById('related-screen-list');
 
       if (titleEl) titleEl.textContent = title || '関連動画';
-      if (copyEl) copyEl.textContent = query ? `「${query}」に近い関連動画を表示しています。` : '選んだ動画をもとに関連動画を表示しています。';
+      if (copyEl) {
+        copyEl.textContent = query
+          ? `「${query}」に近い関連動画を表示しています。気になる動画からさらに関連へ進めます。`
+          : '選んだ動画をもとに関連動画を表示しています。';
+      }
+      if (queryBadgeEl) queryBadgeEl.textContent = query ? `起点: ${query}` : '関連候補';
       if (backSearchEl) backSearchEl.href = query ? `/?q=${encodeURIComponent(query)}` : '/';
       if (openSourceEl) openSourceEl.href = videoUrl || '/';
 
@@ -205,33 +250,39 @@
         }
 
         const data = await response.json();
-        const items = (Array.isArray(data.results) ? data.results : []).filter((item) => item && item.url && item.url !== videoUrl);
+        const items = (Array.isArray(data.results) ? data.results : [])
+          .map((item) => ({ ...item, url: normalizeBilibiliPageUrl(item.url || item.embedUrl || '') }))
+          .filter((item) => item && item.url && item.url !== videoUrl);
+
+        if (countBadgeEl) countBadgeEl.textContent = `${items.length} 件`;
 
         if (!items.length) {
           listEl.innerHTML = '<div class="related-screen-empty">関連動画はまだ見つかりませんでした。</div>';
           return;
         }
 
-        listEl.innerHTML = items.map((item) => {
+        listEl.innerHTML = items.map((item, index) => {
           const itemTitle = escapeHtml(item.title || '関連動画');
           const thumb = escapeHtml(normalizeThumbnail(item.thumbnail, item.title));
-          const url = escapeHtml(item.url || item.embedUrl || '');
+          const url = escapeHtml(item.url || '');
           const duration = item.duration ? `<span class="related-screen-badge">${escapeHtml(item.duration)}</span>` : '';
           const nextQuery = encodeURIComponent(item.title || query || '');
+          const nextRelatedHref = `/related.html?url=${encodeURIComponent(item.url || '')}&title=${encodeURIComponent(item.title || '')}&q=${nextQuery}`;
 
           return `
             <article class="related-screen-card">
               <img class="related-screen-thumb" src="${thumb}" alt="${itemTitle}" loading="lazy">
               <div class="related-screen-body">
-                <div class="related-screen-title">${itemTitle}</div>
+                <div class="related-screen-title">${index + 1}. ${itemTitle}</div>
+                <p class="related-screen-copy">この動画を起点に、さらに関連動画へ進めます。</p>
                 <div class="related-screen-meta">
                   <span class="related-screen-badge">Bilibili</span>
                   ${duration}
                 </div>
                 <div class="related-screen-actions">
-                  <a class="related-screen-action related-screen-action-primary" href="/?q=${nextQuery}">この動画で検索</a>
-                  <a class="related-screen-action related-screen-action-secondary" href="/related.html?url=${encodeURIComponent(item.url || '')}&title=${encodeURIComponent(item.title || '')}&q=${nextQuery}">さらに関連を見る</a>
-                  ${url ? `<a class="related-screen-action related-screen-action-secondary" href="${url}" target="_blank" rel="noopener noreferrer">Bilibiliで開く</a>` : ''}
+                  <a class="related-screen-action related-screen-action-primary" href="${nextRelatedHref}">この動画の関連を見る</a>
+                  <a class="related-screen-action related-screen-action-secondary" href="/?q=${nextQuery}">この動画で検索</a>
+                  ${url ? `<a class="related-screen-action related-screen-action-secondary" href="${url}" target="_blank" rel="noopener noreferrer">公式で開く</a>` : ''}
                 </div>
               </div>
             </article>
