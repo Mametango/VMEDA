@@ -351,11 +351,26 @@ function normalizeBilibiliPageUrl(value) {
   if (!raw) return '';
   const bvidMatch = raw.match(/BV[a-zA-Z0-9]+/);
   if (bvidMatch) return `https://www.bilibili.com/video/${bvidMatch[0]}/`;
+  if (raw.startsWith('javascript:') || raw.startsWith('#')) return '';
   if (raw.startsWith('//')) return `https:${raw}`;
   if (raw.startsWith('/video/')) return `https://www.bilibili.com${raw}`;
   if (raw.startsWith('video/')) return `https://www.bilibili.com/${raw}`;
   if (raw.startsWith('http://')) return raw.replace('http://', 'https://');
+  if (raw.startsWith('https://')) return raw;
+  if (raw.startsWith('/')) return `https://www.bilibili.com${raw}`;
   return raw;
+}
+
+function safeResolveUrl(value, baseUrl = 'https://www.bilibili.com/') {
+  const raw = String(value || '').trim();
+  if (!raw || raw.startsWith('javascript:') || raw.startsWith('#')) {
+    return '';
+  }
+  try {
+    return new URL(raw, baseUrl).toString();
+  } catch (error) {
+    return '';
+  }
 }
 
 function buildRelatedVideoMarkup(video, fallbackQuery) {
@@ -589,22 +604,22 @@ function displayResults(videos, searchQuery) {
     const url = video.url || '';
     const embedUrl = video.embedUrl || url;
     // サムネイルURLを正規化（相対パスを絶対URLに変換）
-    let thumbnail = video.thumbnail || '';
-    if (thumbnail) {
-      // 相対パス（//で始まる）をhttps:に変換
-      if (thumbnail.startsWith('//')) {
-        thumbnail = 'https:' + thumbnail;
+      let thumbnail = video.thumbnail || '';
+      const resolvedVideoUrl = safeResolveUrl(video.url || '', 'https://www.bilibili.com/');
+      if (thumbnail) {
+        // 相対パス（//で始まる）をhttps:に変換
+        if (thumbnail.startsWith('//')) {
+          thumbnail = 'https:' + thumbnail;
+        }
+        // 相対パス（/で始まる）を絶対URLに変換
+        else if (thumbnail.startsWith('/') && !thumbnail.startsWith('http')) {
+          thumbnail = safeResolveUrl(thumbnail, resolvedVideoUrl || 'https://www.bilibili.com/');
+        }
+        // http://で始まる場合はhttps://に変換（セキュリティのため）
+        else if (thumbnail.startsWith('http://')) {
+          thumbnail = thumbnail.replace('http://', 'https://');
+        }
       }
-      // 相対パス（/で始まる）を絶対URLに変換
-      else if (thumbnail.startsWith('/') && !thumbnail.startsWith('http')) {
-        const url = new URL(video.url || 'https://example.com');
-        thumbnail = url.origin + thumbnail;
-      }
-      // http://で始まる場合はhttps://に変換（セキュリティのため）
-      else if (thumbnail.startsWith('http://')) {
-        thumbnail = thumbnail.replace('http://', 'https://');
-      }
-    }
     
     // サムネイルが取得されていない場合のフォールバック処理
     if (!thumbnail || thumbnail.length === 0) {
@@ -648,7 +663,7 @@ function displayResults(videos, searchQuery) {
     // Bilibiliの動画の場合はアイコンを変更
     const isBilibili = video.source === 'bilibili';
     const playIcon = isBilibili ? '📺' : '▶';
-    const officialUrl = normalizeBilibiliPageUrl(url);
+      const officialUrl = normalizeBilibiliPageUrl(url) || safeResolveUrl(url, 'https://www.bilibili.com/');
     const relatedLink = (officialUrl && officialUrl.includes('bilibili.com'))
       ? `/related.html?${new URLSearchParams({ url: officialUrl, title, q: buildRelatedQuery(video) || title }).toString()}`
       : '';
