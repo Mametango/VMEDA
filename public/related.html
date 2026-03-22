@@ -131,23 +131,57 @@
       return raw;
     }
 
+    function buildFallbackQueries(query) {
+      const base = String(query || '').trim();
+      if (!base) return [];
+
+      const variants = new Set([base]);
+      const cleaned = base.replace(/[【】\[\]（）()「」『』]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (cleaned) variants.add(cleaned);
+
+      cleaned
+        .split(/[\s\-_/|]+/)
+        .map((part) => part.trim())
+        .filter((part) => part.length >= 2)
+        .slice(0, 4)
+        .forEach((part) => variants.add(part));
+
+      return Array.from(variants).slice(0, 5);
+    }
+
     async function fetchSearchFallback(query, currentUrl) {
-      if (!query) return [];
-      try {
-        const response = await fetch('/api/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query })
-        });
-        if (!response.ok) return [];
-        const data = await response.json();
-        return (Array.isArray(data.results) ? data.results : [])
-          .map((item) => ({ ...item, url: normalizeBilibiliPageUrl(item.url || item.embedUrl || '') }))
-          .filter((item) => item && item.url && item.url !== currentUrl)
-          .slice(0, 24);
-      } catch (error) {
-        return [];
+      const queries = buildFallbackQueries(query);
+      if (!queries.length) return [];
+
+      const merged = [];
+      const seen = new Set();
+
+      for (const candidate of queries) {
+        try {
+          const response = await fetch('/api/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: candidate })
+          });
+          if (!response.ok) continue;
+
+          const data = await response.json();
+          const normalized = (Array.isArray(data.results) ? data.results : [])
+            .map((item) => ({ ...item, url: normalizeBilibiliPageUrl(item.url || item.embedUrl || '') }))
+            .filter((item) => item && item.url && item.url !== currentUrl);
+
+          for (const item of normalized) {
+            if (seen.has(item.url)) continue;
+            seen.add(item.url);
+            merged.push(item);
+            if (merged.length >= 24) return merged;
+          }
+        } catch (error) {
+          continue;
+        }
       }
+
+      return merged;
     }
 
     function renderRelatedCards(items, query) {
