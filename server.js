@@ -1301,6 +1301,14 @@ app.post('/api/search', async (req, res) => {
           });
         }
       });
+      if (searchFunctions.length === 1 && searchFunctions[0].name === 'Bilibili' && uniqueVideos.length > 0) {
+        const bilibiliRelated = await searchBilibiliRelatedFromVideoPages(uniqueVideos, 20);
+        bilibiliRelated.forEach(video => {
+          if (video && video.url && !strictMatchUrls.has(video.url)) {
+            relatedVideos.push(video);
+          }
+        });
+      }
     } else {
       console.log(`ℹ️ 関連動画の拡張検索はスキップ: ${searchProfile.isCodeSearch ? '品番検索のため' : `1周目で十分な件数 (${uniqueVideos.length}件)`}`);
     }
@@ -2919,6 +2927,81 @@ async function searchBilibili(query, strictMode = true) {
     console.error('Bilibili検索エラー:', error.message);
     return [];
   }
+}
+
+async function searchBilibiliRelatedFromVideoPages(seedVideos = [], limit = 20) {
+  const relatedVideos = [];
+  const seenUrls = new Set();
+  const targets = (Array.isArray(seedVideos) ? seedVideos : []).slice(0, 3);
+
+  for (const seed of targets) {
+    const videoUrl = String(seed?.url || '').trim();
+    if (!videoUrl) continue;
+
+    try {
+      const response = await axios.get(videoUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Referer': 'https://www.bilibili.com/',
+          'Origin': 'https://www.bilibili.com'
+        },
+        timeout: 30000,
+        maxRedirects: 5
+      });
+
+      const $ = cheerio.load(response.data);
+      const selectors = [
+        'a[href*="/video/"]',
+        '.rec-list a[href*="/video/"]',
+        '.video-page-card-small a[href*="/video/"]',
+        '.recommend-video-card a[href*="/video/"]',
+        '.container a[href*="/video/"]'
+      ];
+
+      for (const selector of selectors) {
+        $(selector).each((index, elem) => {
+          if (relatedVideos.length >= limit) return false;
+
+          const $item = $(elem);
+          const href = $item.attr('href') || $item.find('a').attr('href') || '';
+          if (!href || !href.includes('/video/')) return;
+
+          const fullUrl = href.startsWith('http') ? href : `https://www.bilibili.com${href}`;
+          if (!fullUrl.includes('/video/')) return;
+          if (fullUrl === videoUrl || seenUrls.has(fullUrl)) return;
+          seenUrls.add(fullUrl);
+
+          const title = ($item.attr('title') || $item.text() || extractTitle($, $item) || '').trim();
+          if (!title || title.length < 3) return;
+
+          const thumbnail = extractThumbnail($, $item) || '';
+          const duration = extractDurationFromHtml($, $item) || '';
+          const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
+          const embedUrl = bvid ? `//player.bilibili.com/player.html?bvid=${bvid[0]}` : fullUrl;
+
+          relatedVideos.push({
+            id: `bilibili-related-${Date.now()}-${relatedVideos.length}-${index}`,
+            title: title.substring(0, 200),
+            thumbnail,
+            duration,
+            url: fullUrl,
+            embedUrl,
+            source: 'bilibili'
+          });
+        });
+      }
+    } catch (error) {
+      console.warn(`Bilibili related fetch failed: ${videoUrl} / ${error.message}`);
+    }
+
+    if (relatedVideos.length >= limit) break;
+  }
+
+  console.log(`✅ Bilibili related: ${relatedVideos.length}件取得`);
+  return relatedVideos.slice(0, limit);
 }
 
 // Youku検索
