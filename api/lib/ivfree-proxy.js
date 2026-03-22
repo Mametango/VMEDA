@@ -20,13 +20,14 @@ app.get('/api/ivfree-proxy', async (req, res) => {
   }
   
   try {
-    const videoUrl = req.query.url;
+    const videoUrl = String(req.query.url || '').trim();
     if (!videoUrl) {
       return res.status(400).json({ error: 'URL is required' });
     }
     
     // IVFreeの動画ページまたは外部動画サイトのURLを許可
-    const isIVFreeUrl = videoUrl.includes('ivfree.asia');
+    const isIVFreeUrl = videoUrl.includes('ivfree.asia') || videoUrl.includes('aivfree.com');
+    const isAbsoluteHttpUrl = /^https?:\/\//i.test(videoUrl);
     const isExternalVideoUrl = videoUrl.includes('cdn.loadvid.com') || 
                                 videoUrl.includes('loadvid.com') ||
                                 videoUrl.includes('vidnest.io') ||
@@ -39,7 +40,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                                 videoUrl.includes('stream') ||
                                 videoUrl.includes('play');
     
-    if (!isIVFreeUrl && !isExternalVideoUrl) {
+    if (!isAbsoluteHttpUrl && !isIVFreeUrl && !isExternalVideoUrl) {
       return res.status(400).json({ error: 'IVFree or video site URL is required' });
     }
     

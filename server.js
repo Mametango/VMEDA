@@ -5188,8 +5188,9 @@ app.get('/api/jpdmv-video', async (req, res) => {
 // IVFree動画URL取得エンドポイント（広告除去版）
 app.get('/api/ivfree-video', async (req, res) => {
   try {
-    const videoUrl = req.query.url;
-    if (!videoUrl || !videoUrl.includes('ivfree.asia')) {
+    const videoUrl = String(req.query.url || '').trim();
+    const isIVFamilyUrl = videoUrl.includes('ivfree.asia') || videoUrl.includes('aivfree.com');
+    if (!videoUrl || !isIVFamilyUrl) {
       return res.status(400).json({ error: 'IVFree URL is required' });
     }
     
@@ -5312,16 +5313,18 @@ app.get('/api/ivfree-proxy', async (req, res) => {
   }
   
   try {
-    const videoUrl = req.query.url;
+    const videoUrl = String(req.query.url || '').trim();
     if (!videoUrl) {
       return res.status(400).json({ error: 'URL is required' });
     }
     
     // IVFreeの動画ページまたは外部動画サイトのURLを許可
-    const isIVFreeUrl = videoUrl.includes('ivfree.asia');
+    const isIVFreeUrl = videoUrl.includes('ivfree.asia') || videoUrl.includes('aivfree.com');
+    const isAbsoluteHttpUrl = /^https?:\/\//i.test(videoUrl);
     const isExternalVideoUrl = videoUrl.includes('cdn.loadvid.com') || 
                                 videoUrl.includes('loadvid.com') ||
                                 videoUrl.includes('vidnest.io') ||
+                                videoUrl.includes('lulustream.com') ||
                                 videoUrl.includes('luluvid.com') ||
                                 videoUrl.includes('luluvdoo.com') ||
                                 videoUrl.includes('embed') ||
@@ -5330,7 +5333,7 @@ app.get('/api/ivfree-proxy', async (req, res) => {
                                 videoUrl.includes('stream') ||
                                 videoUrl.includes('play');
     
-    if (!isIVFreeUrl && !isExternalVideoUrl) {
+    if (!isAbsoluteHttpUrl && !isIVFreeUrl && !isExternalVideoUrl) {
       return res.status(400).json({ error: 'IVFree or video site URL is required' });
     }
     
