@@ -383,6 +383,154 @@ function buildRelatedVideoMarkup(video, fallbackQuery) {
   `;
 }
 
+function buildInlineRelatedQueries(query) {
+  const raw = String(query || '').trim();
+  if (!raw) return [];
+
+  const cleaned = raw
+    .replace(/\[[^\]]+\]/g, ' ')
+    .replace(/[【】「」『』()（）]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const parts = cleaned
+    .split(/[\s\-_/]+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length >= 2);
+
+  return Array.from(new Set([
+    raw,
+    cleaned,
+    parts.slice(0, 4).join(' '),
+    parts.slice(0, 2).join(' '),
+    ...parts.slice(0, 4)
+  ].filter(Boolean)));
+}
+
+async function fetchInlineSearchFallback(query, currentUrl) {
+  const queries = buildInlineRelatedQueries(query);
+  const collected = [];
+  const seen = new Set();
+
+  for (const candidate of queries) {
+    try {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query: candidate })
+      });
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const videos = await response.json();
+      if (!Array.isArray(videos) || videos.length === 0) {
+        continue;
+      }
+
+      for (const video of videos) {
+        const normalizedUrl = normalizeBilibiliPageUrl(video?.url || video?.embedUrl || '');
+        if (!normalizedUrl || normalizedUrl === currentUrl || seen.has(normalizedUrl)) {
+          continue;
+        }
+        seen.add(normalizedUrl);
+        collected.push({
+          ...video,
+          url: normalizedUrl,
+          embedUrl: normalizedUrl
+        });
+        if (collected.length >= 8) {
+          return collected;
+        }
+      }
+    } catch (error) {
+      console.warn('inline related fallback search failed:', candidate, error);
+    }
+  }
+
+  return collected;
+}
+
+async function showInlineRelatedVideos(videoId) {
+  const host = document.getElementById(`related-${videoId}`);
+  const video = findVideoRecord(videoId, '', '');
+
+  if (!host || !video) {
+    return;
+  }
+
+  const videoUrl = normalizeBilibiliPageUrl(video?.url || video?.embedUrl || '');
+  if (!videoUrl || !videoUrl.includes('bilibili.com')) {
+    host.classList.add('hidden');
+    host.innerHTML = '';
+    return;
+  }
+
+  host.classList.remove('hidden');
+  host.innerHTML = '<div class="related-loading">関連動画を読み込み中...</div>';
+
+  const query = buildRelatedQuery(video) || video?.title || '';
+  let relatedVideos = [];
+
+  try {
+    const params = new URLSearchParams({
+      url: videoUrl,
+      title: video?.title || '',
+      q: query
+    });
+    const response = await fetch(`/api/bilibili-related?${params.toString()}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        const seen = new Set();
+        relatedVideos = data.filter((item) => {
+          const normalizedUrl = normalizeBilibiliPageUrl(item?.url || item?.embedUrl || '');
+          if (!normalizedUrl || normalizedUrl === videoUrl || seen.has(normalizedUrl)) {
+            return false;
+          }
+          seen.add(normalizedUrl);
+          item.url = normalizedUrl;
+          item.embedUrl = normalizedUrl;
+          return true;
+        }).slice(0, 8);
+      }
+    }
+  } catch (error) {
+    console.warn('inline related fetch failed:', error);
+  }
+
+  if (relatedVideos.length === 0) {
+    relatedVideos = await fetchInlineSearchFallback(query, videoUrl);
+  }
+
+  if (relatedVideos.length === 0) {
+    host.innerHTML = '<div class="related-empty">関連動画はまだ見つかりませんでした</div>';
+    return;
+  }
+
+  host.innerHTML = `
+    <div class="related-section-title">この動画の関連動画</div>
+    <div class="related-video-grid">
+      ${relatedVideos.map((item) => buildRelatedVideoMarkup(item, query)).join('')}
+    </div>
+  `;
+
+  host.querySelectorAll('.related-open-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const nextQuery = String(button.dataset.query || '').trim();
+      if (!nextQuery) {
+        return;
+      }
+      searchInput.value = nextQuery;
+      await searchVideos(nextQuery);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
 async function toggleRelatedVideos(videoId) {
   const video = findVideoRecord(videoId, '', '');
   const query = buildRelatedQuery(video);
@@ -983,7 +1131,11 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   // 現在の動画IDを記録
   currentPlayingVideoId = videoId;
   recordVideoView(videoId, embedUrl, originalUrl, source);
-  
+  const bilibiliUrl = normalizeBilibiliPageUrl(originalUrl || embedUrl || '');
+  if (source === 'bilibili' || bilibiliUrl.includes('bilibili.com')) {
+    showInlineRelatedVideos(videoId);
+  }
+
   // 動画プレイヤー表示時に周辺の広告を非表示にする
   const videoItem = container.closest('.video-item');
   if (videoItem) {
