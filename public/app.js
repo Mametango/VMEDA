@@ -1767,6 +1767,7 @@ searchInput.addEventListener('keypress', (e) => {
 const SITE_BASE_URLS = {
   ivfree: 'https://ivfree.asia/',
   aivfree: 'https://aivfree.com/',
+  bilibili: 'https://www.bilibili.com/',
   jpdmv: 'https://jpdmv.com/',
   pizjav: 'https://v.pizjav.com/',
   javmix: 'https://javmix.tv/',
