@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>VMEDA - Related Videos</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="stylesheet" href="styles.css?v=1.0.8">
+  <style>
+    .related-shell {
+      display: grid;
+      gap: 20px;
+    }
+    .related-hero {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 18px;
+      padding: 22px;
+      color: white;
+      backdrop-filter: blur(12px);
+    }
+    .related-hero-title {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .related-hero-copy {
+      color: rgba(255,255,255,0.9);
+      line-height: 1.6;
+    }
+    .related-hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .related-hero-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 700;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.22);
+      color: white;
+    }
+    .related-screen-list {
+      display: grid;
+      gap: 18px;
+    }
+    .related-screen-card {
+      background: white;
+      color: #1f2937;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+    }
+    .related-screen-thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      display: block;
+      background: #111827;
+    }
+    .related-screen-body {
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }
+    .related-screen-title {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+    .related-screen-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .related-screen-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .related-screen-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .related-screen-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+    }
+    .related-screen-action-primary {
+      background: #2563eb;
+      color: white;
+    }
+    .related-screen-action-secondary {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .related-screen-empty {
+      background: rgba(255,255,255,0.12);
+      border: 1px dashed rgba(255,255,255,0.35);
+      border-radius: 18px;
+      padding: 24px;
+      color: white;
+      line-height: 1.7;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="top-links">
+        <a class="top-link" href="/">検索</a>
+        <a class="top-link" href="/recommend.html">おすすめ</a>
+        <a class="top-link top-link-accent" href="/related.html">関連動画</a>
+      </div>
+      <h1 class="site-title">VMEDA Related Videos</h1>
+      <p class="header-debug-hint">選んだ動画をもとに、Bilibili の関連動画を別画面で見やすく並べます。</p>
+    </header>
+
+    <main class="related-shell">
+      <section class="related-hero">
+        <h2 id="related-seed-title" class="related-hero-title">関連動画</h2>
+        <p id="related-seed-copy" class="related-hero-copy">動画を選ぶと、このページに関連動画が表示されます。</p>
+        <div class="related-hero-actions">
+          <a id="related-back-search" class="related-hero-link" href="/">検索へ戻る</a>
+          <a id="related-open-source" class="related-hero-link" href="/" target="_blank" rel="noopener noreferrer">元動画を開く</a>
+        </div>
+      </section>
+
+      <section id="related-screen-list" class="related-screen-list"></section>
+    </main>
+  </div>
+
+  <script>
+    function escapeHtml(text) {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function normalizeThumbnail(url, title) {
+      const value = String(url || '').trim();
+      if (!value) {
+        return `https://via.placeholder.com/640x360/1d4ed8/ffffff?text=${encodeURIComponent((title || 'VMEDA').slice(0, 24))}`;
+      }
+      if (value.startsWith('//')) return 'https:' + value;
+      if (value.startsWith('http://')) return value.replace('http://', 'https://');
+      return value;
+    }
+
+    async function initRelatedScreen() {
+      const params = new URLSearchParams(window.location.search);
+      const videoUrl = params.get('url') || '';
+      const title = params.get('title') || '';
+      const query = params.get('q') || title || '';
+
+      const titleEl = document.getElementById('related-seed-title');
+      const copyEl = document.getElementById('related-seed-copy');
+      const backSearchEl = document.getElementById('related-back-search');
+      const openSourceEl = document.getElementById('related-open-source');
+      const listEl = document.getElementById('related-screen-list');
+
+      if (titleEl) titleEl.textContent = title || '関連動画';
+      if (copyEl) copyEl.textContent = query ? `「${query}」に近い関連動画を表示しています。` : '選んだ動画をもとに関連動画を表示しています。';
+      if (backSearchEl) backSearchEl.href = query ? `/?q=${encodeURIComponent(query)}` : '/';
+      if (openSourceEl) openSourceEl.href = videoUrl || '/';
+
+      if (!videoUrl || !videoUrl.includes('bilibili.com')) {
+        listEl.innerHTML = '<div class="related-screen-empty">元動画のURLが見つかりませんでした。</div>';
+        return;
+      }
+
+      listEl.innerHTML = '<div class="related-screen-empty">関連動画を読み込み中...</div>';
+
+      try {
+        const apiParams = new URLSearchParams({ url: videoUrl, title });
+        const response = await fetch(`/api/bilibili-related?${apiParams.toString()}`);
+        if (!response.ok) {
+          throw new Error('Failed to load related videos');
+        }
+
+        const data = await response.json();
+        const items = (Array.isArray(data.results) ? data.results : []).filter((item) => item && item.url && item.url !== videoUrl);
+
+        if (!items.length) {
+          listEl.innerHTML = '<div class="related-screen-empty">関連動画はまだ見つかりませんでした。</div>';
+          return;
+        }
+
+        listEl.innerHTML = items.map((item) => {
+          const itemTitle = escapeHtml(item.title || '関連動画');
+          const thumb = escapeHtml(normalizeThumbnail(item.thumbnail, item.title));
+          const url = escapeHtml(item.url || item.embedUrl || '');
+          const duration = item.duration ? `<span class="related-screen-badge">${escapeHtml(item.duration)}</span>` : '';
+          const nextQuery = encodeURIComponent(item.title || query || '');
+
+          return `
+            <article class="related-screen-card">
+              <img class="related-screen-thumb" src="${thumb}" alt="${itemTitle}" loading="lazy">
+              <div class="related-screen-body">
+                <div class="related-screen-title">${itemTitle}</div>
+                <div class="related-screen-meta">
+                  <span class="related-screen-badge">Bilibili</span>
+                  ${duration}
+                </div>
+                <div class="related-screen-actions">
+                  <a class="related-screen-action related-screen-action-primary" href="/?q=${nextQuery}">この動画で検索</a>
+                  <a class="related-screen-action related-screen-action-secondary" href="/related.html?url=${encodeURIComponent(item.url || '')}&title=${encodeURIComponent(item.title || '')}&q=${nextQuery}">さらに関連を見る</a>
+                  ${url ? `<a class="related-screen-action related-screen-action-secondary" href="${url}" target="_blank" rel="noopener noreferrer">Bilibiliで開く</a>` : ''}
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('');
+      } catch (error) {
+        listEl.innerHTML = '<div class="related-screen-empty">関連動画の取得に失敗しました。</div>';
+      }
+    }
+
+    initRelatedScreen();
+  </script>
+</body>
+</html>

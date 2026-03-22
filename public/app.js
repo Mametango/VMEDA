@@ -372,72 +372,19 @@ function buildRelatedVideoMarkup(video, fallbackQuery) {
 }
 
 async function toggleRelatedVideos(videoId) {
-  const host = document.getElementById(`related-${videoId}`);
-  if (!host) return;
-
-  if (!host.classList.contains('hidden') && host.dataset.loaded === '1') {
-    host.classList.add('hidden');
-    return;
-  }
-
-  host.classList.remove('hidden');
-
-  if (host.dataset.loaded === '1') {
-    return;
-  }
-
   const video = findVideoRecord(videoId, '', '');
   const query = buildRelatedQuery(video);
   const videoUrl = String(video?.url || video?.embedUrl || '').trim();
   if (!videoUrl || !videoUrl.includes('bilibili.com')) {
-    host.innerHTML = '<div class="related-empty">Bilibili の動画URLが見つかりませんでした。</div>';
     return;
   }
 
-  host.innerHTML = '<div class="related-loading">関連動画を読み込み中...</div>';
-
-  try {
-    const params = new URLSearchParams({
-      url: videoUrl,
-      title: video?.title || ''
-    });
-    const response = await fetch(`/api/bilibili-related?${params.toString()}`);
-
-    if (!response.ok) {
-      throw new Error('Failed to load related videos');
-    }
-
-    const data = await response.json();
-    const related = (Array.isArray(data.results) ? data.results : [])
-      .filter((item) => item && (item.id !== video?.id) && (item.url !== video?.url))
-      .slice(0, 6);
-
-    if (related.length === 0) {
-      host.innerHTML = '<div class="related-empty">関連動画はまだ見つかりませんでした。</div>';
-      host.dataset.loaded = '1';
-      return;
-    }
-
-    host.innerHTML = `
-      <div class="related-section-title">関連動画</div>
-      <div class="related-video-grid">
-        ${related.map((item) => buildRelatedVideoMarkup(item, query)).join('')}
-      </div>
-    `;
-    host.dataset.loaded = '1';
-
-    host.querySelectorAll('.related-open-btn').forEach((button) => {
-      button.addEventListener('click', () => {
-        const nextQuery = button.getAttribute('data-query') || '';
-        if (!nextQuery) return;
-        if (searchInput) searchInput.value = nextQuery;
-        searchVideos(nextQuery);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-    });
-  } catch (error) {
-    host.innerHTML = '<div class="related-empty">関連動画の取得に失敗しました。</div>';
-  }
+  const params = new URLSearchParams({
+    url: videoUrl,
+    title: video?.title || '',
+    q: query || ''
+  });
+  window.location.href = `/related.html?${params.toString()}`;
 }
 
 // 結果表示（ページネーション対応）
