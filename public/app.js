@@ -488,6 +488,9 @@ function displayResults(videos, searchQuery) {
     // Bilibiliの動画の場合はアイコンを変更
     const isBilibili = video.source === 'bilibili';
     const playIcon = isBilibili ? '📺' : '▶';
+    const relatedLink = (url && url.includes('bilibili.com'))
+      ? `/related.html?${new URLSearchParams({ url, title, q: buildRelatedQuery(video) || title }).toString()}`
+      : '';
     
     return `
     <div class="video-item" data-source="${video.source || ''}">
@@ -513,7 +516,7 @@ function displayResults(videos, searchQuery) {
         `}
       </div>
       <div class="video-actions">
-        <button type="button" class="related-btn" data-video-id="${escapeHtml(vid)}">関連動画</button>
+        ${relatedLink ? `<a class="related-btn" href="${escapeHtml(relatedLink)}">関連動画</a>` : ''}
       </div>
       <div class="related-results hidden" id="related-${vid}"></div>
     </div>
@@ -552,14 +555,6 @@ function displayResults(videos, searchQuery) {
   });
   
   // ページネーションを表示
-  document.querySelectorAll('.related-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      const videoId = button.getAttribute('data-video-id') || '';
-      if (!videoId) return;
-      toggleRelatedVideos(videoId);
-    });
-  });
-
   displayPagination();
 }
 
