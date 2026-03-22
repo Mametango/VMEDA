@@ -184,35 +184,53 @@
       return merged;
     }
 
-    function renderRelatedCards(items, query) {
-      return items.map((item, index) => {
-        const itemTitle = escapeHtml(item.title || '関連動画');
-        const thumb = escapeHtml(normalizeThumbnail(item.thumbnail, item.title));
-        const url = escapeHtml(item.url || '');
-        const duration = item.duration ? `<span class="related-screen-badge">${escapeHtml(item.duration)}</span>` : '';
-        const nextQuery = encodeURIComponent(item.title || query || '');
-        const nextRelatedHref = `/related.html?url=${encodeURIComponent(item.url || '')}&title=${encodeURIComponent(item.title || '')}&q=${nextQuery}`;
+    const HOMEPAGE_PLAYBACK_KEY = 'vmeda_homepage_playback';
 
-        return `
-          <article class="related-screen-card">
-            <img class="related-screen-thumb" src="${thumb}" alt="${itemTitle}" loading="lazy">
-            <div class="related-screen-body">
-              <div class="related-screen-title">${index + 1}. ${itemTitle}</div>
-              <p class="related-screen-copy">この動画を起点に、さらに関連動画へ進めます。</p>
-              <div class="related-screen-meta">
-                <span class="related-screen-badge">Bilibili</span>
-                ${duration}
-              </div>
-              <div class="related-screen-actions">
-                <a class="related-screen-action related-screen-action-primary" href="${nextRelatedHref}">この動画の関連を見る</a>
-                <a class="related-screen-action related-screen-action-secondary" href="/?q=${nextQuery}">この動画で検索</a>
-                ${url ? `<a class="related-screen-action related-screen-action-secondary" href="${url}" target="_blank" rel="noopener noreferrer">公式で開く</a>` : ''}
-              </div>
-            </div>
-          </article>
-        `;
-      }).join('');
+    function queueHomepagePlayback(video) {
+      const normalizedUrl = normalizeBilibiliPageUrl(video?.url || video?.embedUrl || '');
+      if (!normalizedUrl) return;
+
+      try {
+        localStorage.setItem(HOMEPAGE_PLAYBACK_KEY, JSON.stringify({
+          ...video,
+          url: normalizedUrl,
+          embedUrl: normalizedUrl,
+          source: video?.source || 'bilibili'
+        }));
+      } catch (error) {}
+
+      window.location.href = '/';
     }
+
+    function renderRelatedCards(items, query) {
+        return items.map((item, index) => {
+          const itemTitle = escapeHtml(item.title || '関連動画');
+          const thumb = escapeHtml(normalizeThumbnail(item.thumbnail, item.title));
+          const url = escapeHtml(item.url || '');
+          const duration = item.duration ? `<span class="related-screen-badge">${escapeHtml(item.duration)}</span>` : '';
+          const nextQuery = encodeURIComponent(item.title || query || '');
+          const nextRelatedHref = `/related.html?url=${encodeURIComponent(item.url || '')}&title=${encodeURIComponent(item.title || '')}&q=${nextQuery}`;
+
+          return `
+            <article class="related-screen-card">
+              <img class="related-screen-thumb" src="${thumb}" alt="${itemTitle}" loading="lazy">
+              <div class="related-screen-body">
+                <div class="related-screen-title">${index + 1}. ${itemTitle}</div>
+                <p class="related-screen-copy">この動画を起点に、さらに関連動画へ進めます。</p>
+                <div class="related-screen-meta">
+                  <span class="related-screen-badge">Bilibili</span>
+                  ${duration}
+                </div>
+                <div class="related-screen-actions">
+                  <a class="related-screen-action related-screen-action-primary" href="${nextRelatedHref}">この動画の関連を見る</a>
+                  <button type="button" class="related-screen-action related-screen-action-secondary related-screen-play" data-index="${index}">トップで再生</button>
+                  ${url ? `<a class="related-screen-action related-screen-action-secondary" href="${url}" target="_blank" rel="noopener noreferrer">公式で開く</a>` : ''}
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('');
+      }
 
     async function initRelatedScreen() {
       const params = new URLSearchParams(window.location.search);
@@ -268,19 +286,33 @@
           return;
         }
 
-        listEl.innerHTML = renderRelatedCards(items, query || title);
-      } catch (error) {
-        const fallbackItems = await fetchSearchFallback(query || title, videoUrl);
-        if (countBadgeEl) countBadgeEl.textContent = `${fallbackItems.length} 件`;
+          listEl.innerHTML = renderRelatedCards(items, query || title);
+          listEl.querySelectorAll('.related-screen-play').forEach((button) => {
+            button.addEventListener('click', () => {
+              const item = items[Number(button.dataset.index)];
+              if (!item) return;
+              queueHomepagePlayback(item);
+            });
+          });
+        } catch (error) {
+          const fallbackItems = await fetchSearchFallback(query || title, videoUrl);
+          if (countBadgeEl) countBadgeEl.textContent = `${fallbackItems.length} 件`;
 
         if (!fallbackItems.length) {
           listEl.innerHTML = '<div class="related-screen-empty">関連動画の取得に失敗しました。</div>';
           return;
         }
 
-        listEl.innerHTML = renderRelatedCards(fallbackItems, query || title);
+          listEl.innerHTML = renderRelatedCards(fallbackItems, query || title);
+          listEl.querySelectorAll('.related-screen-play').forEach((button) => {
+            button.addEventListener('click', () => {
+              const item = fallbackItems[Number(button.dataset.index)];
+              if (!item) return;
+              queueHomepagePlayback(item);
+            });
+          });
+        }
       }
-    }
 
     initRelatedScreen();
   </script>

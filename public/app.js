@@ -486,7 +486,7 @@ function buildRelatedVideoMarkup(video, fallbackQuery) {
           ${duration}
         </div>
         <div class="related-video-actions">
-          <button type="button" class="related-open-btn" data-query="${query}">この場で再生</button>
+          <button type="button" class="related-open-btn" data-query="${query}">トップで再生</button>
           ${url ? `<a class="related-link-btn" href="${url}" target="_blank" rel="noopener noreferrer">Bilibiliで開く</a>` : ''}
         </div>
       </div>
