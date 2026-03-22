@@ -4764,7 +4764,15 @@ app.get('/api/bilibili-related', async (req, res) => {
       source: 'bilibili'
     };
 
-    const relatedVideos = await searchBilibiliRelatedFromVideoPages([seedVideo], 12);
+    let relatedVideos = await searchBilibiliRelatedFromVideoPages([seedVideo], 12);
+
+    if ((!Array.isArray(relatedVideos) || relatedVideos.length === 0) && title) {
+      const fallbackResults = await searchBilibili(title);
+      relatedVideos = (Array.isArray(fallbackResults) ? fallbackResults : [])
+        .filter((video) => video && video.url && video.url !== videoUrl)
+        .slice(0, 12);
+    }
+
     res.json({ results: relatedVideos });
   } catch (error) {
     console.error('Bilibili関連動画取得エラー:', error.message);
