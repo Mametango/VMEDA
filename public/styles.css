@@ -558,6 +558,127 @@ body {
   pointer-events: auto !important;
 }
 
+.video-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.related-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #2563eb;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.related-results {
+  margin-top: 14px;
+}
+
+.related-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 12px;
+}
+
+.related-video-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.related-video-card {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.related-video-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #0f172a;
+}
+
+.related-video-body {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.related-video-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.5;
+}
+
+.related-video-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.related-video-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.related-video-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.related-open-btn,
+.related-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: none;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.related-open-btn {
+  background: #111827;
+  color: white;
+}
+
+.related-link-btn {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.related-loading,
+.related-empty {
+  padding: 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 14px;
+}
+
 /* PPP.Pornの動画プレイヤー用の特別なスタイル（下側が切れないように） */
 .video-item[data-source="ppp"] .video-player-container,
 .video-item[data-source="ppp"] .video-player {

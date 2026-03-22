@@ -340,6 +340,107 @@ function isDirectMediaUrl(value) {
   return /\.(mp4|m3u8|webm|flv)(\?|#|$)/i.test(url);
 }
 
+function buildRelatedQuery(video) {
+  const title = String(video?.title || '').trim();
+  if (!title) return '';
+  return title.replace(/\s+/g, ' ').slice(0, 80);
+}
+
+function buildRelatedVideoMarkup(video, fallbackQuery) {
+  const title = escapeHtml(video?.title || '関連動画');
+  const url = escapeHtml(video?.url || video?.embedUrl || '');
+  const duration = video?.duration ? `<span class="related-video-badge">${escapeHtml(video.duration)}</span>` : '';
+  const thumbnail = escapeHtml(normalizeThumbnailUrl(video?.thumbnail, video?.title || fallbackQuery || 'VMEDA'));
+  const query = escapeHtml(buildRelatedQuery(video) || fallbackQuery || '');
+
+  return `
+    <article class="related-video-card">
+      <img src="${thumbnail}" alt="${title}" class="related-video-thumb" loading="lazy">
+      <div class="related-video-body">
+        <div class="related-video-title">${title}</div>
+        <div class="related-video-meta">
+          <span class="related-video-badge">Bilibili</span>
+          ${duration}
+        </div>
+        <div class="related-video-actions">
+          <button type="button" class="related-open-btn" data-query="${query}">この場で開く</button>
+          ${url ? `<a class="related-link-btn" href="${url}" target="_blank" rel="noopener noreferrer">Bilibiliで開く</a>` : ''}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+async function toggleRelatedVideos(videoId) {
+  const host = document.getElementById(`related-${videoId}`);
+  if (!host) return;
+
+  if (!host.classList.contains('hidden') && host.dataset.loaded === '1') {
+    host.classList.add('hidden');
+    return;
+  }
+
+  host.classList.remove('hidden');
+
+  if (host.dataset.loaded === '1') {
+    return;
+  }
+
+  const video = findVideoRecord(videoId, '', '');
+  const query = buildRelatedQuery(video);
+  if (!query) {
+    host.innerHTML = '<div class="related-empty">関連動画を探すためのタイトルが見つかりませんでした。</div>';
+    return;
+  }
+
+  host.innerHTML = '<div class="related-loading">関連動画を読み込み中...</div>';
+
+  try {
+    const response = await fetch('/api/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to load related videos');
+    }
+
+    const data = await response.json();
+    const related = (Array.isArray(data.results) ? data.results : [])
+      .filter((item) => item && (item.id !== video?.id) && (item.url !== video?.url))
+      .slice(0, 6);
+
+    if (related.length === 0) {
+      host.innerHTML = '<div class="related-empty">関連動画はまだ見つかりませんでした。</div>';
+      host.dataset.loaded = '1';
+      return;
+    }
+
+    host.innerHTML = `
+      <div class="related-section-title">関連動画</div>
+      <div class="related-video-grid">
+        ${related.map((item) => buildRelatedVideoMarkup(item, query)).join('')}
+      </div>
+    `;
+    host.dataset.loaded = '1';
+
+    host.querySelectorAll('.related-open-btn').forEach((button) => {
+      button.addEventListener('click', () => {
+        const nextQuery = button.getAttribute('data-query') || '';
+        if (!nextQuery) return;
+        if (searchInput) searchInput.value = nextQuery;
+        searchVideos(nextQuery);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+  } catch (error) {
+    host.innerHTML = '<div class="related-empty">関連動画の取得に失敗しました。</div>';
+  }
+}
+
 // 結果表示（ページネーション対応）
 function displayResults(videos, searchQuery) {
   if (videos.length === 0) {
@@ -465,6 +566,10 @@ function displayResults(videos, searchQuery) {
           </button>
         `}
       </div>
+      <div class="video-actions">
+        <button type="button" class="related-btn" data-video-id="${escapeHtml(vid)}">関連動画</button>
+      </div>
+      <div class="related-results hidden" id="related-${vid}"></div>
     </div>
   `;
   }).join('');
@@ -501,6 +606,14 @@ function displayResults(videos, searchQuery) {
   });
   
   // ページネーションを表示
+  document.querySelectorAll('.related-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const videoId = button.getAttribute('data-video-id') || '';
+      if (!videoId) return;
+      toggleRelatedVideos(videoId);
+    });
+  });
+
   displayPagination();
 }
 
