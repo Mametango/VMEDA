@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>VMEDA - Recommendations</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="stylesheet" href="styles.css?v=1.0.8">
+  <style>
+    .top-links {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .top-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 999px;
+      text-decoration: none;
+      color: white;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.24);
+      font-weight: 700;
+    }
+    .top-link-accent {
+      background: rgba(76, 175, 80, 0.3);
+      border-color: rgba(76, 175, 80, 0.7);
+    }
+    .recommend-layout {
+      display: grid;
+      gap: 20px;
+    }
+    .recommend-panel {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 18px;
+      padding: 20px;
+      color: white;
+      backdrop-filter: blur(12px);
+    }
+    .recommend-title {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .recommend-copy {
+      color: rgba(255,255,255,0.9);
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .recommend-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .recommend-chip {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.16);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .recommend-grid {
+      display: grid;
+      gap: 18px;
+    }
+    .recommend-card {
+      background: white;
+      color: #1f2937;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+    }
+    .recommend-thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      display: block;
+      background: #111827;
+    }
+    .recommend-card-body {
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }
+    .recommend-card-title {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+    .recommend-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .recommend-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    .recommend-reason {
+      color: #475569;
+      line-height: 1.6;
+    }
+    .recommend-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .recommend-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+    }
+    .recommend-action-primary {
+      background: #2563eb;
+      color: white;
+    }
+    .recommend-action-secondary {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .recommend-empty {
+      background: rgba(255,255,255,0.12);
+      border: 1px dashed rgba(255,255,255,0.35);
+      border-radius: 18px;
+      padding: 24px;
+      color: white;
+      line-height: 1.7;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="top-links">
+        <a class="top-link" href="/">検索</a>
+        <a class="top-link top-link-accent" href="/recommend.html">おすすめ</a>
+      </div>
+      <h1 class="site-title">VMEDA Recommendations</h1>
+      <p class="header-debug-hint">最近の検索語と見た動画から、次に見やすそうな Bilibili 動画をまとめます。</p>
+    </header>
+
+    <main class="recommend-layout">
+      <section class="recommend-panel">
+        <h2 class="recommend-title">おすすめの作り方</h2>
+        <p class="recommend-copy">最近検索したワードと再生した動画をもとに、Bilibili でもう一度検索しやすい導線を作っています。気になる語を押すと、そのまま検索ページへ戻れます。</p>
+        <div id="recommend-keywords" class="recommend-chips"></div>
+      </section>
+
+      <section id="recommend-list" class="recommend-grid"></section>
+    </main>
+  </div>
+
+  <script>
+    const RECENT_VIEWS_KEY = 'vmeda_recent_views';
+    const MAX_KEYWORDS = 8;
+    const MAX_RECOMMENDATIONS = 8;
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function readRecentViews() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(RECENT_VIEWS_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function normalizeThumbnail(url, title) {
+      const value = String(url || '').trim();
+      if (!value) {
+        return `https://via.placeholder.com/640x360/1d4ed8/ffffff?text=${encodeURIComponent((title || 'VMEDA').slice(0, 24))}`;
+      }
+      if (value.startsWith('//')) return 'https:' + value;
+      if (value.startsWith('http://')) return value.replace('http://', 'https://');
+      return value;
+    }
+
+    function tokenize(text) {
+      return String(text || '')
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+        .split(/\s+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 2);
+    }
+
+    async function loadSearchTerms() {
+      try {
+        const response = await fetch('/api/recent-searches');
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data.searches) ? data.searches.map((entry) => String(entry.query || '').trim()).filter(Boolean) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function buildKeywordPool(searchTerms, views) {
+      const weighted = new Map();
+      const push = (term, weight) => {
+        const normalized = String(term || '').trim();
+        if (!normalized) return;
+        weighted.set(normalized, (weighted.get(normalized) || 0) + weight);
+      };
+
+      searchTerms.forEach((term, index) => push(term, Math.max(6 - index, 1)));
+
+      views.forEach((view, index) => {
+        push(view.title, Math.max(5 - index, 1));
+        tokenize(view.title).forEach((token) => push(token, 1));
+      });
+
+      return Array.from(weighted.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([term]) => term)
+        .slice(0, MAX_KEYWORDS);
+    }
+
+    async function searchBilibili(query) {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const data = await response.json();
+      return Array.isArray(data.results) ? data.results : [];
+    }
+
+    function dedupeRecommendations(items) {
+      const seen = new Set();
+      return items.filter((item) => {
+        const key = String(item.url || item.embedUrl || item.title || '').toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function renderKeywordButtons(keywords) {
+      const wrap = document.getElementById('recommend-keywords');
+      if (!wrap) return;
+
+      if (keywords.length === 0) {
+        wrap.innerHTML = '<span class="recommend-badge">まだ履歴がありません</span>';
+        return;
+      }
+
+      wrap.innerHTML = keywords
+        .map((keyword) => `<button class="recommend-chip" type="button" data-query="${escapeHtml(keyword)}">${escapeHtml(keyword)}</button>`)
+        .join('');
+
+      wrap.querySelectorAll('[data-query]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const query = button.getAttribute('data-query') || '';
+          window.location.href = '/?q=' + encodeURIComponent(query);
+        });
+      });
+    }
+
+    function renderRecommendations(items) {
+      const list = document.getElementById('recommend-list');
+      if (!list) return;
+
+      if (!items.length) {
+        list.innerHTML = `
+          <div class="recommend-empty">
+            まずは検索ページで何本か見てみてください。<br>
+            検索語や再生履歴がたまると、このページにおすすめが出ます。
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = items.map((item) => {
+        const title = escapeHtml(item.title || 'Untitled');
+        const thumb = escapeHtml(normalizeThumbnail(item.thumbnail, item.title));
+        const source = escapeHtml(item.source || 'bilibili');
+        const duration = item.duration ? `<span class="recommend-badge">${escapeHtml(item.duration)}</span>` : '';
+        const reason = escapeHtml(item.reason || '最近の検索や視聴履歴に近い動画です。');
+        const url = escapeHtml(item.url || item.embedUrl || '');
+        const searchUrl = '/?q=' + encodeURIComponent(item.searchQuery || item.title || '');
+
+        return `
+          <article class="recommend-card">
+            <img class="recommend-thumb" src="${thumb}" alt="${title}" loading="lazy">
+            <div class="recommend-card-body">
+              <div class="recommend-card-title">${title}</div>
+              <div class="recommend-meta">
+                <span class="recommend-badge">${source}</span>
+                ${duration}
+                <span class="recommend-badge">${escapeHtml(item.searchQuery || 'おすすめ')}</span>
+              </div>
+              <p class="recommend-reason">${reason}</p>
+              <div class="recommend-actions">
+                <a class="recommend-action recommend-action-primary" href="${searchUrl}">この語で検索</a>
+                ${url ? `<a class="recommend-action recommend-action-secondary" href="${url}" target="_blank" rel="noopener noreferrer">Bilibili で開く</a>` : ''}
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    async function initRecommendations() {
+      const views = readRecentViews();
+      const searchTerms = await loadSearchTerms();
+      const keywords = buildKeywordPool(searchTerms, views);
+      renderKeywordButtons(keywords);
+
+      const collected = [];
+      for (const keyword of keywords.slice(0, 4)) {
+        const results = await searchBilibili(keyword);
+        const candidates = results.slice(0, 3).map((item) => ({
+          ...item,
+          searchQuery: keyword,
+          reason: `「${keyword}」に近い検索や視聴履歴から拾いました。`
+        }));
+        collected.push(...candidates);
+      }
+
+      const recentUrls = new Set(views.map((view) => String(view.url || view.embedUrl || '').toLowerCase()).filter(Boolean));
+      const deduped = dedupeRecommendations(collected)
+        .filter((item) => !recentUrls.has(String(item.url || item.embedUrl || '').toLowerCase()))
+        .slice(0, MAX_RECOMMENDATIONS);
+
+      renderRecommendations(deduped);
+    }
+
+    initRecommendations();
+  </script>
+</body>
+</html>

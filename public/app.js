@@ -117,10 +117,69 @@ const sortSelect = document.getElementById('sort-select');
 
 // 現在の検索結果を保持
 let currentVideos = [];
+const RECENT_VIEWS_KEY = 'vmeda_recent_views';
+const MAX_RECENT_VIEWS = 24;
 // ページネーション用の変数
 let currentPage = 1; // 現在のページ番号
 const VIDEOS_PER_PAGE = 10; // 1ページに表示する動画数
 let totalPages = 1; // 総ページ数
+
+function safeLocalStorageGet(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function safeLocalStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {}
+}
+
+function normalizeThumbnailUrl(url, title) {
+  const value = String(url || '').trim();
+  if (!value) {
+    return `https://via.placeholder.com/640x360/667eea/ffffff?text=${encodeURIComponent(String(title || 'VMEDA').slice(0, 20))}`;
+  }
+  if (value.startsWith('//')) return `https:${value}`;
+  if (value.startsWith('http://')) return value.replace('http://', 'https://');
+  return value;
+}
+
+function findVideoRecord(videoId, originalUrl, embedUrl) {
+  return currentVideos.find((video) => {
+    if (!video || typeof video !== 'object') return false;
+    return (
+      video.id === videoId ||
+      (originalUrl && video.url === originalUrl) ||
+      (embedUrl && (video.embedUrl === embedUrl || video.url === embedUrl))
+    );
+  }) || null;
+}
+
+function recordVideoView(videoId, embedUrl, originalUrl, source) {
+  const matched = findVideoRecord(videoId, originalUrl, embedUrl);
+  const entry = {
+    id: matched?.id || videoId,
+    title: matched?.title || `Video ${videoId}`,
+    url: matched?.url || originalUrl || embedUrl || '',
+    embedUrl: matched?.embedUrl || embedUrl || originalUrl || '',
+    source: matched?.source || source || '',
+    duration: matched?.duration || '',
+    thumbnail: normalizeThumbnailUrl(matched?.thumbnail, matched?.title || videoId),
+    viewedAt: Date.now()
+  };
+
+  const current = safeLocalStorageGet(RECENT_VIEWS_KEY, []);
+  const withoutDup = Array.isArray(current)
+    ? current.filter((item) => String(item.url || item.embedUrl || item.id) !== String(entry.url || entry.embedUrl || entry.id))
+    : [];
+  withoutDup.unshift(entry);
+  safeLocalStorageSet(RECENT_VIEWS_KEY, withoutDup.slice(0, MAX_RECENT_VIEWS));
+}
 
 function updateAppViewportHeight() {
   const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -855,6 +914,7 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   
   // 現在の動画IDを記録
   currentPlayingVideoId = videoId;
+  recordVideoView(videoId, embedUrl, originalUrl, source);
   
   // 動画プレイヤー表示時に周辺の広告を非表示にする
   const videoItem = container.closest('.video-item');
