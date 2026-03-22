@@ -118,6 +118,7 @@ const sortSelect = document.getElementById('sort-select');
 // 現在の検索結果を保持
 let currentVideos = [];
 const RECENT_VIEWS_KEY = 'vmeda_recent_views';
+const HOMEPAGE_PLAYBACK_KEY = 'vmeda_homepage_playback';
 const MAX_RECENT_VIEWS = 24;
 // ページネーション用の変数
 let currentPage = 1; // 現在のページ番号
@@ -136,6 +137,12 @@ function safeLocalStorageGet(key, fallback) {
 function safeLocalStorageSet(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {}
+}
+
+function safeLocalStorageRemove(key) {
+  try {
+    localStorage.removeItem(key);
   } catch (error) {}
 }
 
@@ -191,69 +198,62 @@ function replaceVideoRecord(videoId, nextVideo) {
   return mergedVideo;
 }
 
-function syncVideoCard(videoId, video) {
-  const container = document.getElementById(`player-${videoId}`);
-  const videoItem = container?.closest('.video-item');
-  if (!videoItem || !video) {
+function queueHomepagePlayback(video) {
+  const normalizedUrl = normalizeBilibiliPageUrl(video?.url || video?.embedUrl || '');
+  if (!normalizedUrl) {
     return;
   }
 
-  const title = String(video.title || '関連動画').trim();
-  const duration = String(video.duration || '').trim();
-  const officialUrl = normalizeBilibiliPageUrl(video.url || video.embedUrl || '');
-  const relatedUrl = officialUrl
-    ? `/related.html?${new URLSearchParams({ url: officialUrl, title, q: buildRelatedQuery(video) || title }).toString()}`
-    : '';
+  safeLocalStorageSet(HOMEPAGE_PLAYBACK_KEY, {
+    ...video,
+    url: normalizedUrl,
+    embedUrl: normalizedUrl,
+    source: video?.source || 'bilibili'
+  });
 
-  const titleNode = videoItem.querySelector('.video-title');
-  if (titleNode) {
-    titleNode.textContent = title;
+  window.location.href = '/';
+}
+
+function consumeHomepagePlayback() {
+  const pending = safeLocalStorageGet(HOMEPAGE_PLAYBACK_KEY, null);
+  if (!pending || typeof pending !== 'object') {
+    return false;
   }
 
-  const durationNode = videoItem.querySelector('.video-duration');
-  if (durationNode) {
-    durationNode.textContent = duration;
-    durationNode.style.display = duration ? '' : 'none';
+  safeLocalStorageRemove(HOMEPAGE_PLAYBACK_KEY);
+
+  const normalizedUrl = normalizeBilibiliPageUrl(pending.url || pending.embedUrl || '');
+  if (!normalizedUrl) {
+    return false;
   }
 
-  const sourceNode = videoItem.querySelector('.video-source');
-  if (sourceNode) {
-    sourceNode.textContent = getSourceName(video.source || 'bilibili');
+  const videoId = pending.id || `homepage-play-${Date.now()}`;
+  const mergedVideo = replaceVideoRecord(videoId, {
+    ...pending,
+    id: videoId,
+    url: normalizedUrl,
+    embedUrl: normalizedUrl,
+    source: pending.source || 'bilibili'
+  });
+
+  currentPage = 1;
+  displayResults([mergedVideo], mergedVideo.title || '');
+
+  if (searchInput) {
+    searchInput.value = mergedVideo.title || '';
   }
 
-  const officialBtn = videoItem.querySelector('.official-btn');
-  if (officialBtn) {
-    if (officialUrl) {
-      officialBtn.setAttribute('href', officialUrl);
-      officialBtn.style.display = '';
-    } else {
-      officialBtn.style.display = 'none';
-    }
-  }
-
-  const relatedBtn = videoItem.querySelector('.related-btn');
-  if (relatedBtn) {
-    if (relatedUrl) {
-      relatedBtn.setAttribute('href', relatedUrl);
-      relatedBtn.style.display = '';
-    } else {
-      relatedBtn.style.display = 'none';
-    }
-  }
-
-  const thumb = videoItem.querySelector('.video-thumbnail');
-  if (thumb && video.thumbnail) {
-    thumb.setAttribute('src', video.thumbnail);
-    thumb.setAttribute('alt', title);
-  }
-
-  const wrapper = videoItem.querySelector('.video-thumbnail-wrapper');
-  if (wrapper) {
-    wrapper.setAttribute(
-      'onclick',
-      `showPlayer('${escapeHtml(videoId)}', '${escapeHtml(video.embedUrl || video.url || '')}', '${escapeHtml(video.url || video.embedUrl || '')}', '${escapeHtml(video.source || 'bilibili')}', event)`
+  setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.showPlayer(
+      videoId,
+      mergedVideo.embedUrl || mergedVideo.url || '',
+      mergedVideo.url || mergedVideo.embedUrl || '',
+      mergedVideo.source || 'bilibili'
     );
-  }
+  }, 0);
+
+  return true;
 }
 
 function recordVideoView(videoId, embedUrl, originalUrl, source) {
@@ -630,19 +630,12 @@ async function showInlineRelatedVideos(videoId) {
   `;
 
   host.querySelectorAll('.related-open-btn').forEach((button, index) => {
-    button.addEventListener('click', async () => {
+    button.addEventListener('click', () => {
       const nextVideo = relatedVideos[index];
       if (!nextVideo) {
         return;
       }
-      const mergedVideo = replaceVideoRecord(videoId, nextVideo);
-      syncVideoCard(videoId, mergedVideo);
-      window.showPlayer(
-        videoId,
-        mergedVideo.embedUrl || mergedVideo.url || '',
-        mergedVideo.url || mergedVideo.embedUrl || '',
-        mergedVideo.source || 'bilibili'
-      );
+      queueHomepagePlayback(nextVideo);
     });
   });
 }
@@ -1058,6 +1051,9 @@ ensureRandomSortOption();
 // ページ読み込み時の自動検索は完全に無効化
 // URLパラメータから検索キーワードを取得して検索入力欄に設定するだけ（検索は実行しない）
 (function() {
+  if (consumeHomepagePlayback()) {
+    return;
+  }
   const urlParams = new URLSearchParams(window.location.search);
   const queryParam = urlParams.get('q');
   
