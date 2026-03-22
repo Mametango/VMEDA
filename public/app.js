@@ -208,7 +208,8 @@ function queueHomepagePlayback(video) {
     ...video,
     url: normalizedUrl,
     embedUrl: normalizedUrl,
-    source: video?.source || 'bilibili'
+    source: video?.source || 'bilibili',
+    relatedVideos: Array.isArray(video?.relatedVideos) ? video.relatedVideos : []
   });
 
   window.location.href = '/';
@@ -254,6 +255,29 @@ function consumeHomepagePlayback() {
   }, 0);
 
   return true;
+}
+
+function normalizeRelatedVideoList(items, currentUrl) {
+  const seen = new Set();
+  return (Array.isArray(items) ? items : [])
+    .map((item) => {
+      const normalizedUrl = normalizeBilibiliPageUrl(item?.url || item?.embedUrl || '');
+      if (!normalizedUrl) return null;
+      return {
+        ...item,
+        url: normalizedUrl,
+        embedUrl: normalizedUrl,
+        source: item?.source || 'bilibili'
+      };
+    })
+    .filter((item) => {
+      if (!item || item.url === currentUrl || seen.has(item.url)) {
+        return false;
+      }
+      seen.add(item.url);
+      return true;
+    })
+    .slice(0, 12);
 }
 
 function recordVideoView(videoId, embedUrl, originalUrl, source) {
@@ -584,34 +608,26 @@ async function showInlineRelatedVideos(videoId) {
   host.innerHTML = '<div class="related-loading">関連動画を読み込み中...</div>';
 
   const query = buildRelatedQuery(video) || video?.title || '';
-  let relatedVideos = [];
+  let relatedVideos = normalizeRelatedVideoList(video?.relatedVideos, videoUrl);
 
-  try {
-    const params = new URLSearchParams({
-      url: videoUrl,
-      title: video?.title || '',
-      q: query
-    });
-    const response = await fetch(`/api/bilibili-related?${params.toString()}`);
-    if (response.ok) {
-      const data = await response.json();
-      const items = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
-      if (items.length > 0) {
-        const seen = new Set();
-        relatedVideos = items.filter((item) => {
-          const normalizedUrl = normalizeBilibiliPageUrl(item?.url || item?.embedUrl || '');
-          if (!normalizedUrl || normalizedUrl === videoUrl || seen.has(normalizedUrl)) {
-            return false;
-          }
-          seen.add(normalizedUrl);
-          item.url = normalizedUrl;
-          item.embedUrl = normalizedUrl;
-          return true;
-        }).slice(0, 8);
+  if (relatedVideos.length === 0) {
+    try {
+      const params = new URLSearchParams({
+        url: videoUrl,
+        title: video?.title || '',
+        q: query
+      });
+      const response = await fetch(`/api/bilibili-related?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+        if (items.length > 0) {
+          relatedVideos = normalizeRelatedVideoList(items, videoUrl).slice(0, 8);
+        }
       }
+    } catch (error) {
+      console.warn('inline related fetch failed:', error);
     }
-  } catch (error) {
-    console.warn('inline related fetch failed:', error);
   }
 
   if (relatedVideos.length === 0) {
@@ -636,7 +652,10 @@ async function showInlineRelatedVideos(videoId) {
       if (!nextVideo) {
         return;
       }
-      queueHomepagePlayback(nextVideo);
+      queueHomepagePlayback({
+        ...nextVideo,
+        relatedVideos
+      });
     });
   });
 }

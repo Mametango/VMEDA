@@ -40,12 +40,17 @@
       background: white; color: #1f2937; border-radius: 18px;
       overflow: hidden; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
     }
-    .related-screen-thumb {
-      width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
-      display: block; background: #111827;
-    }
-    .related-screen-body { padding: 16px; display: grid; gap: 10px; }
-    .related-screen-title { font-size: 18px; font-weight: 700; line-height: 1.5; }
+      .related-screen-thumb {
+        width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+        display: block; background: #111827;
+      }
+      .related-screen-media,
+      .related-screen-title-button {
+        appearance: none; border: none; background: transparent; padding: 0;
+        margin: 0; cursor: pointer; text-align: left; width: 100%;
+      }
+      .related-screen-body { padding: 16px; display: grid; gap: 10px; }
+      .related-screen-title { font-size: 18px; font-weight: 700; line-height: 1.5; }
     .related-screen-copy { color: #475569; line-height: 1.6; font-size: 14px; }
     .related-screen-meta { display: flex; flex-wrap: wrap; gap: 8px; }
     .related-screen-badge {
@@ -186,18 +191,19 @@
 
     const HOMEPAGE_PLAYBACK_KEY = 'vmeda_homepage_playback';
 
-    function queueHomepagePlayback(video) {
-      const normalizedUrl = normalizeBilibiliPageUrl(video?.url || video?.embedUrl || '');
-      if (!normalizedUrl) return;
+    function queueHomepagePlayback(video, relatedVideos = []) {
+        const normalizedUrl = normalizeBilibiliPageUrl(video?.url || video?.embedUrl || '');
+        if (!normalizedUrl) return;
 
-      try {
-        localStorage.setItem(HOMEPAGE_PLAYBACK_KEY, JSON.stringify({
-          ...video,
-          url: normalizedUrl,
-          embedUrl: normalizedUrl,
-          source: video?.source || 'bilibili'
-        }));
-      } catch (error) {}
+        try {
+          localStorage.setItem(HOMEPAGE_PLAYBACK_KEY, JSON.stringify({
+            ...video,
+            url: normalizedUrl,
+            embedUrl: normalizedUrl,
+            source: video?.source || 'bilibili',
+            relatedVideos
+          }));
+        } catch (error) {}
 
       window.location.href = '/';
     }
@@ -213,9 +219,13 @@
 
           return `
             <article class="related-screen-card">
-              <img class="related-screen-thumb" src="${thumb}" alt="${itemTitle}" loading="lazy">
+              <button type="button" class="related-screen-media related-screen-play" data-index="${index}">
+                <img class="related-screen-thumb" src="${thumb}" alt="${itemTitle}" loading="lazy">
+              </button>
               <div class="related-screen-body">
-                <div class="related-screen-title">${index + 1}. ${itemTitle}</div>
+                <button type="button" class="related-screen-title-button related-screen-play" data-index="${index}">
+                  <div class="related-screen-title">${index + 1}. ${itemTitle}</div>
+                </button>
                 <p class="related-screen-copy">この動画を起点に、さらに関連動画へ進めます。</p>
                 <div class="related-screen-meta">
                   <span class="related-screen-badge">Bilibili</span>
@@ -291,7 +301,7 @@
             button.addEventListener('click', () => {
               const item = items[Number(button.dataset.index)];
               if (!item) return;
-              queueHomepagePlayback(item);
+              queueHomepagePlayback(item, items.filter((candidate) => candidate.url !== item.url));
             });
           });
         } catch (error) {
@@ -308,7 +318,7 @@
             button.addEventListener('click', () => {
               const item = fallbackItems[Number(button.dataset.index)];
               if (!item) return;
-              queueHomepagePlayback(item);
+              queueHomepagePlayback(item, fallbackItems.filter((candidate) => candidate.url !== item.url));
             });
           });
         }
