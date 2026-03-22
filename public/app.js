@@ -516,6 +516,7 @@ function displayResults(videos, searchQuery) {
         `}
       </div>
       <div class="video-actions">
+        ${url ? `<a class="official-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">公式で開く</a>` : ''}
         ${relatedLink ? `<a class="related-btn" href="${escapeHtml(relatedLink)}">関連動画</a>` : ''}
       </div>
       <div class="related-results hidden" id="related-${vid}"></div>
