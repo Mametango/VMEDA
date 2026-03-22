@@ -276,6 +276,11 @@ function isIVFamilyUrl(value) {
   return url.includes('ivfree.asia') || url.includes('aivfree.com');
 }
 
+function isDirectMediaUrl(value) {
+  const url = String(value || '');
+  return /\.(mp4|m3u8|webm|flv)(\?|#|$)/i.test(url);
+}
+
 // 結果表示（ページネーション対応）
 function displayResults(videos, searchQuery) {
   if (videos.length === 0) {
@@ -986,6 +991,14 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   }
   
   // iframeのsrcを設定（douga4の場合は後で更新される可能性がある）
+  if (
+    (source === 'ivfree' || source === 'aivfree' || isIVFamilyUrl(originalUrl)) &&
+    !normalizedUrl.includes('/api/ivfree-proxy') &&
+    !isDirectMediaUrl(normalizedUrl) &&
+    /vidnest|lulustream|loadvid|luluvid|luluvdoo|embed/i.test(normalizedUrl)
+  ) {
+    normalizedUrl = `/api/ivfree-proxy?url=${encodeURIComponent(normalizedUrl)}`;
+  }
   iframe.src = normalizedUrl;
   
   // 外部動画サイト・Pizjavプロキシの場合は、src設定後にもsandbox属性を確実に削除
@@ -1392,7 +1405,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
           if (isExternalEmbedUrl) {
             // 外部動画サイトの場合は、直接iframeで表示
             iframe.removeAttribute('sandbox');
-            iframe.src = data.embedUrl;
+            iframe.src = isDirectMediaUrl(data.embedUrl)
+              ? data.embedUrl
+              : `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
             ivfreeStatusText = `動画URL更新（直接表示）: ${data.embedUrl.substring(0, 30)}...`;
             ivfreeUpdateDebugInfo();
             console.log('📺 IVFree外部動画URLを直接表示（プロキシなし）:', data.embedUrl);
@@ -1442,8 +1457,12 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
           const ifr = container.querySelector('iframe');
           const isExternal = /vidnest|lulustream|loadvid|luluvid|embed/i.test(data.embedUrl);
           if (isExternal) {
-            ifr.removeAttribute('sandbox');
-            ifr.src = data.embedUrl;
+            if (isDirectMediaUrl(data.embedUrl)) {
+              ifr.removeAttribute('sandbox');
+              ifr.src = data.embedUrl;
+            } else {
+              ifr.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
+            }
           } else {
             ifr.src = `/api/ivfree-proxy?url=${encodeURIComponent(data.embedUrl)}`;
           }
