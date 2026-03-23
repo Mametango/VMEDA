@@ -169,12 +169,13 @@ function findVideoRecord(videoId, originalUrl, embedUrl) {
 
 function replaceVideoRecord(videoId, nextVideo) {
   const normalizedUrl = normalizeBilibiliPageUrl(nextVideo?.url || nextVideo?.embedUrl || '');
+  const normalizedEmbedUrl = buildBilibiliEmbedUrl(nextVideo?.embedUrl || nextVideo?.url || '');
   const normalizedThumbnail = normalizeThumbnailUrl(nextVideo?.thumbnail, nextVideo?.title || videoId);
   const mergedVideo = {
     ...nextVideo,
     id: videoId,
     url: normalizedUrl || nextVideo?.url || '',
-    embedUrl: normalizedUrl || nextVideo?.embedUrl || nextVideo?.url || '',
+    embedUrl: normalizedEmbedUrl || normalizedUrl || nextVideo?.embedUrl || nextVideo?.url || '',
     source: nextVideo?.source || 'bilibili',
     thumbnail: normalizedThumbnail
   };
@@ -200,6 +201,7 @@ function replaceVideoRecord(videoId, nextVideo) {
 
 function queueHomepagePlayback(video) {
   const normalizedUrl = normalizeBilibiliPageUrl(video?.url || video?.embedUrl || '');
+  const normalizedEmbedUrl = buildBilibiliEmbedUrl(video?.embedUrl || video?.url || '');
   if (!normalizedUrl) {
     return;
   }
@@ -207,7 +209,7 @@ function queueHomepagePlayback(video) {
   safeLocalStorageSet(HOMEPAGE_PLAYBACK_KEY, {
     ...video,
     url: normalizedUrl,
-    embedUrl: normalizedUrl,
+    embedUrl: normalizedEmbedUrl || normalizedUrl,
     source: video?.source || 'bilibili',
     relatedVideos: Array.isArray(video?.relatedVideos) ? video.relatedVideos : []
   });
@@ -224,6 +226,7 @@ function consumeHomepagePlayback() {
   safeLocalStorageRemove(HOMEPAGE_PLAYBACK_KEY);
 
   const normalizedUrl = normalizeBilibiliPageUrl(pending.url || pending.embedUrl || '');
+  const normalizedEmbedUrl = buildBilibiliEmbedUrl(pending.embedUrl || pending.url || '');
   if (!normalizedUrl) {
     return false;
   }
@@ -233,7 +236,7 @@ function consumeHomepagePlayback() {
     ...pending,
     id: videoId,
     url: normalizedUrl,
-    embedUrl: normalizedUrl,
+    embedUrl: normalizedEmbedUrl || normalizedUrl,
     source: pending.source || 'bilibili'
   });
 
@@ -262,11 +265,12 @@ function normalizeRelatedVideoList(items, currentUrl) {
   return (Array.isArray(items) ? items : [])
     .map((item) => {
       const normalizedUrl = normalizeBilibiliPageUrl(item?.url || item?.embedUrl || '');
+      const normalizedEmbedUrl = buildBilibiliEmbedUrl(item?.embedUrl || item?.url || '');
       if (!normalizedUrl) return null;
       return {
         ...item,
         url: normalizedUrl,
-        embedUrl: normalizedUrl,
+        embedUrl: normalizedEmbedUrl || normalizedUrl,
         source: item?.source || 'bilibili'
       };
     })
@@ -479,6 +483,18 @@ function normalizeBilibiliPageUrl(value) {
   if (raw.startsWith('https://')) return raw;
   if (raw.startsWith('/')) return `https://www.bilibili.com${raw}`;
   return raw;
+}
+
+function buildBilibiliEmbedUrl(value) {
+  const raw = String(value || '').trim();
+  const bvidMatch = raw.match(/BV[a-zA-Z0-9]+/);
+  if (bvidMatch) {
+    return `https://player.bilibili.com/player.html?bvid=${bvidMatch[0]}`;
+  }
+  if (raw.includes('player.bilibili.com')) {
+    return raw.startsWith('//') ? `https:${raw}` : raw;
+  }
+  return normalizeBilibiliPageUrl(raw);
 }
 
 function safeResolveUrl(value, baseUrl = 'https://www.bilibili.com/') {

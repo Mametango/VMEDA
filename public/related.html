@@ -136,6 +136,14 @@
       return raw;
     }
 
+    function buildBilibiliEmbedUrl(url) {
+      const raw = String(url || '').trim();
+      const bvidMatch = raw.match(/BV[a-zA-Z0-9]+/);
+      if (bvidMatch) return `https://player.bilibili.com/player.html?bvid=${bvidMatch[0]}`;
+      if (raw.includes('player.bilibili.com')) return raw.startsWith('//') ? `https:${raw}` : raw;
+      return normalizeBilibiliPageUrl(raw);
+    }
+
     function buildFallbackQueries(query) {
       const base = String(query || '').trim();
       if (!base) return [];
@@ -193,13 +201,14 @@
 
     function queueHomepagePlayback(video, relatedVideos = []) {
         const normalizedUrl = normalizeBilibiliPageUrl(video?.url || video?.embedUrl || '');
+        const normalizedEmbedUrl = buildBilibiliEmbedUrl(video?.embedUrl || video?.url || '');
         if (!normalizedUrl) return;
 
         try {
           localStorage.setItem(HOMEPAGE_PLAYBACK_KEY, JSON.stringify({
             ...video,
             url: normalizedUrl,
-            embedUrl: normalizedUrl,
+            embedUrl: normalizedEmbedUrl || normalizedUrl,
             source: video?.source || 'bilibili',
             relatedVideos
           }));
