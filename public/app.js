@@ -527,7 +527,6 @@ function buildRelatedVideoMarkup(video, fallbackQuery) {
         </div>
         <div class="related-video-actions">
           <button type="button" class="related-open-btn" data-query="${query}">トップで再生</button>
-          ${url ? `<a class="related-link-btn" href="${url}" target="_blank" rel="noopener noreferrer">Bilibiliで開く</a>` : ''}
         </div>
       </div>
     </article>
@@ -794,9 +793,9 @@ function displayResults(videos, searchQuery) {
     const isBilibili = video.source === 'bilibili';
     const playIcon = isBilibili ? '📺' : '▶';
       const officialUrl = normalizeBilibiliPageUrl(url) || safeResolveUrl(url, 'https://www.bilibili.com/');
-    const relatedLink = (officialUrl && officialUrl.includes('bilibili.com'))
-      ? `/related.html?${new URLSearchParams({ url: officialUrl, title, q: buildRelatedQuery(video) || title }).toString()}`
-      : '';
+      const relatedLink = (officialUrl && officialUrl.includes('bilibili.com'))
+        ? `/related.html?${new URLSearchParams({ url: officialUrl, title, q: buildRelatedQuery(video) || title }).toString()}`
+        : '';
     
     return `
     <div class="video-item" data-source="${video.source || ''}">
@@ -822,7 +821,6 @@ function displayResults(videos, searchQuery) {
         `}
       </div>
       <div class="video-actions">
-        ${officialUrl ? `<a class="official-btn" href="${escapeHtml(officialUrl)}" target="_blank" rel="noopener noreferrer">公式で開く</a>` : ''}
         ${relatedLink ? `<a class="related-btn" href="${escapeHtml(relatedLink)}">関連動画</a>` : ''}
       </div>
       <div class="related-results hidden" id="related-${vid}"></div>
