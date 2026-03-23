@@ -591,7 +591,7 @@ async function fetchInlineSearchFallback(query, currentUrl) {
         collected.push({
           ...video,
           url: normalizedUrl,
-          embedUrl: normalizedUrl
+          embedUrl: buildBilibiliEmbedUrl(video?.embedUrl || video?.url || normalizedUrl)
         });
         if (collected.length >= 8) {
           return collected;

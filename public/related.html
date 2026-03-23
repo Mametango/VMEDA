@@ -178,10 +178,14 @@
           });
           if (!response.ok) continue;
 
-          const data = await response.json();
-          const normalized = (Array.isArray(data.results) ? data.results : [])
-            .map((item) => ({ ...item, url: normalizeBilibiliPageUrl(item.url || item.embedUrl || '') }))
-            .filter((item) => item && item.url && item.url !== currentUrl);
+            const data = await response.json();
+            const normalized = (Array.isArray(data.results) ? data.results : [])
+              .map((item) => ({
+                ...item,
+                url: normalizeBilibiliPageUrl(item.url || item.embedUrl || ''),
+                embedUrl: buildBilibiliEmbedUrl(item.embedUrl || item.url || '')
+              }))
+              .filter((item) => item && item.url && item.url !== currentUrl);
 
           for (const item of normalized) {
             if (seen.has(item.url)) continue;
@@ -290,7 +294,11 @@
         if (response.ok) {
           const data = await response.json();
           items = (Array.isArray(data.results) ? data.results : [])
-            .map((item) => ({ ...item, url: normalizeBilibiliPageUrl(item.url || item.embedUrl || '') }))
+            .map((item) => ({
+              ...item,
+              url: normalizeBilibiliPageUrl(item.url || item.embedUrl || ''),
+              embedUrl: buildBilibiliEmbedUrl(item.embedUrl || item.url || '')
+            }))
             .filter((item) => item && item.url && item.url !== videoUrl);
         }
 
