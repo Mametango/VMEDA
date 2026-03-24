@@ -1145,7 +1145,7 @@ app.post('/api/search', async (req, res) => {
         if (typeof fn === 'function') {
           console.log(`🚀 [${index + 1}/${searchFunctions.length}] ${name}検索関数を呼び出し:`, fn.name);
           // strictMode=falseで呼び出す（緩和したマッチングでより多くの結果を取得）
-          allSearches.push(withSearchTimeout(fn(sanitizedQuery, false), name));
+          allSearches.push(withSearchTimeout(fn(sanitizedQuery, true), name));
         } else {
           console.warn(`⚠️ [${index + 1}/${searchFunctions.length}] ${name}関数が定義されていません (typeof: ${typeof fn})`);
           // 関数が定義されていない場合も空の配列を返すPromiseを追加
@@ -2890,11 +2890,7 @@ async function searchBilibili(query, strictMode = true) {
       '.video-item',
       '.bili-video-card',
       '.video-card',
-      '.video-list-item',
-      '.search-all-list a[href*="/video/"]',
-      '.bili-video-card__wrap a[href*="/video/"]',
       'a[href*="/video/"]',
-      'a[href*="/video/BV"]',
       '.result-item',
       '[class*="video"]'
     ];
@@ -2914,10 +2910,8 @@ async function searchBilibili(query, strictMode = true) {
         
         if (title && title.length > 3) {
           // 検索クエリとタイトルの関連性をチェック
-          if (!isTitleRelevant(title, query, strictMode)) {
-            if (strictMode || title.length < 8) {
-              return; // 関連性がない場合はスキップ
-            }
+          if (!isTitleRelevant(title, query)) {
+            return; // 関連性がない場合はスキップ
           }
           
           const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
