@@ -1302,8 +1302,13 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
     }
   }
   
+  let effectiveEmbedUrl = embedUrl;
+  if (source === 'bilibili' || bilibiliUrl.includes('bilibili.com')) {
+    effectiveEmbedUrl = buildBilibiliEmbedUrl(embedUrl || originalUrl || bilibiliUrl);
+  }
+
   // 埋め込み可能かどうかを判定（基本的には試してみる）
-  const canEmbed = isEmbeddable(embedUrl, source);
+  const canEmbed = isEmbeddable(effectiveEmbedUrl, source);
   
   // 既に表示されている場合は閉じる
   if (container.querySelector('iframe')) {
@@ -1314,9 +1319,9 @@ window.showPlayer = function(videoId, embedUrl, originalUrl, source, event) {
   // プレイヤーを表示
   const iframe = document.createElement('iframe');
   // URLを正規化（iOS Safari対応）
-  let normalizedUrl = embedUrl.startsWith('//') ? `https:${embedUrl}` : embedUrl;
+  let normalizedUrl = effectiveEmbedUrl.startsWith('//') ? `https:${effectiveEmbedUrl}` : effectiveEmbedUrl;
   if (isDirectMediaUrl(normalizedUrl)) {
-    renderNativeVideoPlayer(container, videoId, normalizedUrl, embedUrl, originalUrl, source);
+    renderNativeVideoPlayer(container, videoId, normalizedUrl, effectiveEmbedUrl, originalUrl, source);
     return;
   }
   // /api/... のような相対URLはそのまま使う（https:// を付けない）
