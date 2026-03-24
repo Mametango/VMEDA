@@ -2862,6 +2862,63 @@ function normalizeBilibiliVideoUrl(rawValue) {
 async function searchBilibili(query, strictMode = true) {
   try {
     const encodedQuery = encodeURIComponent(query);
+    const videos = [];
+    const seenUrls = new Set();
+    const normalizedQuery = String(query || '').trim();
+    const pushVideo = (video) => {
+      if (!video || !video.url || seenUrls.has(video.url)) return;
+      seenUrls.add(video.url);
+      videos.push(video);
+    };
+
+    if (normalizedQuery) {
+      const apiResponses = await Promise.allSettled([1, 2].map((page) => axios.get('https://api.bilibili.com/x/web-interface/search/type', {
+        params: {
+          search_type: 'video',
+          keyword: normalizedQuery,
+          page
+        },
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+          'Referer': 'https://search.bilibili.com/',
+          'Origin': 'https://www.bilibili.com'
+        },
+        timeout: 15000
+      })));
+
+      apiResponses.forEach((result, responseIndex) => {
+        if (result.status !== 'fulfilled') return;
+        const items = Array.isArray(result.value?.data?.data?.result) ? result.value.data.data.result : [];
+        items.forEach((item, index) => {
+          const fullUrl = normalizeBilibiliVideoUrl(item?.arcurl || item?.bvid || '');
+          if (!fullUrl || !fullUrl.includes('/video/')) return;
+
+          const title = String(item?.title || '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (!title || !isTitleRelevant(title, normalizedQuery, strictMode)) {
+            if (strictMode || title.length < 8) return;
+          }
+
+          const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
+          const thumbnail = String(item?.pic || '').startsWith('//')
+            ? `https:${String(item.pic)}`
+            : String(item?.pic || '');
+          pushVideo({
+            id: `bilibili-api-${responseIndex}-${index}-${Date.now()}`,
+            title: title.substring(0, 200),
+            thumbnail,
+            duration: String(item?.duration || '').trim(),
+            url: fullUrl,
+            embedUrl: bvid ? `//player.bilibili.com/player.html?bvid=${bvid[0]}` : fullUrl,
+            source: 'bilibili'
+          });
+        });
+      });
+    }
+
     // 空のクエリの場合はトップページや最新動画ページから取得
     const url = query && query.trim() ? 
       `https://search.bilibili.com/all?keyword=${encodedQuery}` :
@@ -2883,7 +2940,6 @@ async function searchBilibili(query, strictMode = true) {
     });
     
     const $ = cheerio.load(response.data);
-    const videos = [];
     
     // 複数のセレクタを試す（BilibiliのHTML構造の変更に対応）
     const selectors = [
@@ -2924,18 +2980,15 @@ async function searchBilibili(query, strictMode = true) {
           const embedUrl = bvid ? `//player.bilibili.com/player.html?bvid=${bvid[0]}` : fullUrl;
           
           // 重複チェック
-          const isDuplicate = videos.some(v => v.url === fullUrl);
-          if (!isDuplicate) {
-            videos.push({
-              id: `bilibili-${Date.now()}-${index}`,
-              title: title.substring(0, 200),
-              thumbnail: thumbnail || '',
-              duration: duration || '',
-              url: fullUrl,
-              embedUrl: embedUrl,
-              source: 'bilibili'
-            });
-          }
+          pushVideo({
+            id: `bilibili-${Date.now()}-${index}`,
+            title: title.substring(0, 200),
+            thumbnail: thumbnail || '',
+            duration: duration || '',
+            url: fullUrl,
+            embedUrl: embedUrl,
+            source: 'bilibili'
+          });
         }
       });
     }
