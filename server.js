@@ -2945,11 +2945,15 @@ async function searchBilibili(query, strictMode = true) {
 async function searchBilibiliExpanded(query, strictMode = false) {
   try {
     const encodedQuery = encodeURIComponent(query);
+    const trimmedQuery = String(query || '').trim();
+    const pageCount = trimmedQuery.length <= 4 ? 5 : 3;
     const urls = query && query.trim()
-      ? [
-          `https://search.bilibili.com/all?keyword=${encodedQuery}`,
-          `https://search.bilibili.com/all?keyword=${encodedQuery}&page=2`
-        ]
+      ? Array.from({ length: pageCount }, (_, index) => {
+          const page = index + 1;
+          return page === 1
+            ? `https://search.bilibili.com/all?keyword=${encodedQuery}`
+            : `https://search.bilibili.com/all?keyword=${encodedQuery}&page=${page}`;
+        })
       : ['https://www.bilibili.com/'];
 
     const videos = [];
@@ -3042,7 +3046,7 @@ async function searchBilibiliExpanded(query, strictMode = false) {
     }
 
     console.log(`✅ Bilibili expanded: ${videos.length}件の動画を取得`);
-    return videos.slice(0, 80);
+    return videos.slice(0, trimmedQuery.length <= 4 ? 180 : 120);
   } catch (error) {
     console.error('Bilibili拡張検索エラー:', error.message);
     return searchBilibili(query, strictMode);
