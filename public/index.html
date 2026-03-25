@@ -33,6 +33,88 @@
     </header>
 
     <main class="container">
+      <section class="portal-hero">
+        <div class="portal-hero-backdrop">
+          <div class="portal-hero-nav">
+            <span class="portal-nav-item">首页</span>
+            <span class="portal-nav-item">番剧</span>
+            <span class="portal-nav-item">直播</span>
+            <span class="portal-nav-item">动画</span>
+            <span class="portal-nav-item">游戏</span>
+            <span class="portal-nav-item">知识</span>
+            <span class="portal-nav-item">影视</span>
+            <span class="portal-nav-item">更多</span>
+          </div>
+          <div class="portal-hero-content">
+            <div class="portal-hero-copy">
+              <div class="portal-logo-mark">bilibili</div>
+              <h2 class="portal-hero-title">BiliBili-VMEDA Top</h2>
+              <p class="portal-hero-text">Bilibili 風のトップ構造に寄せた VMEDA ホーム。検索と関連動画の回遊を中心に見せます。</p>
+            </div>
+            <div class="portal-login-card">
+              <div class="portal-login-title">VMEDA ホーム</div>
+              <ul class="portal-login-list">
+                <li>検索結果からすぐ再生</li>
+                <li>関連動画を連続で辿る</li>
+                <li>擬似おすすめも表示</li>
+              </ul>
+              <button type="button" class="portal-login-btn" id="portal-search-jump">今すぐ検索</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="portal-categories">
+        <div class="portal-category-main">
+          <span class="portal-badge portal-badge-hot">热门</span>
+          <span class="portal-badge">动态</span>
+        </div>
+        <div class="portal-category-grid">
+          <span class="portal-category-chip">番剧</span>
+          <span class="portal-category-chip">国创</span>
+          <span class="portal-category-chip">综艺</span>
+          <span class="portal-category-chip">动画</span>
+          <span class="portal-category-chip">鬼畜</span>
+          <span class="portal-category-chip">舞蹈</span>
+          <span class="portal-category-chip">娱乐</span>
+          <span class="portal-category-chip">科技</span>
+          <span class="portal-category-chip">美食</span>
+          <span class="portal-category-chip">汽车</span>
+          <span class="portal-category-chip">运动</span>
+          <span class="portal-category-chip">vlog</span>
+          <span class="portal-category-chip">影视</span>
+          <span class="portal-category-chip">知识</span>
+          <span class="portal-category-chip">资讯</span>
+          <span class="portal-category-chip">更多</span>
+        </div>
+      </section>
+
+      <section class="portal-feature-grid">
+        <article class="portal-feature-card portal-feature-card-large">
+          <div class="portal-feature-thumb portal-feature-thumb-large"></div>
+          <div class="portal-feature-meta">
+            <h3>注目エリア</h3>
+            <p>検索前でも「動画ポータル感」が出るように、大きめの特集カード風レイアウトを置いています。</p>
+          </div>
+        </article>
+        <article class="portal-feature-card">
+          <div class="portal-feature-thumb thumb-blue"></div>
+          <div class="portal-feature-caption">検索から関連へつなぐ導線</div>
+        </article>
+        <article class="portal-feature-card">
+          <div class="portal-feature-thumb thumb-gold"></div>
+          <div class="portal-feature-caption">擬似おすすめの回遊</div>
+        </article>
+        <article class="portal-feature-card">
+          <div class="portal-feature-thumb thumb-rose"></div>
+          <div class="portal-feature-caption">見た動画の近くで次を探す</div>
+        </article>
+        <article class="portal-feature-card">
+          <div class="portal-feature-thumb thumb-mint"></div>
+          <div class="portal-feature-caption">VMEDA 内で連続再生</div>
+        </article>
+      </section>
+
       <section class="hero-panel">
         <div class="hero-copy">
           <span class="hero-kicker">Bilibili inspired top page</span>
@@ -159,5 +241,11 @@
   </div>
 
   <script src="app.js?v=1.0.36"></script>
+  <script>
+    document.getElementById('portal-search-jump')?.addEventListener('click', () => {
+      document.getElementById('search-input')?.focus();
+      window.scrollTo({ top: document.getElementById('search-input')?.getBoundingClientRect().top + window.scrollY - 120, behavior: 'smooth' });
+    });
+  </script>
 </body>
 </html>
