@@ -14,47 +14,82 @@
   <title>BiliBili-VMEDA</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=1.0.8">
+  <link rel="stylesheet" href="styles.css?v=1.0.9">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <div class="top-links">
-        <a class="top-link" href="/">検索</a>
-        <a class="top-link top-link-accent" href="/recommend.html">おすすめ</a>
+  <div class="page-shell">
+    <header class="app-topbar">
+      <div class="app-brand">
+        <div class="app-brand-badge">B</div>
+        <div class="app-brand-copy">
+          <div class="app-brand-title">BiliBili-VMEDA</div>
+          <div class="app-brand-subtitle">Search and related navigation</div>
+        </div>
       </div>
-      <h1 class="site-title">BiliBili-VMEDA</h1>
-      <p class="header-debug-hint">BiliBili の動画検索と関連動画表示ができます。</p>
+      <nav class="app-nav">
+        <a class="top-link top-link-active" href="/">検索</a>
+        <a class="top-link top-link-accent" href="/recommend.html">おすすめ</a>
+      </nav>
     </header>
 
-    <section class="search-section">
-      <div class="search-container">
-        <input
-          type="text"
-          id="search-input"
-          class="search-input"
-          placeholder="BiliBili の動画を検索..."
-          autocomplete="off"
-        >
-        <button id="search-btn" class="search-btn">検索</button>
-      </div>
-    </section>
+    <main class="container">
+      <section class="hero-panel">
+        <div class="hero-copy">
+          <span class="hero-kicker">Bilibili style layout</span>
+          <h1 class="site-title">BiliBili-VMEDA</h1>
+          <p class="hero-description">Bilibili っぽい画面構成に寄せつつ、VMEDA の関連動画導線と擬似おすすめを見やすくまとめた検索ページです。</p>
+          <div class="hero-pills">
+            <span class="hero-pill">検索</span>
+            <span class="hero-pill">関連動画</span>
+            <span class="hero-pill">擬似おすすめ</span>
+          </div>
+        </div>
 
-    <div id="loading" class="loading hidden">検索中...</div>
+        <section class="search-section hero-search-card">
+          <div class="search-card-header">
+            <div class="search-card-title">動画を探す</div>
+            <div class="search-card-subtitle">タイトル、品番、出演者名などで検索</div>
+          </div>
+          <div class="search-container">
+            <input
+              type="text"
+              id="search-input"
+              class="search-input"
+              placeholder="Bilibili の動画を検索..."
+              autocomplete="off"
+            >
+            <button id="search-btn" class="search-btn">検索</button>
+          </div>
+        </section>
+      </section>
 
-    <div id="sort-container" class="sort-container hidden">
-      <label for="sort-select" class="sort-label">並び替え</label>
-      <select id="sort-select" class="sort-select">
-        <option value="default">デフォルト</option>
-        <option value="duration-desc">再生時間が長い順</option>
-        <option value="duration-asc">再生時間が短い順</option>
-        <option value="date-desc">新しい順</option>
-        <option value="date-asc">古い順</option>
-        <option value="title-asc">タイトル A-Z</option>
-        <option value="title-desc">タイトル Z-A</option>
-        <option value="source-asc">ソース順</option>
-      </select>
-    </div>
+      <section class="content-surface">
+        <div class="section-header">
+          <div>
+            <div class="section-title">検索結果</div>
+            <p class="section-caption">再生、関連動画、閲覧導線をまとめて表示します。</p>
+          </div>
+        </div>
+
+        <div id="loading" class="loading hidden">検索中...</div>
+
+        <div id="sort-container" class="sort-container hidden">
+          <label for="sort-select" class="sort-label">並び替え</label>
+          <select id="sort-select" class="sort-select">
+            <option value="default">デフォルト</option>
+            <option value="duration-desc">再生時間が長い順</option>
+            <option value="duration-asc">再生時間が短い順</option>
+            <option value="date-desc">新しい順</option>
+            <option value="date-asc">古い順</option>
+            <option value="title-asc">タイトル A-Z</option>
+            <option value="title-desc">タイトル Z-A</option>
+            <option value="source-asc">ソース順</option>
+          </select>
+        </div>
+
+        <div id="results" class="results"></div>
+      </section>
+    </main>
 
     <div id="site-frame-wrap" class="site-frame-wrap hidden">
       <div class="site-frame-toolbar">
@@ -69,7 +104,7 @@
         <div class="vmeda-debug-header">VMEDA デバッグ</div>
         <div class="vmeda-debug-row"><label>プロキシURL:</label><input id="vmeda-debug-proxy-url" class="vmeda-debug-input" readonly></div>
         <div class="vmeda-debug-row"><label>実URL:</label><input id="vmeda-debug-real-url" class="vmeda-debug-input" readonly></div>
-        <div class="vmeda-debug-row"><label>情報:</label><pre id="vmeda-debug-stats" class="vmeda-debug-stats"></pre></div>
+        <div class="vmeda-debug-row"><label>状態:</label><pre id="vmeda-debug-stats" class="vmeda-debug-stats"></pre></div>
         <div class="vmeda-debug-actions">
           <button type="button" id="vmeda-debug-copy-url" class="vmeda-debug-btn">URLコピー</button>
           <button type="button" id="vmeda-debug-copy-all" class="vmeda-debug-btn">全部コピー</button>
@@ -78,8 +113,6 @@
       </div>
       <iframe id="site-frame" class="site-frame" title="サイト表示" allow="fullscreen; autoplay; encrypted-media; picture-in-picture"></iframe>
     </div>
-
-    <div id="results" class="results"></div>
   </div>
 
   <script src="app.js?v=1.0.36"></script>
