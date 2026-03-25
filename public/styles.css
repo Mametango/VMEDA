@@ -2129,4 +2129,59 @@ body {
   }
 }
 
+.page-shell-simple {
+  gap: 14px;
+}
+
+.app-topbar-simple {
+  padding: 12px 16px;
+  border-radius: 20px;
+}
+
+.container-simple {
+  display: grid;
+  gap: 18px;
+}
+
+.simple-hero {
+  display: grid;
+  gap: 18px;
+}
+
+.simple-hero-copy {
+  padding: 24px 28px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+.simple-search-card {
+  padding: 22px;
+}
+
+.content-surface-simple {
+  padding: 20px;
+}
+
+.content-surface-simple .section-header {
+  margin-bottom: 14px;
+}
+
+@media (min-width: 901px) {
+  .simple-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 0.9fr);
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 768px) {
+  .simple-hero-copy,
+  .simple-search-card,
+  .content-surface-simple {
+    padding: 18px;
+    border-radius: 20px;
+  }
+}
+
 /* レスポンシブデザインを無効化 - デスクトップと同じ表示 */

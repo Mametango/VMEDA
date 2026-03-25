@@ -14,16 +14,16 @@
   <title>BiliBili-VMEDA</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=1.1.0">
+  <link rel="stylesheet" href="styles.css?v=1.1.1">
 </head>
 <body>
-  <div class="page-shell">
-    <header class="app-topbar">
+  <div class="page-shell page-shell-simple">
+    <header class="app-topbar app-topbar-simple">
       <div class="app-brand">
         <div class="app-brand-badge">B</div>
         <div class="app-brand-copy">
           <div class="app-brand-title">BiliBili-VMEDA</div>
-          <div class="app-brand-subtitle">Search, related videos, pseudo recommendations</div>
+          <div class="app-brand-subtitle">Simple search and related videos</div>
         </div>
       </div>
       <nav class="app-nav">
@@ -32,167 +32,37 @@
       </nav>
     </header>
 
-    <main class="container">
-      <section class="portal-hero">
-        <div class="portal-hero-backdrop">
-          <div class="portal-hero-nav">
-            <span class="portal-nav-item">首页</span>
-            <span class="portal-nav-item">番剧</span>
-            <span class="portal-nav-item">直播</span>
-            <span class="portal-nav-item">动画</span>
-            <span class="portal-nav-item">游戏</span>
-            <span class="portal-nav-item">知识</span>
-            <span class="portal-nav-item">影视</span>
-            <span class="portal-nav-item">更多</span>
-          </div>
-          <div class="portal-hero-content">
-            <div class="portal-hero-copy">
-              <div class="portal-logo-mark">bilibili</div>
-              <h2 class="portal-hero-title">BiliBili-VMEDA Top</h2>
-              <p class="portal-hero-text">Bilibili 風のトップ構造に寄せた VMEDA ホーム。検索と関連動画の回遊を中心に見せます。</p>
-            </div>
-            <div class="portal-login-card">
-              <div class="portal-login-title">VMEDA ホーム</div>
-              <ul class="portal-login-list">
-                <li>検索結果からすぐ再生</li>
-                <li>関連動画を連続で辿る</li>
-                <li>擬似おすすめも表示</li>
-              </ul>
-              <button type="button" class="portal-login-btn" id="portal-search-jump">今すぐ検索</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="portal-categories">
-        <div class="portal-category-main">
-          <span class="portal-badge portal-badge-hot">热门</span>
-          <span class="portal-badge">动态</span>
-        </div>
-        <div class="portal-category-grid">
-          <span class="portal-category-chip">番剧</span>
-          <span class="portal-category-chip">国创</span>
-          <span class="portal-category-chip">综艺</span>
-          <span class="portal-category-chip">动画</span>
-          <span class="portal-category-chip">鬼畜</span>
-          <span class="portal-category-chip">舞蹈</span>
-          <span class="portal-category-chip">娱乐</span>
-          <span class="portal-category-chip">科技</span>
-          <span class="portal-category-chip">美食</span>
-          <span class="portal-category-chip">汽车</span>
-          <span class="portal-category-chip">运动</span>
-          <span class="portal-category-chip">vlog</span>
-          <span class="portal-category-chip">影视</span>
-          <span class="portal-category-chip">知识</span>
-          <span class="portal-category-chip">资讯</span>
-          <span class="portal-category-chip">更多</span>
-        </div>
-      </section>
-
-      <section class="portal-feature-grid">
-        <article class="portal-feature-card portal-feature-card-large">
-          <div class="portal-feature-thumb portal-feature-thumb-large"></div>
-          <div class="portal-feature-meta">
-            <h3>注目エリア</h3>
-            <p>検索前でも「動画ポータル感」が出るように、大きめの特集カード風レイアウトを置いています。</p>
-          </div>
-        </article>
-        <article class="portal-feature-card">
-          <div class="portal-feature-thumb thumb-blue"></div>
-          <div class="portal-feature-caption">検索から関連へつなぐ導線</div>
-        </article>
-        <article class="portal-feature-card">
-          <div class="portal-feature-thumb thumb-gold"></div>
-          <div class="portal-feature-caption">擬似おすすめの回遊</div>
-        </article>
-        <article class="portal-feature-card">
-          <div class="portal-feature-thumb thumb-rose"></div>
-          <div class="portal-feature-caption">見た動画の近くで次を探す</div>
-        </article>
-        <article class="portal-feature-card">
-          <div class="portal-feature-thumb thumb-mint"></div>
-          <div class="portal-feature-caption">VMEDA 内で連続再生</div>
-        </article>
-      </section>
-
-      <section class="hero-panel">
-        <div class="hero-copy">
-          <span class="hero-kicker">Bilibili inspired top page</span>
+    <main class="container container-simple">
+      <section class="simple-hero">
+        <div class="simple-hero-copy">
+          <span class="hero-kicker">Simple mode</span>
           <h1 class="site-title">BiliBili-VMEDA</h1>
-          <p class="hero-description">トップページを Bilibili っぽい情報密度に寄せて、検索、関連動画、擬似おすすめをひと目で辿りやすくした VMEDA のホームです。</p>
-          <div class="hero-pills">
-            <span class="hero-pill">検索</span>
-            <span class="hero-pill">関連動画</span>
-            <span class="hero-pill">これを見た人はこれも見ています</span>
-          </div>
+          <p class="hero-description">検索して、そのまま再生して、関連動画を辿るためのシンプルなトップページです。</p>
         </div>
 
-        <aside class="hero-side">
-          <div class="hero-side-card hero-side-card-primary">
-            <div class="hero-side-label">急上昇っぽい導線</div>
-            <div class="hero-side-title">見たい動画をすぐ探す</div>
-            <p class="hero-side-text">タイトル、品番、出演者名で検索して、そのまま関連動画へ深掘りできます。</p>
+        <div class="search-section hero-search-card simple-search-card">
+          <div class="search-card-header">
+            <div class="search-card-title">動画を探す</div>
+            <div class="search-card-subtitle">タイトル、品番、出演者名などで検索</div>
           </div>
-          <div class="hero-side-card">
-            <div class="hero-side-mini-grid">
-              <div class="hero-mini-stat">
-                <span class="hero-mini-label">探索</span>
-                <strong>Search</strong>
-              </div>
-              <div class="hero-mini-stat">
-                <span class="hero-mini-label">関連</span>
-                <strong>Related</strong>
-              </div>
-              <div class="hero-mini-stat">
-                <span class="hero-mini-label">履歴</span>
-                <strong>History</strong>
-              </div>
-              <div class="hero-mini-stat">
-                <span class="hero-mini-label">推定</span>
-                <strong>Pseudo</strong>
-              </div>
-            </div>
+          <div class="search-container">
+            <input
+              type="text"
+              id="search-input"
+              class="search-input"
+              placeholder="Bilibili の動画を検索..."
+              autocomplete="off"
+            >
+            <button id="search-btn" class="search-btn">検索</button>
           </div>
-        </aside>
-      </section>
-
-      <section class="top-strip">
-        <div class="top-strip-label">人気エリア</div>
-        <div class="top-strip-items">
-          <span class="top-strip-item">新着を探す</span>
-          <span class="top-strip-item">品番で探す</span>
-          <span class="top-strip-item">出演者で探す</span>
-          <span class="top-strip-item">関連動画を辿る</span>
-          <span class="top-strip-item">履歴からおすすめ</span>
         </div>
       </section>
 
-      <section class="search-section hero-search-card">
-        <div class="search-card-header">
-          <div class="search-card-title">動画を探す</div>
-          <div class="search-card-subtitle">Bilibili 風のトップ導線を意識しつつ、VMEDA 内で検索結果と関連動画をまとめて見られます。</div>
-        </div>
-        <div class="search-container">
-          <input
-            type="text"
-            id="search-input"
-            class="search-input"
-            placeholder="Bilibili の動画を検索..."
-            autocomplete="off"
-          >
-          <button id="search-btn" class="search-btn">検索</button>
-        </div>
-      </section>
-
-      <section class="content-surface">
+      <section class="content-surface content-surface-simple">
         <div class="section-header">
           <div>
             <div class="section-title">検索結果</div>
             <p class="section-caption">再生、関連動画、閲覧導線をまとめて表示します。</p>
-          </div>
-          <div class="section-chips">
-            <span class="section-chip">VMEDA</span>
-            <span class="section-chip">Bilibili style</span>
           </div>
         </div>
 
@@ -241,11 +111,5 @@
   </div>
 
   <script src="app.js?v=1.0.36"></script>
-  <script>
-    document.getElementById('portal-search-jump')?.addEventListener('click', () => {
-      document.getElementById('search-input')?.focus();
-      window.scrollTo({ top: document.getElementById('search-input')?.getBoundingClientRect().top + window.scrollY - 120, behavior: 'smooth' });
-    });
-  </script>
 </body>
 </html>
