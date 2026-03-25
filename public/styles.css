@@ -602,6 +602,10 @@ body {
   margin-bottom: 12px;
 }
 
+.related-section-spaced {
+  margin-top: 18px;
+}
+
 .related-video-grid {
   display: grid;
   gap: 12px;

@@ -533,6 +533,59 @@ function buildRelatedVideoMarkup(video, fallbackQuery) {
   `;
 }
 
+function buildAlsoWatchedCandidates(video) {
+  const currentUrl = normalizeBilibiliPageUrl(video?.url || video?.embedUrl || '');
+  const recentViews = safeLocalStorageGet(RECENT_VIEWS_KEY, []);
+  const query = buildRelatedQuery(video) || video?.title || '';
+  const queryWords = String(query)
+    .toLowerCase()
+    .split(/[\s\-_/]+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length >= 2);
+
+  const seen = new Set([currentUrl]);
+  const scored = [];
+
+  (Array.isArray(recentViews) ? recentViews : []).forEach((item) => {
+    const normalizedUrl = normalizeBilibiliPageUrl(item?.url || item?.embedUrl || '');
+    if (!normalizedUrl || seen.has(normalizedUrl)) return;
+    seen.add(normalizedUrl);
+
+    const title = String(item?.title || '').toLowerCase();
+    const matchCount = queryWords.filter((word) => title.includes(word)).length;
+    const score = matchCount * 10 + Math.max(0, 5 - scored.length);
+    if (score <= 0) return;
+
+    scored.push({
+      ...item,
+      url: normalizedUrl,
+      embedUrl: buildBilibiliEmbedUrl(item?.embedUrl || item?.url || normalizedUrl),
+      source: item?.source || 'bilibili',
+      _score: score
+    });
+  });
+
+  currentVideos.forEach((item) => {
+    const normalizedUrl = normalizeBilibiliPageUrl(item?.url || item?.embedUrl || '');
+    if (!normalizedUrl || seen.has(normalizedUrl)) return;
+    const title = String(item?.title || '').toLowerCase();
+    const matchCount = queryWords.filter((word) => title.includes(word)).length;
+    if (matchCount <= 0) return;
+    seen.add(normalizedUrl);
+    scored.push({
+      ...item,
+      url: normalizedUrl,
+      embedUrl: buildBilibiliEmbedUrl(item?.embedUrl || item?.url || normalizedUrl),
+      source: item?.source || 'bilibili',
+      _score: matchCount * 10
+    });
+  });
+
+  return scored
+    .sort((a, b) => (b._score - a._score) || String(a.title || '').localeCompare(String(b.title || '')))
+    .slice(0, 6);
+}
+
 function buildInlineRelatedQueries(query) {
   const raw = String(query || '').trim();
   if (!raw) return [];
@@ -673,6 +726,30 @@ async function showInlineRelatedVideos(videoId) {
       });
     });
   });
+
+  const alsoWatched = buildAlsoWatchedCandidates(video);
+  if (alsoWatched.length > 0) {
+    host.insertAdjacentHTML('beforeend', `
+      <div class="related-section-title related-section-spaced">これを見た人はこれも見ています</div>
+      <div class="related-video-grid">
+        ${alsoWatched.map((item) => buildRelatedVideoMarkup(item, query)).join('')}
+      </div>
+    `);
+
+    const buttons = host.querySelectorAll('.related-open-btn');
+    const startIndex = Math.max(0, buttons.length - alsoWatched.length);
+    buttons.forEach((button, index) => {
+      if (index < startIndex) return;
+      button.addEventListener('click', () => {
+        const item = alsoWatched[index - startIndex];
+        if (!item) return;
+        queueHomepagePlayback({
+          ...item,
+          relatedVideos: alsoWatched
+        });
+      });
+    });
+  }
 }
 
 async function toggleRelatedVideos(videoId) {
