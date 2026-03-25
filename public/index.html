@@ -14,7 +14,7 @@
   <title>BiliBili-VMEDA</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=1.0.9">
+  <link rel="stylesheet" href="styles.css?v=1.1.0">
 </head>
 <body>
   <div class="page-shell">
@@ -23,7 +23,7 @@
         <div class="app-brand-badge">B</div>
         <div class="app-brand-copy">
           <div class="app-brand-title">BiliBili-VMEDA</div>
-          <div class="app-brand-subtitle">Search and related navigation</div>
+          <div class="app-brand-subtitle">Search, related videos, pseudo recommendations</div>
         </div>
       </div>
       <nav class="app-nav">
@@ -35,32 +35,71 @@
     <main class="container">
       <section class="hero-panel">
         <div class="hero-copy">
-          <span class="hero-kicker">Bilibili style layout</span>
+          <span class="hero-kicker">Bilibili inspired top page</span>
           <h1 class="site-title">BiliBili-VMEDA</h1>
-          <p class="hero-description">Bilibili っぽい画面構成に寄せつつ、VMEDA の関連動画導線と擬似おすすめを見やすくまとめた検索ページです。</p>
+          <p class="hero-description">トップページを Bilibili っぽい情報密度に寄せて、検索、関連動画、擬似おすすめをひと目で辿りやすくした VMEDA のホームです。</p>
           <div class="hero-pills">
             <span class="hero-pill">検索</span>
             <span class="hero-pill">関連動画</span>
-            <span class="hero-pill">擬似おすすめ</span>
+            <span class="hero-pill">これを見た人はこれも見ています</span>
           </div>
         </div>
 
-        <section class="search-section hero-search-card">
-          <div class="search-card-header">
-            <div class="search-card-title">動画を探す</div>
-            <div class="search-card-subtitle">タイトル、品番、出演者名などで検索</div>
+        <aside class="hero-side">
+          <div class="hero-side-card hero-side-card-primary">
+            <div class="hero-side-label">急上昇っぽい導線</div>
+            <div class="hero-side-title">見たい動画をすぐ探す</div>
+            <p class="hero-side-text">タイトル、品番、出演者名で検索して、そのまま関連動画へ深掘りできます。</p>
           </div>
-          <div class="search-container">
-            <input
-              type="text"
-              id="search-input"
-              class="search-input"
-              placeholder="Bilibili の動画を検索..."
-              autocomplete="off"
-            >
-            <button id="search-btn" class="search-btn">検索</button>
+          <div class="hero-side-card">
+            <div class="hero-side-mini-grid">
+              <div class="hero-mini-stat">
+                <span class="hero-mini-label">探索</span>
+                <strong>Search</strong>
+              </div>
+              <div class="hero-mini-stat">
+                <span class="hero-mini-label">関連</span>
+                <strong>Related</strong>
+              </div>
+              <div class="hero-mini-stat">
+                <span class="hero-mini-label">履歴</span>
+                <strong>History</strong>
+              </div>
+              <div class="hero-mini-stat">
+                <span class="hero-mini-label">推定</span>
+                <strong>Pseudo</strong>
+              </div>
+            </div>
           </div>
-        </section>
+        </aside>
+      </section>
+
+      <section class="top-strip">
+        <div class="top-strip-label">人気エリア</div>
+        <div class="top-strip-items">
+          <span class="top-strip-item">新着を探す</span>
+          <span class="top-strip-item">品番で探す</span>
+          <span class="top-strip-item">出演者で探す</span>
+          <span class="top-strip-item">関連動画を辿る</span>
+          <span class="top-strip-item">履歴からおすすめ</span>
+        </div>
+      </section>
+
+      <section class="search-section hero-search-card">
+        <div class="search-card-header">
+          <div class="search-card-title">動画を探す</div>
+          <div class="search-card-subtitle">Bilibili 風のトップ導線を意識しつつ、VMEDA 内で検索結果と関連動画をまとめて見られます。</div>
+        </div>
+        <div class="search-container">
+          <input
+            type="text"
+            id="search-input"
+            class="search-input"
+            placeholder="Bilibili の動画を検索..."
+            autocomplete="off"
+          >
+          <button id="search-btn" class="search-btn">検索</button>
+        </div>
       </section>
 
       <section class="content-surface">
@@ -68,6 +107,10 @@
           <div>
             <div class="section-title">検索結果</div>
             <p class="section-caption">再生、関連動画、閲覧導線をまとめて表示します。</p>
+          </div>
+          <div class="section-chips">
+            <span class="section-chip">VMEDA</span>
+            <span class="section-chip">Bilibili style</span>
           </div>
         </div>
 

@@ -1680,4 +1680,148 @@ body {
   }
 }
 
+.hero-side {
+  display: grid;
+  gap: 16px;
+}
+
+.hero-side-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 28px;
+  padding: 22px;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+}
+
+.hero-side-card-primary {
+  background: linear-gradient(135deg, rgba(37, 168, 255, 0.12) 0%, rgba(255, 255, 255, 0.92) 100%);
+}
+
+.hero-side-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-deep);
+}
+
+.hero-side-title {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--page-ink);
+}
+
+.hero-side-text {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--page-muted);
+}
+
+.hero-side-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hero-mini-stat {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #f5f9ff;
+  border: 1px solid #dce7f7;
+}
+
+.hero-mini-label {
+  font-size: 12px;
+  color: var(--page-muted);
+}
+
+.hero-mini-stat strong {
+  font-size: 18px;
+  color: var(--page-ink);
+}
+
+.top-strip {
+  display: grid;
+  gap: 12px;
+  padding: 18px 22px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+.top-strip-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--page-muted);
+}
+
+.top-strip-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.top-strip-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #f4f8ff;
+  border: 1px solid #dce7f7;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--page-ink);
+}
+
+.section-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.section-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef6ff;
+  border: 1px solid #dbe7f7;
+  color: var(--brand-deep);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .hero-side-title {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-side-card {
+    border-radius: 22px;
+    padding: 18px;
+  }
+
+  .hero-side-mini-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .top-strip {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* レスポンシブデザインを無効化 - デスクトップと同じ表示 */
