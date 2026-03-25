@@ -14,7 +14,7 @@
   <title>BiliBili-VMEDA</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
-  <link rel="stylesheet" href="styles.css?v=1.1.1">
+  <link rel="stylesheet" href="styles.css?v=1.1.2">
 </head>
 <body>
   <div class="page-shell page-shell-simple">
@@ -37,7 +37,7 @@
         <div class="simple-hero-copy">
           <span class="hero-kicker">Simple mode</span>
           <h1 class="site-title">BiliBili-VMEDA</h1>
-          <p class="hero-description">検索して、そのまま再生して、関連動画を辿るためのシンプルなトップページです。</p>
+          <p class="hero-description">検索結果は小さい一覧で表示し、タップした動画を上部プレイヤーと右側の「接下来播放」で辿れるトップページです。</p>
         </div>
 
         <div class="search-section hero-search-card simple-search-card">
@@ -62,9 +62,23 @@
         <div class="section-header">
           <div>
             <div class="section-title">検索結果</div>
-            <p class="section-caption">再生、関連動画、閲覧導線をまとめて表示します。</p>
+            <p class="section-caption">小さい一覧から選ぶと、上部のプレイヤーと右側の次動画リストで再生できます。</p>
           </div>
         </div>
+
+        <section id="bili-player-layout" class="bili-player-layout hidden">
+          <div class="bili-player-main">
+            <div class="video-player-container top-player-container" id="player-top-player"></div>
+            <div class="bili-player-info">
+              <h3 id="top-player-title" class="bili-player-title">動画を選ぶとここで再生します</h3>
+              <div id="top-player-meta" class="bili-player-meta">検索結果の小さい一覧から動画をタップしてください。</div>
+            </div>
+          </div>
+          <aside class="bili-next-up">
+            <div class="bili-next-up-header">接下来播放</div>
+            <div id="next-up-list" class="next-up-list"></div>
+          </aside>
+        </section>
 
         <div id="loading" class="loading hidden">検索中...</div>
 
@@ -110,6 +124,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=1.0.36"></script>
+  <script src="app.js?v=1.1.2"></script>
 </body>
 </html>

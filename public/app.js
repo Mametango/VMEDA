@@ -114,9 +114,14 @@ const resultsDiv = document.getElementById('results');
 const loadingDiv = document.getElementById('loading');
 const sortContainer = document.getElementById('sort-container');
 const sortSelect = document.getElementById('sort-select');
+const topPlayerLayout = document.getElementById('bili-player-layout');
+const topPlayerTitle = document.getElementById('top-player-title');
+const topPlayerMeta = document.getElementById('top-player-meta');
+const nextUpList = document.getElementById('next-up-list');
 
 // 現在の検索結果を保持
 let currentVideos = [];
+let currentTopVideoId = null;
 const RECENT_VIEWS_KEY = 'vmeda_recent_views';
 const HOMEPAGE_PLAYBACK_KEY = 'vmeda_homepage_playback';
 const MAX_RECENT_VIEWS = 24;
@@ -155,6 +160,87 @@ function normalizeThumbnailUrl(url, title) {
   if (value.startsWith('http://')) return value.replace('http://', 'https://');
   return value;
 }
+
+function setTopPlayerLayoutVisible(visible) {
+  if (!topPlayerLayout) return;
+  topPlayerLayout.classList.toggle('hidden', !visible);
+}
+
+function updateTopPlayerInfo(video) {
+  if (!video) return;
+  if (topPlayerTitle) {
+    topPlayerTitle.textContent = video.title || '動画';
+  }
+  if (topPlayerMeta) {
+    const parts = [];
+    if (video.duration) parts.push(video.duration);
+    if (video.source) parts.push(getSourceName(video.source));
+    topPlayerMeta.textContent = parts.length > 0 ? parts.join(' / ') : 'Bilibili';
+  }
+}
+
+function renderNextUpList(activeVideoId) {
+  if (!nextUpList) return;
+  const queue = currentVideos
+    .filter((video) => video && video.id !== activeVideoId)
+    .slice(0, 18);
+
+  if (queue.length === 0) {
+    nextUpList.innerHTML = '<div class="next-up-empty">次に再生する動画はまだありません。</div>';
+    return;
+  }
+
+  nextUpList.innerHTML = queue.map((video) => {
+    const title = escapeHtml(String(video.title || '動画'));
+    const thumbnail = escapeHtml(normalizeThumbnailUrl(video.thumbnail, video.title || 'VMEDA'));
+    const duration = escapeHtml(String(video.duration || ''));
+    const source = escapeHtml(getSourceName(video.source || 'bilibili'));
+    return `
+      <button
+        type="button"
+        class="next-up-item${video.id === activeVideoId ? ' is-active' : ''}"
+        onclick="playTopVideo('${escapeHtml(video.id)}', '${escapeHtml(video.embedUrl || video.url || '')}', '${escapeHtml(video.url || video.embedUrl || '')}', '${escapeHtml(video.source || 'bilibili')}', event)"
+      >
+        <img src="${thumbnail}" alt="${title}" class="next-up-thumb" loading="lazy">
+        <span class="next-up-body">
+          <span class="next-up-title">${title}</span>
+          <span class="next-up-meta">${source}${duration ? ` / ${duration}` : ''}</span>
+        </span>
+      </button>
+    `;
+  }).join('');
+}
+
+window.playTopVideo = function(videoId, embedUrl, originalUrl, source, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  const video = findVideoRecord(videoId, originalUrl, embedUrl) || {
+    id: videoId,
+    title: '動画',
+    url: originalUrl || embedUrl,
+    embedUrl: embedUrl || originalUrl,
+    source: source || 'bilibili',
+    duration: '',
+    thumbnail: ''
+  };
+
+  currentTopVideoId = video.id || videoId;
+  updateTopPlayerInfo(video);
+  renderNextUpList(currentTopVideoId);
+  setTopPlayerLayoutVisible(true);
+
+  const topContainer = document.getElementById('player-top-player');
+  if (topContainer && topContainer.querySelector('iframe, video.video-player')) {
+    stopVideo('top-player');
+  }
+
+  window.showPlayer('top-player', video.embedUrl || embedUrl || '', video.url || originalUrl || '', video.source || source || 'bilibili');
+
+  topPlayerLayout?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 function findVideoRecord(videoId, originalUrl, embedUrl) {
   return currentVideos.find((video) => {
@@ -249,7 +335,7 @@ function consumeHomepagePlayback() {
 
   setTimeout(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    window.showPlayer(
+    window.playTopVideo(
       videoId,
       mergedVideo.embedUrl || mergedVideo.url || '',
       mergedVideo.url || mergedVideo.embedUrl || '',
@@ -770,6 +856,8 @@ async function toggleRelatedVideos(videoId) {
 
 // 結果表示（ページネーション対応）
 function displayResults(videos, searchQuery) {
+  setTopPlayerLayoutVisible(false);
+  currentTopVideoId = null;
   if (videos.length === 0) {
     resultsDiv.innerHTML = `
       <div class="no-results">検索結果が見つかりませんでした</div>
@@ -2510,4 +2598,83 @@ if (sortSelect) {
   });
 } else {
   console.error('❌ sortSelect要素が見つかりません');
+}
+function displayResults(videos, searchQuery) {
+  setTopPlayerLayoutVisible(false);
+  currentTopVideoId = null;
+
+  if (!Array.isArray(videos) || videos.length === 0) {
+    resultsDiv.innerHTML = '<div class="no-results">検索結果が見つかりませんでした</div>';
+    const paginationDiv = document.getElementById('pagination');
+    if (paginationDiv) paginationDiv.innerHTML = '';
+    return;
+  }
+
+  totalPages = Math.ceil(videos.length / VIDEOS_PER_PAGE);
+  const startIndex = (currentPage - 1) * VIDEOS_PER_PAGE;
+  const endIndex = startIndex + VIDEOS_PER_PAGE;
+  const videosToShow = videos.slice(startIndex, endIndex);
+
+  if (videosToShow.length === 0) {
+    currentPage = 1;
+    return displayResults(videos, searchQuery);
+  }
+
+  const html = videosToShow.map((video, index) => {
+    const vid = video.id || `video-${startIndex + index}`;
+    const title = String(video.title || '動画').trim() || '動画';
+    const url = video.url || '';
+    const embedUrl = video.embedUrl || url;
+    const resolvedVideoUrl = safeResolveUrl(url, 'https://www.bilibili.com/');
+    const rawThumbnail = video.thumbnail
+      ? safeResolveUrl(video.thumbnail, resolvedVideoUrl || 'https://www.bilibili.com/')
+      : '';
+    const thumbnail = normalizeThumbnailUrl(rawThumbnail, title);
+    const duration = String(video.duration || '').trim();
+    const sourceName = getSourceName(video.source || 'bilibili');
+    const officialUrl = normalizeBilibiliPageUrl(url) || safeResolveUrl(url, 'https://www.bilibili.com/');
+    const relatedLink = (officialUrl && officialUrl.includes('bilibili.com'))
+      ? `/related.html?${new URLSearchParams({ url: officialUrl, title, q: buildRelatedQuery(video) || title }).toString()}`
+      : '';
+    const metaParts = [sourceName];
+
+    if (duration) metaParts.push(duration);
+    if (searchQuery && String(searchQuery).trim()) metaParts.push(`検索: ${String(searchQuery).trim()}`);
+
+    return `
+      <article class="video-item video-item-compact" data-source="${video.source || ''}">
+        <button
+          type="button"
+          class="compact-play-row"
+          onclick="playTopVideo('${escapeHtml(vid)}', '${escapeHtml(embedUrl)}', '${escapeHtml(url)}', '${escapeHtml(video.source || '')}', event)"
+        >
+          <span class="compact-thumb-wrap">
+            <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(title)}" class="compact-thumb" loading="lazy">
+            ${duration ? `<span class="compact-duration">${escapeHtml(duration)}</span>` : ''}
+          </span>
+          <span class="compact-body">
+            <span class="compact-title">${escapeHtml(title)}</span>
+            <span class="compact-meta">
+              <span class="video-source">${escapeHtml(sourceName)}</span>
+              <span class="compact-meta-text">${escapeHtml(metaParts.join(' / '))}</span>
+            </span>
+          </span>
+        </button>
+        <div class="video-actions compact-actions">
+          <button
+            type="button"
+            class="play-inline-btn"
+            onclick="playTopVideo('${escapeHtml(vid)}', '${escapeHtml(embedUrl)}', '${escapeHtml(url)}', '${escapeHtml(video.source || '')}', event)"
+          >
+            再生
+          </button>
+          ${relatedLink ? `<a class="related-btn" href="${escapeHtml(relatedLink)}">関連動画</a>` : ''}
+        </div>
+        <div class="related-results hidden" id="related-${vid}"></div>
+      </article>
+    `;
+  }).join('');
+
+  resultsDiv.innerHTML = html;
+  displayPagination();
 }
