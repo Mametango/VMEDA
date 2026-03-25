@@ -1127,7 +1127,7 @@ app.post('/api/search', async (req, res) => {
     const searchFunctions = [
       { fn: searchIVFree, name: 'IVFree' }, // 優先順位: 最高
       { fn: searchJPdmv, name: 'JPdmv' }, // 優先順位: 高
-      { fn: searchBilibili, name: 'Bilibili' },
+      { fn: searchBilibiliExpanded, name: 'Bilibili' },
       { fn: searchDouga4, name: 'Douga4' },
       { fn: searchJavmix, name: 'Javmix.TV' },
       { fn: searchMat6tube, name: 'Mat6tube' },
@@ -1138,7 +1138,7 @@ app.post('/api/search', async (req, res) => {
     
     // 各検索関数を安全に呼び出す（まずはstrictMode=falseで緩和したマッチングを試す）
     searchFunctions.length = 0;
-    searchFunctions.push({ fn: searchBilibili, name: 'Bilibili' });
+    searchFunctions.push({ fn: searchBilibiliExpanded, name: 'Bilibili' });
     console.log('🔒 検索モード: Bilibili only');
     searchFunctions.forEach(({ fn, name }, index) => {
       try {
@@ -2939,6 +2939,113 @@ async function searchBilibili(query, strictMode = true) {
   } catch (error) {
     console.error('Bilibili検索エラー:', error.message);
     return [];
+  }
+}
+
+async function searchBilibiliExpanded(query, strictMode = false) {
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    const urls = query && query.trim()
+      ? [
+          `https://search.bilibili.com/all?keyword=${encodedQuery}`,
+          `https://search.bilibili.com/all?keyword=${encodedQuery}&page=2`
+        ]
+      : ['https://www.bilibili.com/'];
+
+    const videos = [];
+    const seenUrls = new Set();
+
+    for (const url of urls) {
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Referer': 'https://www.bilibili.com/',
+          'Origin': 'https://www.bilibili.com',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        },
+        timeout: 30000,
+        maxRedirects: 5
+      });
+
+      const $ = cheerio.load(response.data);
+      const selectors = [
+        '.video-item',
+        '.bili-video-card',
+        '.video-card',
+        '.result-item',
+        '[data-bvid]',
+        'a[href*="/video/"]',
+        '[class*="video"]'
+      ];
+
+      for (const selector of selectors) {
+        $(selector).each((index, elem) => {
+          const $item = $(elem);
+          const href = $item.attr('href') || $item.find('a').attr('href') || '';
+          const bvidFromAttr = $item.attr('data-bvid') || $item.find('[data-bvid]').attr('data-bvid') || '';
+          const rawUrl = href || (bvidFromAttr ? `/video/${bvidFromAttr}` : '');
+          if (!rawUrl || (!rawUrl.includes('/video/') && !bvidFromAttr)) return;
+
+          const fullUrl = normalizeBilibiliVideoUrl(rawUrl);
+          if (!fullUrl || seenUrls.has(fullUrl)) return;
+
+          const title = extractTitle($, $item);
+          if (!title || title.length <= 1) return;
+          if (strictMode && !isTitleRelevant(title, query)) return;
+
+          const thumbnail = extractThumbnail($, $item);
+          const duration = extractDurationFromHtml($, $item);
+          const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
+          const embedUrl = bvid ? `//player.bilibili.com/player.html?bvid=${bvid[0]}` : fullUrl;
+
+          seenUrls.add(fullUrl);
+          videos.push({
+            id: `bilibili-expanded-${Date.now()}-${videos.length}-${index}`,
+            title: title.substring(0, 200),
+            thumbnail: thumbnail || '',
+            duration: duration || '',
+            url: fullUrl,
+            embedUrl,
+            source: 'bilibili'
+          });
+        });
+      }
+
+      const jsonMatches = response.data.match(/"bvid":"BV[a-zA-Z0-9]+".{0,300}?"title":"(.*?)"/g) || [];
+      jsonMatches.forEach((chunk, index) => {
+        const bvid = chunk.match(/BV[a-zA-Z0-9]+/)?.[0];
+        const title = chunk.match(/"title":"(.*?)"/)?.[1]
+          ?.replace(/\\u003c.*?\\u003e/g, '')
+          ?.replace(/\\"/g, '"')
+          ?.trim();
+        if (!bvid || !title) return;
+        if (strictMode && !isTitleRelevant(title, query)) return;
+
+        const fullUrl = normalizeBilibiliVideoUrl(`/video/${bvid}`);
+        if (!fullUrl || seenUrls.has(fullUrl)) return;
+
+        seenUrls.add(fullUrl);
+        videos.push({
+          id: `bilibili-expanded-json-${Date.now()}-${videos.length}-${index}`,
+          title: title.substring(0, 200),
+          thumbnail: '',
+          duration: '',
+          url: fullUrl,
+          embedUrl: `//player.bilibili.com/player.html?bvid=${bvid}`,
+          source: 'bilibili'
+        });
+      });
+    }
+
+    console.log(`✅ Bilibili expanded: ${videos.length}件の動画を取得`);
+    return videos.slice(0, 80);
+  } catch (error) {
+    console.error('Bilibili拡張検索エラー:', error.message);
+    return searchBilibili(query, strictMode);
   }
 }
 
@@ -4780,7 +4887,7 @@ app.get('/api/bilibili-related', async (req, res) => {
     let relatedVideos = await searchBilibiliRelatedFromVideoPages([seedVideo], 24);
 
     if ((!Array.isArray(relatedVideos) || relatedVideos.length === 0) && title) {
-      const fallbackResults = await searchBilibili(title);
+      const fallbackResults = await searchBilibiliExpanded(title);
       relatedVideos = (Array.isArray(fallbackResults) ? fallbackResults : [])
         .filter((video) => video && video.url && video.url !== videoUrl)
         .slice(0, 24);
