@@ -124,6 +124,7 @@ const homeFeedGrid = document.getElementById('home-feed-grid');
 // 現在の検索結果を保持
 let currentVideos = [];
 let currentTopVideoId = null;
+let currentNextUpVideos = [];
 let homeFeedVideos = [];
 const RECENT_VIEWS_KEY = 'vmeda_recent_views';
 const HOMEPAGE_PLAYBACK_KEY = 'vmeda_homepage_playback';
@@ -199,7 +200,10 @@ function updateTopPlayerInfo(video) {
 
 function renderNextUpList(activeVideoId) {
   if (!nextUpList) return;
-  const queue = currentVideos
+  const sourceList = Array.isArray(currentNextUpVideos) && currentNextUpVideos.length > 0
+    ? currentNextUpVideos
+    : currentVideos;
+  const queue = sourceList
     .filter((video) => video && video.id !== activeVideoId)
     .slice(0, 18);
 
@@ -235,6 +239,43 @@ function renderNextUpList(activeVideoId) {
   }).join('');
 }
 
+async function refreshNextUpFromCurrent(video) {
+  if (!nextUpList || !video) return;
+
+  const videoUrl = normalizeBilibiliPageUrl(video.url || video.embedUrl || '');
+  const videoTitle = String(video.title || '').trim();
+
+  if (!videoUrl || !videoUrl.includes('bilibili.com')) {
+    currentNextUpVideos = [];
+    renderNextUpList(video.id);
+    return;
+  }
+
+  nextUpList.innerHTML = '<div class="next-up-empty">関連動画を読み込み中...</div>';
+
+  try {
+    const params = new URLSearchParams({
+      url: videoUrl,
+      title: videoTitle
+    });
+    const response = await fetch(`/api/bilibili-related?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch related videos');
+    }
+
+    const data = await response.json();
+    const items = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+    const normalized = normalizeRelatedVideoList(items, videoUrl).slice(0, 18);
+
+    currentNextUpVideos = normalized;
+    renderNextUpList(video.id);
+  } catch (error) {
+    console.warn('next-up related fetch failed:', error);
+    currentNextUpVideos = [];
+    renderNextUpList(video.id);
+  }
+}
+
 window.playTopVideo = function(videoId, embedUrl, originalUrl, source, event) {
   if (event) {
     event.preventDefault();
@@ -262,6 +303,8 @@ window.playTopVideo = function(videoId, embedUrl, originalUrl, source, event) {
   }
 
   window.showPlayer('top-player', video.embedUrl || embedUrl || '', video.url || originalUrl || '', video.source || source || 'bilibili');
+
+  refreshNextUpFromCurrent(video);
 
   topPlayerLayout?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
