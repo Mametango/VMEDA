@@ -175,6 +175,16 @@ function setHomeFeedVisible(visible) {
   homeFeedSection.classList.toggle('hidden', !visible);
 }
 
+function setSearchResultsVisible(visible) {
+  if (resultsDiv) {
+    resultsDiv.classList.toggle('hidden', !visible);
+  }
+  const paginationDiv = document.getElementById('pagination');
+  if (paginationDiv) {
+    paginationDiv.classList.toggle('hidden', !visible);
+  }
+}
+
 function dedupeVideos(videos) {
   const seen = new Set();
   return (Array.isArray(videos) ? videos : []).filter((video) => {
@@ -296,6 +306,7 @@ window.playTopVideo = function(videoId, embedUrl, originalUrl, source, event) {
   updateTopPlayerInfo(video);
   renderNextUpList(currentTopVideoId);
   setTopPlayerLayoutVisible(true);
+  setSearchResultsVisible(false);
 
   const topContainer = document.getElementById('player-top-player');
   if (topContainer && topContainer.querySelector('iframe, video.video-player')) {
@@ -2729,6 +2740,7 @@ if (sortSelect) {
 function displayResults(videos, searchQuery) {
   setTopPlayerLayoutVisible(false);
   currentTopVideoId = null;
+  setSearchResultsVisible(true);
 
   if (!Array.isArray(videos) || videos.length === 0) {
     resultsDiv.innerHTML = '<div class="no-results">検索結果が見つかりませんでした</div>';
