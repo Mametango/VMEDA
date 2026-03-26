@@ -265,7 +265,7 @@ async function refreshNextUpFromCurrent(video) {
 
     const data = await response.json();
     const items = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
-    const normalized = normalizeRelatedVideoList(items, videoUrl).slice(0, 18);
+    const normalized = rankRelatedVideos(video, normalizeRelatedVideoList(items, videoUrl)).slice(0, 18);
 
     currentNextUpVideos = normalized;
     renderNextUpList(video.id);
@@ -435,6 +435,65 @@ function normalizeRelatedVideoList(items, currentUrl) {
       return true;
     })
     .slice(0, 12);
+}
+
+function normalizeUploaderName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[【】\[\]()（）]/g, '');
+}
+
+function tokenizeTitle(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[【】\[\]()（）\-_/|｜,，.。:：!！?？]/g, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2);
+}
+
+function getRelatedRankingScore(baseVideo, candidate) {
+  if (!candidate) return 0;
+
+  let score = 0;
+  const baseAuthor = normalizeUploaderName(baseVideo?.author || baseVideo?.subtitle || '');
+  const candidateAuthor = normalizeUploaderName(candidate?.author || candidate?.subtitle || '');
+
+  if (baseAuthor && candidateAuthor && baseAuthor === candidateAuthor) {
+    score += 100;
+  }
+
+  const baseTokens = tokenizeTitle(baseVideo?.title || '');
+  const candidateTokens = new Set(tokenizeTitle(candidate?.title || ''));
+  for (const token of baseTokens) {
+    if (candidateTokens.has(token)) {
+      score += token.length >= 4 ? 12 : 6;
+    }
+  }
+
+  const codeMatchBase = String(baseVideo?.title || '').match(/[A-Z]{2,10}-[A-Z0-9]{2,12}/i);
+  const codeMatchCandidate = String(candidate?.title || '').match(/[A-Z]{2,10}-[A-Z0-9]{2,12}/i);
+  if (codeMatchBase && codeMatchCandidate && codeMatchBase[0].toUpperCase() === codeMatchCandidate[0].toUpperCase()) {
+    score += 60;
+  }
+
+  return score;
+}
+
+function rankRelatedVideos(baseVideo, items) {
+  return [...(Array.isArray(items) ? items : [])]
+    .map((item, index) => ({
+      ...item,
+      _rankScore: getRelatedRankingScore(baseVideo, item),
+      _rankIndex: index
+    }))
+    .sort((a, b) => {
+      if (b._rankScore !== a._rankScore) return b._rankScore - a._rankScore;
+      return a._rankIndex - b._rankIndex;
+    })
+    .map(({ _rankScore, _rankIndex, ...item }) => item);
 }
 
 function recordVideoView(videoId, embedUrl, originalUrl, source) {

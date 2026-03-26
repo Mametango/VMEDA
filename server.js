@@ -3103,6 +3103,18 @@ async function searchBilibiliRelatedFromVideoPages(seedVideos = [], limit = 20) 
 
           const thumbnail = extractThumbnail($, $item) || '';
           const duration = extractDurationFromHtml($, $item) || '';
+          const author = (
+            $item.find('.up-name').first().text() ||
+            $item.find('.bili-video-card__info--author').first().text() ||
+            $item.find('.bili-video-card__info--bottom .bili-video-card__info--author').first().text() ||
+            $item.find('[class*="author"]').first().text() ||
+            ''
+          ).trim();
+          const subtitle = (
+            $item.find('.bili-video-card__info--date').first().text() ||
+            $item.find('.stat').first().text() ||
+            ''
+          ).trim();
           const bvid = fullUrl.match(/BV[a-zA-Z0-9]+/);
           const embedUrl = bvid ? `//player.bilibili.com/player.html?bvid=${bvid[0]}` : fullUrl;
 
@@ -3111,6 +3123,8 @@ async function searchBilibiliRelatedFromVideoPages(seedVideos = [], limit = 20) 
             title: title.substring(0, 200),
             thumbnail,
             duration,
+            author,
+            subtitle,
             url: fullUrl,
             embedUrl,
             source: 'bilibili'
