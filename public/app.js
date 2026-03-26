@@ -214,6 +214,7 @@ function renderNextUpList(activeVideoId) {
     const thumbnail = escapeHtml(normalizeThumbnailUrl(video.thumbnail, video.title || 'VMEDA'));
     const duration = escapeHtml(String(video.duration || ''));
     const source = escapeHtml(getSourceName(video.source || 'bilibili'));
+    const subtitle = escapeHtml(String(video.subtitle || video.author || ''));
     return `
       <button
         type="button"
@@ -223,7 +224,11 @@ function renderNextUpList(activeVideoId) {
         <img src="${thumbnail}" alt="${title}" class="next-up-thumb" loading="lazy">
         <span class="next-up-body">
           <span class="next-up-title">${title}</span>
-          <span class="next-up-meta">${source}${duration ? ` / ${duration}` : ''}</span>
+          ${subtitle ? `<span class="next-up-subtitle">${subtitle}</span>` : ''}
+          <span class="next-up-meta">
+            <span class="next-up-meta-source">${source}</span>
+            ${duration ? `<span class="next-up-meta-duration">${duration}</span>` : ''}
+          </span>
         </span>
       </button>
     `;
