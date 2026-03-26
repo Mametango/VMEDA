@@ -118,10 +118,13 @@ const topPlayerLayout = document.getElementById('bili-player-layout');
 const topPlayerTitle = document.getElementById('top-player-title');
 const topPlayerMeta = document.getElementById('top-player-meta');
 const nextUpList = document.getElementById('next-up-list');
+const homeFeedSection = document.getElementById('home-feed');
+const homeFeedGrid = document.getElementById('home-feed-grid');
 
 // 現在の検索結果を保持
 let currentVideos = [];
 let currentTopVideoId = null;
+let homeFeedVideos = [];
 const RECENT_VIEWS_KEY = 'vmeda_recent_views';
 const HOMEPAGE_PLAYBACK_KEY = 'vmeda_homepage_playback';
 const MAX_RECENT_VIEWS = 24;
@@ -166,6 +169,21 @@ function setTopPlayerLayoutVisible(visible) {
   topPlayerLayout.classList.toggle('hidden', !visible);
 }
 
+function setHomeFeedVisible(visible) {
+  if (!homeFeedSection) return;
+  homeFeedSection.classList.toggle('hidden', !visible);
+}
+
+function dedupeVideos(videos) {
+  const seen = new Set();
+  return (Array.isArray(videos) ? videos : []).filter((video) => {
+    const key = String(video?.url || video?.embedUrl || video?.id || '');
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function updateTopPlayerInfo(video) {
   if (!video) return;
   if (topPlayerTitle) {
@@ -187,6 +205,7 @@ function renderNextUpList(activeVideoId) {
 
   if (queue.length === 0) {
     nextUpList.innerHTML = '<div class="next-up-empty">次に再生する動画はまだありません。</div>';
+    setHomeFeedVisible(true);
     return;
   }
 
@@ -420,6 +439,7 @@ async function searchVideos(query) {
 
   loadingDiv.classList.remove('hidden');
   resultsDiv.innerHTML = '';
+  setHomeFeedVisible(false);
 
   try {
     console.log('🔍 検索開始:', query);
@@ -2678,3 +2698,114 @@ function displayResults(videos, searchQuery) {
   resultsDiv.innerHTML = html;
   displayPagination();
 }
+
+async function fetchSearchResults(query) {
+  const trimmedQuery = String(query || '').trim();
+  if (!trimmedQuery) return [];
+
+  const response = await fetch('/api/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query: trimmedQuery })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Search failed');
+  }
+
+  const data = await response.json();
+  return Array.isArray(data.results) ? data.results : [];
+}
+
+function renderHomeFeedSection(section) {
+  const cards = (section.videos || []).slice(0, 8).map((video, index) => {
+    const vid = escapeHtml(video.id || `home-${section.key}-${index}`);
+    const videoTitle = escapeHtml(String(video.title || '動画'));
+    const thumbnail = escapeHtml(normalizeThumbnailUrl(video.thumbnail, video.title || 'VMEDA'));
+    const duration = escapeHtml(String(video.duration || '').trim());
+    const sourceName = escapeHtml(getSourceName(video.source || 'bilibili'));
+
+    return `
+      <article class="home-video-card">
+        <button
+          type="button"
+          class="home-video-button"
+          onclick="playHomeFeedVideo('${vid}', '${escapeHtml(video.embedUrl || video.url || '')}', '${escapeHtml(video.url || video.embedUrl || '')}', '${escapeHtml(video.source || 'bilibili')}', event)"
+        >
+          <span class="home-video-thumb-wrap">
+            <img src="${thumbnail}" alt="${videoTitle}" class="home-video-thumb" loading="lazy">
+            ${duration ? `<span class="home-video-duration">${duration}</span>` : ''}
+          </span>
+          <span class="home-video-title">${videoTitle}</span>
+          <span class="home-video-meta">${sourceName}</span>
+        </button>
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <section class="home-feed-section">
+      <div class="home-feed-section-head">
+        <div class="home-feed-section-title">${escapeHtml(section.title)}</div>
+        <div class="home-feed-section-subtitle">${escapeHtml(section.subtitle || '')}</div>
+      </div>
+      <div class="home-feed-section-grid">
+        ${cards || '<div class="next-up-empty">動画はまだありません。</div>'}
+      </div>
+    </section>
+  `;
+}
+
+window.playHomeFeedVideo = function(videoId, embedUrl, originalUrl, source, event) {
+  currentVideos = Array.isArray(homeFeedVideos) ? [...homeFeedVideos] : [];
+  currentPage = 1;
+  setHomeFeedVisible(false);
+  displayResults(currentVideos, '');
+  window.playTopVideo(videoId, embedUrl, originalUrl, source, event);
+};
+
+async function initHomeFeed() {
+  if (!homeFeedGrid) return;
+
+  if (consumeHomepagePlayback()) {
+    setHomeFeedVisible(false);
+    return;
+  }
+
+  setHomeFeedVisible(true);
+  homeFeedGrid.innerHTML = '<div class="loading">ホーム動画を読み込み中...</div>';
+
+  const sections = [
+    { key: 'recommend', title: 'おすすめ', subtitle: 'Bilibiliっぽい定番ワード', query: 'おすすめ' },
+    { key: 'topic', title: '話題', subtitle: '今見つかりやすい話題語', query: '話題' },
+    { key: 'popular', title: '人気', subtitle: '広く拾える人気キーワード', query: '人気' },
+    { key: 'new', title: '新着', subtitle: '新しめの候補を探す', query: '新着' }
+  ];
+
+  const settled = await Promise.allSettled(sections.map(async (section) => {
+    const videos = await fetchSearchResults(section.query);
+    return {
+      ...section,
+      videos: videos.slice(0, 8)
+    };
+  }));
+
+  const resolvedSections = settled
+    .filter((result) => result.status === 'fulfilled')
+    .map((result) => result.value)
+    .filter((section) => Array.isArray(section.videos) && section.videos.length > 0);
+
+  homeFeedVideos = dedupeVideos(resolvedSections.flatMap((section) => section.videos));
+
+  if (resolvedSections.length === 0) {
+    homeFeedGrid.innerHTML = '<div class="no-results">ホーム動画を読み込めませんでした</div>';
+    return;
+  }
+
+  homeFeedGrid.innerHTML = resolvedSections.map(renderHomeFeedSection).join('');
+}
+
+initHomeFeed();
