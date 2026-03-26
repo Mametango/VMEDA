@@ -2809,3 +2809,34 @@ async function initHomeFeed() {
 }
 
 initHomeFeed();
+
+async function ensureInitialHomeVideo() {
+  for (let i = 0; i < 20; i += 1) {
+    if (Array.isArray(homeFeedVideos) && homeFeedVideos.length > 0) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+
+  if (!Array.isArray(homeFeedVideos) || homeFeedVideos.length === 0) {
+    return;
+  }
+
+  if (currentTopVideoId) {
+    return;
+  }
+
+  currentVideos = [...homeFeedVideos];
+  currentPage = 1;
+  displayResults(currentVideos, '');
+
+  const firstVideo = homeFeedVideos[0];
+  window.playTopVideo(
+    firstVideo.id || 'home-initial-video',
+    firstVideo.embedUrl || firstVideo.url || '',
+    firstVideo.url || firstVideo.embedUrl || '',
+    firstVideo.source || 'bilibili'
+  );
+}
+
+ensureInitialHomeVideo();
